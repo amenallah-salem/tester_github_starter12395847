@@ -1,0 +1,71 @@
+name: t02-product-ux-docs
+
+on:
+  pull_request:
+    paths:
+      - 'docs/personas.md'
+      - 'docs/ux-flows.md'
+      - 'docs/information-architecture.md'
+      - 'docs/index.md'
+      - '.github/workflows/t02-docs.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/personas.md'
+      - 'docs/ux-flows.md'
+      - 'docs/information-architecture.md'
+      - 'docs/index.md'
+      - '.github/workflows/t02-docs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-t02-docs:
+    name: Validate T-02 deliverables (personas / UX flows / IA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Required T-02 deliverables exist and are non-trivial
+        run: |
+          set -euo pipefail
+          for f in docs/personas.md docs/ux-flows.md docs/information-architecture.md docs/index.md; do
+            test -f "$f" || { echo "missing $f"; exit 1; }
+            lines=$(wc -l < "$f")
+            test "$lines" -ge 20 || { echo "$f too short ($lines lines)"; exit 1; }
+            grep -q '^# ' "$f" || { echo "$f has no H1"; exit 1; }
+            echo "ok: $f ($lines lines)"
+          done
+
+      - name: docs/index.md links every T-02 deliverable
+        run: |
+          set -euo pipefail
+          for f in personas.md ux-flows.md information-architecture.md; do
+            grep -q "docs/$f" docs/index.md || { echo "docs/index.md missing link to docs/$f"; exit 1; }
+            echo "ok: index links docs/$f"
+          done
+
+      - name: UX flows reference every required SIW-6 section
+        run: |
+          set -euo pipefail
+          for sec in 6 7 8 9 10 11 12 13 14 15 16 17; do
+            grep -q "§$sec" docs/ux-flows.md || { echo "ux-flows.md missing SIW-6 §$sec reference"; exit 1; }
+            echo "ok: ux-flows.md references §$sec"
+          done
+
+      - name: Terminology matches the data model (plans / exercises / sets / sessions)
+        run: |
+          set -euo pipefail
+          for term in TrainingPlan WorkoutExercise WorkoutSet WorkoutSession Exercise Alternative; do
+            grep -q "$term" docs/ux-flows.md || { echo "ux-flows.md missing data-model term $term"; exit 1; }
+            echo "ok: ux-flows.md uses $term"
+          done
+
+      - name: Personas map to all training objective categories
+        run: |
+          set -euo pipefail
+          for obj in "Lose weight" "Build muscle" "Gain strength" "Improve fitness" "Body composition" "General health" "Maintain"; do
+            grep -qi "$obj" docs/personas.md || { echo "personas.md missing objective $obj"; exit 1; }
+            echo "ok: personas.md covers $obj"
+          done
