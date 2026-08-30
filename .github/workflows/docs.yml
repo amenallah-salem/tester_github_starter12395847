@@ -1,0 +1,57 @@
+name: docs
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-docs:
+    name: Validate product docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Required deliverables exist and are non-trivial
+        run: |
+          set -euo pipefail
+          for f in docs/competitive-research.md docs/feature-inventory.md; do
+            test -f "$f" || { echo "missing $f"; exit 1; }
+            lines=$(wc -l < "$f")
+            test "$lines" -ge 50 || { echo "$f too short ($lines lines)"; exit 1; }
+            echo "ok: $f ($lines lines)"
+          done
+
+      - name: Docs are findable from README
+        run: |
+          set -euo pipefail
+          grep -q 'docs/competitive-research.md' README.md || { echo "README missing link to docs/competitive-research.md"; exit 1; }
+          grep -q 'docs/feature-inventory.md' README.md || { echo "README missing link to docs/feature-inventory.md"; exit 1; }
+          echo "ok: README links present"
+
+      - name: Every SIW-6 capability section is covered in the inventory
+        run: |
+          set -euo pipefail
+          for sec in 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+            grep -q "## §$sec —" docs/feature-inventory.md || { echo "feature-inventory missing section §$sec"; exit 1; }
+          done
+          echo "ok: all SIW-6 sections 5-20 present"
+
+      - name: Markdown sanity (H1 present, no accidental chart/emoji-free encoding issues)
+        run: |
+          set -euo pipefail
+          for f in docs/competitive-research.md docs/feature-inventory.md; do
+            grep -q '^# ' "$f" || { echo "$f has no H1"; exit 1; }
+            echo "ok: $f"
+          done
