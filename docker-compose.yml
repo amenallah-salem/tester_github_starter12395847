@@ -1,0 +1,30 @@
+# Docker Compose — stub
+#
+# PLACEHOLDER skeleton for the AI Gym Assistant backend stack.
+# Realized and validated in the backend scaffold + infrastructure phases
+# (Django project scaffold, Postgres, healthcheck, env config, migrations).
+#
+# Current stub exposes Postgres on 5432 for early local development.
+
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gym_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gym}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gym}
+      POSTGRES_DB: ${POSTGRES_DB:-gym}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gym}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:
