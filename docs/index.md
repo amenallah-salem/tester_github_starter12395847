@@ -1,36 +1,39 @@
-# Documentation
+# Documentation Index — AI Gym Assistant
 
-Central entry point for all project documentation (Project: **AI Gym Assistant /
-Personal Training**, repo `tester_github_starter12395847`).
+Central index for siwar_corp's product + engineering documentation for the AI Gym
+Assistant (Flutter + Django). Built per [SIW-6](/SIW/issues/SIW-6) §31 (`docs/`),
+currently landing PHASE 0 research & product-definition artifacts.
 
-## Product
+## Product & UX (PHASE 0)
 
-- [Product Requirements Document — AI Gym Assistant](prd.md) — the single
-  authoritative product definition: scope, functional + non-functional
-  requirements, acceptance criteria, Definition of Done, out-of-scope, and
-  traceability to master spec and build tasks (T-13..T-36).
+| Doc | Purpose | Source |
+|-----|---------|--------|
+| [Personas](personas.md) | 5 user personas mapped to training objectives, experience levels, devices, friction points | SIW-8 / T-02 |
+| [UX flows](ux-flows.md) | Primary flows as implementable step lists with minimal-tap mid-workout rules (references SIW-6 §5–§17) | SIW-8 / T-02 |
+| [Information architecture](information-architecture.md) | Navigation model, route table, screen inventory, cross-cutting states | SIW-8 / T-02 |
 
-## Planned / to be authored in later phases (mapping to master spec §31)
+## Upstream authority & related research
 
-| Document | Status |
-|---|---|
-| `architecture.md` | planned (Phase 1/11) |
-| `development.md` | planned (Phase 11) |
-| `backend.md` | planned (Phase 11) |
-| `frontend.md` | planned (Phase 11) |
-| `api.md` | planned (Phase 11, contract freezes in Phase 1) |
-| `database.md` | planned (Phase 11) |
-| `testing.md` | planned (Phase 11) |
-| `deployment.md` | planned (Phase 11) |
-| `ci-cd.md` | planned (Phase 11) |
-| `releases.md` | planned (Phase 11) |
-| `troubleshooting.md` | planned (Phase 11) |
+- **Project master instruction:** [SIW-6](/SIW/issues/SIW-6) — source of every section
+  reference (§5–§39) used by the docs above.
+- **Competitive research & feature inventory:** `competitive-research.md` +
+  `feature-inventory.md` (T-01, SIW-7).
+- **Product Requirements Document:** `prd.md` (T-03, SIW-9; depends on T-01 + T-02).
 
-Status legend: **done** = published and in sync; **in progress** = being authored;
-**planned** = not yet started (owned by later phases).
+## Planned docs tree (landing in later phases)
+
+Per [SIW-6](/SIW/issues/SIW-6) §31 — `architecture.md`, `development.md`,
+`backend.md`, `frontend.md`, `api.md`, `database.md`, `testing.md`, `deployment.md`,
+`ci-cd.md`, `releases.md`, `troubleshooting.md`. Each phase links its deliverables
+here as they land.
+
+## Terminology
+
+The single source of truth for nouns (`TrainingPlan`, `Workout`, `WorkoutExercise`,
+`WorkoutSet`, `WorkoutSession`, `Exercise`, `ExerciseAlternative`, …) is
+[SIW-6](/SIW/issues/SIW-6) §20; every doc above uses it consistently.
 
 ## How to update this index
 
-When a document is added, moved, or renamed, update this file in the same commit
-so the index never goes stale. The doc-maintenance routine audits this index
-against repository history on a schedule.
+When a document is added, moved, or renamed, update this file in the same commit so
+the index never goes stale.

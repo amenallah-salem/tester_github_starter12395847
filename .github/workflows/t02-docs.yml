@@ -42,7 +42,7 @@ jobs:
         run: |
           set -euo pipefail
           for f in personas.md ux-flows.md information-architecture.md; do
-            grep -q "docs/$f" docs/index.md || { echo "docs/index.md missing link to docs/$f"; exit 1; }
+            grep -Eq "\]\(.*$f\)" docs/index.md || { echo "docs/index.md missing markdown link to docs/$f"; exit 1; }
             echo "ok: index links docs/$f"
           done
 
