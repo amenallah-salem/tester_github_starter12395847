@@ -1,0 +1,83 @@
+name: prd
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - '.github/workflows/prd.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - '.github/workflows/prd.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-prd:
+    name: Validate PRD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PRD exists and is non-trivial
+        run: |
+          set -euo pipefail
+          test -f docs/prd.md || { echo "missing docs/prd.md"; exit 1; }
+          lines=$(wc -l < docs/prd.md)
+          test "$lines" -ge 200 || { echo "docs/prd.md too short ($lines lines)"; exit 1; }
+          echo "ok: docs/prd.md ($lines lines)"
+
+      - name: Product overview, personas, scope, out-of-scope present
+        run: |
+          set -euo pipefail
+          for term in "Product Overview" "Personas" "Feature Scope" "Out of Scope" "Out-of-Scope"; do
+            grep -q "$term" docs/prd.md || { echo "PRD missing section: $term"; exit 1; }
+          done
+          echo "ok: overview/personas/scope/out-of-scope present"
+
+      - name: Every SIW-6 capability section (5-20) covered
+        run: |
+          set -euo pipefail
+          for sec in 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+            grep -q "SIW-6 §$sec" docs/prd.md || { echo "PRD missing SIW-6 §$sec coverage"; exit 1; }
+          done
+          echo "ok: all SIW-6 sections 5-20 referenced"
+
+      - name: Required NFRs present
+        run: |
+          set -euo pipefail
+          for term in "configurable API base URL" "PostgreSQL" "Django REST Framework" "Docker" "CI/CD" "Android" "iOS" "flavor"; do
+            grep -qi "$term" docs/prd.md || { echo "PRD missing NFR term: $term"; exit 1; }
+          done
+          echo "ok: required NFRs present"
+
+      - name: Acceptance criteria and DoD present
+        run: |
+          set -euo pipefail
+          grep -q "Acceptance Criteria" docs/prd.md || { echo "PRD missing Acceptance Criteria"; exit 1; }
+          grep -q "Definition of Done" docs/prd.md || { echo "PRD missing DoD"; exit 1; }
+          echo "ok: AC + DoD present"
+
+      - name: Traceability to T-13..T-36 and SIW-6 present
+        run: |
+          set -euo pipefail
+          grep -q "T-13" docs/prd.md || { echo "traceability missing T-13"; exit 1; }
+          grep -q "T-36" docs/prd.md || { echo "traceability missing T-36"; exit 1; }
+          echo "ok: traceability present"
+
+      - name: PRD linked from README + docs index
+        run: |
+          set -euo pipefail
+          grep -q "docs/prd.md" README.md || { echo "README missing PRD link"; exit 1; }
+          grep -q "prd.md" docs/index.md || { echo "docs index missing PRD link"; exit 1; }
+          echo "ok: PRD linked from README and docs index"
+
+      - name: Markdown sanity
+        run: |
+          set -euo pipefail
+          grep -q '^# ' docs/prd.md || { echo "PRD has no H1"; exit 1; }
+          echo "ok: H1 present"
