@@ -1,0 +1,2296 @@
+openapi: 3.0.3
+info:
+  title: AI Gym Assistant — API v1
+  version: 1.0.0
+  description: >
+    Versioned REST API contract for the AI Gym Assistant / Personal Training
+    product (siwar_corp). This contract is the single synchronization point
+    between the Django REST Framework backend and the Flutter client: both are
+    built against this exact shape.
+
+    - All endpoints are mounted under `/api/v1` (URL-path versioning, ADR-0003).
+    - Authentication is Bearer JWT (access token) + refresh token
+      (`djangorestframework-simplejwt`, ADR-0002). Use
+      `Authorization: Bearer <access>` on protected endpoints.
+    - Every list endpoint is paginated with `page` / `page_size` query params
+      (DRF `PageNumberPagination`, default 20, max 100) and returns a
+      paginated envelope.
+    - Every 4xx/5xx responds with the uniform error envelope
+      `{"detail", "code", "field_errors"}`.
+    - Schemas mirror the [T-05 data model](data-model.md) exactly (entity
+      names, field names, and enum codes). The Flutter DTOs (T-06) derive from
+      these schemas.
+  contact:
+    name: siwar_corp Backend Engineering
+  license:
+    name: Proprietary (siwar_corp)
+
+servers:
+  - url: http://192.168.1.100:8000/api/v1
+    description: Development (laptop on local network; literal IP varies)
+  - url: https://staging-api.example.com/api/v1
+    description: Staging
+  - url: https://api.example.com/api/v1
+    description: Production
+
+tags:
+  - name: Auth
+    description: Registration, login, logout, token refresh, password management (accounts app).
+  - name: Profile
+    description: User profile, goals and training preferences (profiles app).
+  - name: Onboarding
+    description: Guided onboarding after registration (profiles app).
+  - name: Exercises
+    description: Read-only exercise database (content app).
+  - name: Muscles
+    description: Read-only muscle groups (content app).
+  - name: Equipment
+    description: Read-only equipment catalog (content app).
+  - name: Alternatives
+    description: Exercise substitutions and alternatives (content app).
+  - name: Plans
+    description: Training plans, plan days, workouts, prescribed sets (training app).
+  - name: Sessions
+    description: Workout session execution and set logging (sessions app).
+  - name: Progress
+    description: Body measurements, personal records, progress metrics (progress app).
+  - name: History
+    description: Completed workout history (sessions app).
+  - name: Calendar
+    description: Training calendar/schedule (training app).
+  - name: Dashboard
+    description: Home dashboard (progress/training aggregation).
+  - name: Notifications
+    description: In-app notifications (notifications app).
+  - name: Subscription
+    description: Subscription plans and current status (accounts app).
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ==========================================================================
+  # AUTH (accounts app)
+  # ==========================================================================
+  /auth/register/:
+    post:
+      tags: [Auth]
+      operationId: authRegister
+      summary: Create an account
+      description: Creates a User (+ blank UserProfile) and returns access +
+        refresh tokens (auto-login).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created and authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenWithUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login/:
+    post:
+      tags: [Auth]
+      operationId: authLogin
+      summary: Log in
+      description: Authenticates a user with email and password.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenWithUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout/:
+    post:
+      tags: [Auth]
+      operationId: authLogout
+      summary: Log out
+      description: Blacklists the provided refresh token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '204':
+          description: Logged out
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh/:
+    post:
+      tags: [Auth]
+      operationId: authRefresh
+      summary: Refresh access token
+      description: Exchanges a valid refresh token for a new access token and a
+        rotated refresh token (ROTATE_REFRESH_TOKENS=True).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: New tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/forgot-password/:
+    post:
+      tags: [Auth]
+      operationId: authForgotPassword
+      summary: Request password reset
+      description: Sends a password reset email if the account exists. Always
+        returns 202 to avoid account enumeration.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '202':
+          description: Reset email sent (if the account exists)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/reset-password/:
+    post:
+      tags: [Auth]
+      operationId: authResetPassword
+      summary: Reset password with token
+      description: Sets a new password using the signed reset token from the
+        email link.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Password reset
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/change-password/:
+    post:
+      tags: [Auth]
+      operationId: authChangePassword
+      summary: Change password
+      description: Changes the authenticated user's password given the current
+        password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Password changed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================================================
+  # PROFILE (profiles app)
+  # ==========================================================================
+  /profile/:
+    get:
+      tags: [Profile]
+      operationId: getProfile
+      summary: Get the authenticated user's profile
+      description: Returns the User, UserProfile, active goal and training
+        preferences for the authenticated user.
+      responses:
+        '200':
+          description: Profile bundle
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileBundle'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [Profile]
+      operationId: updateProfile
+      summary: Update the authenticated user's profile
+      description: Partial update of UserProfile fields. Only provided fields
+        are changed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileWrite'
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileBundle'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /profile/preferences/:
+    get:
+      tags: [Profile]
+      operationId: getTrainingPreferences
+      summary: Get the user's training preferences
+      responses:
+        '200':
+          description: Training preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingPreference'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [Profile]
+      operationId: updateTrainingPreferences
+      summary: Upsert the user's training preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingPreferenceWrite'
+      responses:
+        '200':
+          description: Updated preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingPreference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================================================
+  # GOALS (profiles app)
+  # ==========================================================================
+  /goals/:
+    get:
+      tags: [Profile]
+      operationId: listGoals
+      summary: List the user's goals
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/GoalStatus' }
+      responses:
+        '200':
+          description: Paginated goals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGoals'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Profile]
+      operationId: createGoal
+      summary: Create a goal
+      description: Creates a goal. Only one active goal per user is allowed
+        (DB-enforced); creating a second active goal must first resolve the
+        current one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoalWrite'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Goal'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /goals/{id}/:
+    get:
+      tags: [Profile]
+      operationId: getGoal
+      summary: Get a goal
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+      responses:
+        '200':
+          description: Goal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Goal'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Profile]
+      operationId: updateGoal
+      summary: Update a goal
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoalWrite'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Goal'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Profile]
+      operationId: deleteGoal
+      summary: Delete a goal
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================================================
+  # ONBOARDING (profiles app)
+  # ==========================================================================
+  /onboarding/:
+    get:
+      tags: [Onboarding]
+      operationId: getOnboardingState
+      summary: Get onboarding progress
+      description: Returns whether onboarding is complete and the current
+        profile state.
+      responses:
+        '200':
+          description: Onboarding state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [Onboarding]
+      operationId: completeOnboarding
+      summary: Submit complete onboarding answers
+      description: Persists UserProfile, active Goal and TrainingPreference
+        from the onboarding payload, marks onboarding completed and returns a
+        recommended plan driven by the user's objective/experience/equipment.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardingSubmit'
+      responses:
+        '200':
+          description: Onboarding completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================================================
+  # CONTENT: EXERCISES (content app, read-only for non-admin)
+  # ==========================================================================
+  /exercises/:
+    get:
+      tags: [Exercises]
+      operationId: listExercises
+      summary: List exercises
+      description: Searchable and filterable exercise database. Returns
+        paginated exercise cards; use the detail endpoint for full media and
+        instructions.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Full-text search on name/description.
+        - name: muscle
+          in: query
+          schema: { type: integer }
+          description: Filter by a muscle group id.
+        - name: equipment
+          in: query
+          schema: { type: integer }
+          description: Filter by an equipment id.
+        - name: difficulty
+          in: query
+          schema: { $ref: '#/components/schemas/Difficulty' }
+        - name: movement_type
+          in: query
+          schema: { $ref: '#/components/schemas/MovementType' }
+        - name: pattern
+          in: query
+          schema: { $ref: '#/components/schemas/ExercisePattern' }
+      responses:
+        '200':
+          description: Paginated exercises
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedExercises'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /exercises/{id}/:
+    get:
+      tags: [Exercises]
+      operationId: getExercise
+      summary: Get exercise detail
+      description: Full exercise including instructions, media, muscles,
+        equipment and alternatives.
+      parameters:
+        - $ref: '#/components/parameters/ExerciseId'
+      responses:
+        '200':
+          description: Exercise detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exercise'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /exercises/{id}/alternatives/:
+    get:
+      tags: [Alternatives]
+      operationId: listExerciseAlternatives
+      summary: List alternative/substitute exercises
+      description: Returns the substitution candidates for an exercise from the
+        ExerciseAlternative graph, plus compatible suggestions, rank-ordered by
+        rationale and priority.
+      parameters:
+        - $ref: '#/components/parameters/ExerciseId'
+      responses:
+        '200':
+          description: Ranked alternatives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlternativeList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================================================
+  # CONTENT: MUSCLES & EQUIPMENT (content app)
+  # ==========================================================================
+  /muscles/:
+    get:
+      tags: [Muscles]
+      operationId: listMuscles
+      summary: List muscle groups
+      responses:
+        '200':
+          description: Muscle groups
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MuscleGroupList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /equipment/:
+    get:
+      tags: [Equipment]
+      operationId: listEquipment
+      summary: List equipment
+      responses:
+        '200':
+          description: Equipment catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================================================
+  # TRAINING PLANS (training app)
+  # ==========================================================================
+  /plans/:
+    get:
+      tags: [Plans]
+      operationId: listPlans
+      summary: List training plans
+      description: Lists active training plans. Plans are data-driven from the
+        backend; never hardcoded in Flutter.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: objective
+          in: query
+          schema: { $ref: '#/components/schemas/PlanObjective' }
+        - name: difficulty
+          in: query
+          schema: { $ref: '#/components/schemas/Difficulty' }
+      responses:
+        '200':
+          description: Paginated plans
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlans'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /plans/{id}/:
+    get:
+      tags: [Plans]
+      operationId: getPlan
+      summary: Get a training plan
+      description: Returns the plan, its days, and per-day workouts with
+        prescribed sets.
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        '200':
+          description: Plan detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/me/current-plan/:
+    get:
+      tags: [Plans]
+      operationId: getCurrentPlan
+      summary: Get the user's current (active) plan
+      description: Returns the plan currently selected against the active goal.
+      responses:
+        '200':
+          description: Current plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Plans]
+      operationId: assignCurrentPlan
+      summary: Select the user's current training plan
+      description: Assigns a plan as the user's current plan (set on the active
+        goal). Feeds the calendar, dashboard and workout execution.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignPlanRequest'
+      responses:
+        '200':
+          description: Plan assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================================================
+  # SESSIONS / WORKOUT EXECUTION (sessions app)
+  # ==========================================================================
+  /workout-sessions/:
+    get:
+      tags: [Sessions]
+      operationId: listSessions
+      summary: List the user's workout sessions
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/SessionStatus' }
+        - name: start_date
+          in: query
+          schema: { type: string, format: date }
+        - name: end_date
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Paginated sessions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSessions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /workout-sessions/{id}/:
+    get:
+      tags: [Sessions]
+      operationId: getSession
+      summary: Get a workout session
+      description: Returns the session with its exercises, performed sets and
+        previous performance.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Session detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workout-sessions/{id}/start/:
+    post:
+      tags: [Sessions]
+      operationId: startSession
+      summary: Start a workout session
+      description: Creates (or returns) the in-progress session for the given
+        workout / plan day scheduled today and returns the session with
+        prescribed exercises and previous performance.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartSessionActionRequest'
+      responses:
+        '200':
+          description: Session started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workout-sessions/{id}/complete/:
+    post:
+      tags: [Sessions]
+      operationId: completeSession
+      summary: Complete a workout session
+      description: Marks the session as completed, records the end time,
+        computes volume and triggers PR/metric/streak recomputation.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteSessionRequest'
+      responses:
+        '200':
+          description: Session completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Start a session by plan day (convenience; creates a new planned session)
+  /plans/{plan_id}/days/{day_id}/schedule/:
+    post:
+      tags: [Sessions, Plans]
+      operationId: scheduleSession
+      summary: Schedule a session for a plan day
+      description: Creates a planned WorkoutSession for the given plan day on a
+        date (default today). One open slot per user per date is enforced.
+      parameters:
+        - name: plan_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: day_id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleSessionRequest'
+      responses:
+        '201':
+          description: Session scheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================================================
+  # SETS (set logging — sessions app)
+  # ==========================================================================
+  /workout-sessions/{id}/exercises/{sessionExerciseId}/sets/:
+    get:
+      tags: [Sessions]
+      operationId: listSessionExerciseSets
+      summary: List sets for a session exercise
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/SessionExerciseId'
+      responses:
+        '200':
+          description: Sets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionSetList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Sessions]
+      operationId: createSessionSet
+      summary: Record a performed set
+      description: Logs a set for a session exercise (weight, reps, duration,
+        rpe, set type, completion, note).
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/SessionExerciseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionSetCreate'
+      responses:
+        '201':
+          description: Set recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionSet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workout-sessions/{id}/exercises/{sessionExerciseId}/sets/{setId}/:
+    patch:
+      tags: [Sessions]
+      operationId: updateSessionSet
+      summary: Update a recorded set
+      description: Partial update of a set (e.g. correcting weight/reps or
+        completion).
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/SessionExerciseId'
+        - $ref: '#/components/parameters/SetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionSetUpdate'
+      responses:
+        '200':
+          description: Updated set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionSet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Sessions]
+      operationId: deleteSessionSet
+      summary: Delete a recorded set
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/SessionExerciseId'
+        - $ref: '#/components/parameters/SetId'
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workout-sessions/{id}/exercises/{sessionExerciseId}/previous/:
+    get:
+      tags: [Sessions, Progress]
+      operationId: getPreviousPerformance
+      summary: Get previous performance for a session exercise
+      description: Returns the most recent completed-set history for this
+        exercise (last workout's sets, best set, est. 1RM) to guide the user
+        during training.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/SessionExerciseId'
+      responses:
+        '200':
+          description: Previous performance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviousPerformance'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workout-sessions/{id}/exercises/{sessionExerciseId}/skip/:
+    post:
+      tags: [Sessions]
+      operationId: skipSessionExercise
+      summary: Skip a session exercise
+      description: Marks a planned session exercise as skipped.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/SessionExerciseId'
+      responses:
+        '200':
+          description: Exercise skipped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionExercise'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workout-sessions/{id}/exercises/{sessionExerciseId}/substitute/:
+    post:
+      tags: [Sessions, Alternatives]
+      operationId: substituteSessionExercise
+      summary: Substitute an exercise in a session
+      description: Replaces a session exercise with a chosen alternative,
+        recording substituted_from for traceability.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/SessionExerciseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubstituteRequest'
+      responses:
+        '200':
+          description: Substituted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionExercise'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================================================
+  # HISTORY (sessions app — completed workouts)
+  # ==========================================================================
+  /history/workouts/:
+    get:
+      tags: [History]
+      operationId: listWorkoutHistory
+      summary: List completed workout history
+      description: Paginated completed sessions with date, duration, exercise
+        summary, volume and notes.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSessions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================================================
+  # CALENDAR (training app)
+  # ==========================================================================
+  /calendar/:
+    get:
+      tags: [Calendar]
+      operationId: getCalendar
+      summary: Get training calendar
+      description: Returns planned, completed and missed workouts for a month
+        window so consistency is visible.
+      parameters:
+        - name: start_date
+          in: query
+          required: false
+          schema: { type: string, format: date }
+          description: 'Inclusive start (default: first day of current month).'
+        - name: end_date
+          in: query
+          required: false
+          schema: { type: string, format: date }
+          description: 'Inclusive end (default: last day of current month).'
+      responses:
+        '200':
+          description: Calendar entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Calendar'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================================================
+  # DASHBOARD
+  # ==========================================================================
+  /dashboard/:
+    get:
+      tags: [Dashboard]
+      operationId: getDashboard
+      summary: Get home dashboard
+      description: Today's/next workout, current goal, weekly progress, recent
+        activity, progress metrics and streak.
+      responses:
+        '200':
+          description: Dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================================================
+  # PROGRESS (progress app)
+  # ==========================================================================
+  /measurements/:
+    get:
+      tags: [Progress]
+      operationId: listMeasurements
+      summary: List body measurements
+      description: Returns trend series for one or more measurement types.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: measurement_type
+          in: query
+          schema: { $ref: '#/components/schemas/MeasurementType' }
+        - name: start_date
+          in: query
+          schema: { type: string, format: date }
+        - name: end_date
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Paginated measurements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMeasurements'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Progress]
+      operationId: createMeasurement
+      summary: Add a body measurement
+      description: Creates one measurement data point (one type per row). Send
+        one request per measurement type, or reuse a bulk endpoint as needed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BodyMeasurementWrite'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyMeasurement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /measurements/{id}/:
+    delete:
+      tags: [Progress]
+      operationId: deleteMeasurement
+      summary: Delete a body measurement
+      parameters:
+        - $ref: '#/components/parameters/MeasurementId'
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /personal-records/:
+    get:
+      tags: [Progress]
+      operationId: listPersonalRecords
+      summary: List the user's personal records
+      parameters:
+        - name: exercise
+          in: query
+          schema: { type: integer }
+        - name: metric
+          in: query
+          schema: { $ref: '#/components/schemas/PRMetric' }
+      responses:
+        '200':
+          description: Personal records
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonalRecordList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /progress-metrics/:
+    get:
+      tags: [Progress]
+      operationId: listProgressMetrics
+      summary: List computed progress metrics
+      description: Aggregated, materialized metrics for charts and the
+        dashboard.
+      parameters:
+        - name: metric_type
+          in: query
+          schema: { $ref: '#/components/schemas/ProgressMetricType' }
+        - name: start_date
+          in: query
+          schema: { type: string, format: date }
+        - name: end_date
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Progress metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressMetricList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================================================
+  # NOTIFICATIONS (notifications app)
+  # ==========================================================================
+  /notifications/:
+    get:
+      tags: [Notifications]
+      operationId: listNotifications
+      summary: List the user's notifications
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotifications'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/read-all/:
+    post:
+      tags: [Notifications]
+      operationId: markAllNotificationsRead
+      summary: Mark all notifications as read
+      responses:
+        '204':
+          description: All marked read
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/{id}/read/:
+    post:
+      tags: [Notifications]
+      operationId: markNotificationRead
+      summary: Mark a notification as read
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      responses:
+        '204':
+          description: Marked read
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================================================
+  # SUBSCRIPTION (accounts app — modeled now, no billing UI in MVP)
+  # ==========================================================================
+  /subscription/plans/:
+    get:
+      tags: [Subscription]
+      operationId: listSubscriptionPlans
+      summary: List available subscription plans
+      responses:
+        '200':
+          description: Subscription plans
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionPlanList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /subscription/:
+    get:
+      tags: [Subscription]
+      operationId: getMySubscription
+      summary: Get the user's current subscription
+      responses:
+        '200':
+          description: Current subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token from /auth/login or /auth/refresh.
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+      description: Page number (1-based).
+    PageSize:
+      name: page_size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      description: Items per page (max 100).
+    GoalId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    ExerciseId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    PlanId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    SessionId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    SessionExerciseId:
+      name: sessionExerciseId
+      in: path
+      required: true
+      schema: { type: integer }
+    SetId:
+      name: setId
+      in: path
+      required: true
+      schema: { type: integer }
+    MeasurementId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    NotificationId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: The authenticated user lacks permission
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Resource already exists / conflicts
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # ------------------------------------------------------------------------
+    # Identifiers & timestamps
+    # ------------------------------------------------------------------------
+    Id:
+      type: integer
+      format: int64
+      description: Synthetic primary key (bigint), assigned by the backend.
+
+    # ------------------------------------------------------------------------
+    # Enums — canonical codes mirror T-05 data model §5
+    # ------------------------------------------------------------------------
+    Gender:
+      type: string
+      enum: [female, male, other, prefer_not_to_say]
+    FitnessLevel:
+      type: string
+      enum: [beginner, intermediate, advanced]
+    Difficulty:
+      type: string
+      enum: [beginner, intermediate, advanced]
+    TrainingExperience:
+      type: string
+      enum: [none, less_than_1y, '1_3y', '3_plus_y']
+    TrainingLocation:
+      type: string
+      enum: [gym, home, outdoor, mix]
+    PreferredTimeOfDay:
+      type: string
+      enum: [morning, afternoon, evening, any]
+    GoalType:
+      type: string
+      enum: [lose_weight, build_muscle, gain_strength, endurance, fitness, body_composition, general_health, maintain]
+    PlanObjective:
+      type: string
+      enum: [lose_weight, build_muscle, gain_strength, endurance, fitness, body_composition, general_health, maintain]
+    GoalStatus:
+      type: string
+      enum: [active, achieved, abandoned]
+    GoalTargetUnit:
+      type: string
+      enum: [kg, lb, cm, minutes, percentage, none]
+    EquipmentCategory:
+      type: string
+      enum: [free, barbell, dumbbell, machine, cable, kettlebell, band, cardio, bodyweight, other]
+    MuscleRegion:
+      type: string
+      enum: [chest, back, shoulders, arms, legs, core, full_body, other]
+    MuscleRole:
+      type: string
+      enum: [primary, secondary, antagonist]
+    MovementType:
+      type: string
+      enum: [compound, isolation]
+    ExercisePattern:
+      type: string
+      enum: [push, pull, squat, hinge, lunge, carry, core, cardio, static, none]
+    ExerciseMechanics:
+      type: string
+      enum: [barbell, dumbbell, machine, cable, bodyweight, kettlebell, band, other]
+    MediaType:
+      type: string
+      enum: [image, video]
+    MediaLicense:
+      type: string
+      enum: [cc0, cc_by, cc_by_sa, own, purchased, unspecified]
+    SubstitutionRationale:
+      type: string
+      enum: [same_muscle, same_pattern, same_equipment, easier, harder]
+    SetType:
+      type: string
+      enum: [warmup, working, drop, failure, dropset]
+    ProgressionRule:
+      type: string
+      enum: [double_progression, linear_increment, fixed, rir_based, clusters]
+    SessionStatus:
+      type: string
+      enum: [planned, in_progress, paused, completed, skipped]
+    SessionExerciseStatus:
+      type: string
+      enum: [pending, in_progress, completed, skipped]
+    MeasurementType:
+      type: string
+      enum: [weight, waist, chest, hips, arms, thighs, body_fat_percentage, other]
+    MeasurementUnit:
+      type: string
+      enum: [kg, lb, cm, inches, percent]
+    PRMetric:
+      type: string
+      enum: [max_weight, max_reps, estimated_1rm, best_time, max_volume]
+    ProgressMetricType:
+      type: string
+      enum: [weekly_volume, weekly_workouts, consistency_percent, streak_days, total_workouts, current_streak]
+    NotificationType:
+      type: string
+      enum: [workout_reminder, missed_workout, plan_completed, progress_milestone, consistency, system, subscription]
+    NotificationChannel:
+      type: string
+      enum: [in_app, push, email]
+    NotificationPriority:
+      type: string
+      enum: [normal, high]
+    SubscriptionPlanCode:
+      type: string
+      enum: [free, plus, pro]
+    SubscriptionStatus:
+      type: string
+      enum: [trialing, active, past_due, cancelled, expired]
+
+    # ------------------------------------------------------------------------
+    # Auth / tokens
+    # ------------------------------------------------------------------------
+    AccessToken:
+      type: string
+      description: Short-lived JWT (default 30 min) used in the Authorization header.
+    RefreshToken:
+      type: string
+      description: Longer-lived JWT (default 30 days); rotated on each refresh.
+    TokenResponse:
+      type: object
+      required: [access, refresh]
+      properties:
+        access: { $ref: '#/components/schemas/AccessToken' }
+        refresh: { $ref: '#/components/schemas/RefreshToken' }
+    TokenWithUserResponse:
+      allOf:
+        - $ref: '#/components/schemas/TokenResponse'
+        - type: object
+          required: [user]
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+    RegisterRequest:
+      type: object
+      required: [first_name, last_name, email, password, password_confirm, accept_terms]
+      properties:
+        first_name: { type: string, minLength: 1, maxLength: 150 }
+        last_name: { type: string, minLength: 1, maxLength: 150 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8, maxLength: 128, format: password }
+        password_confirm: { type: string, format: password }
+        accept_terms:
+          type: boolean
+          description: User accepted the Terms of Service. Must be true.
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    RefreshTokenRequest:
+      type: object
+      required: [refresh]
+      properties:
+        refresh: { $ref: '#/components/schemas/RefreshToken' }
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    ResetPasswordRequest:
+      type: object
+      required: [token, new_password, new_password_confirm]
+      properties:
+        token: { type: string }
+        new_password: { type: string, minLength: 8, format: password }
+        new_password_confirm: { type: string, format: password }
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password, new_password_confirm]
+      properties:
+        current_password: { type: string, format: password }
+        new_password: { type: string, minLength: 8, format: password }
+        new_password_confirm: { type: string, format: password }
+    User:
+      type: object
+      required: [id, email, first_name, last_name, is_onboarded]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        email: { type: string, format: email }
+        first_name: { type: string }
+        last_name: { type: string }
+        is_active: { type: boolean }
+        is_onboarded: { type: boolean, description: 'True when UserProfile.onboarding_completed_at is set.' }
+        date_joined: { type: string, format: date-time }
+
+    # ------------------------------------------------------------------------
+    # Profile
+    # ------------------------------------------------------------------------
+    UserProfile:
+      type: object
+      required: [id, user]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        user: { $ref: '#/components/schemas/User' }
+        date_of_birth: { type: string, format: date, nullable: true }
+        gender: { $ref: '#/components/schemas/Gender', nullable: true }
+        height_cm: { type: number, nullable: true, description: 'Decimal cm, 30–280.' }
+        current_weight_kg: { type: number, nullable: true, description: 'Snapshot at onboarding; ongoing values live in measurements.' }
+        fitness_level: { $ref: '#/components/schemas/FitnessLevel', nullable: true }
+        training_experience: { $ref: '#/components/schemas/TrainingExperience', nullable: true }
+        training_frequency_weekly: { type: integer, nullable: true, description: '0–7.' }
+        preferred_location: { $ref: '#/components/schemas/TrainingLocation', nullable: true }
+        onboarding_completed_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    UserProfileWrite:
+      type: object
+      properties:
+        date_of_birth: { type: string, format: date, nullable: true }
+        gender: { $ref: '#/components/schemas/Gender', nullable: true }
+        height_cm: { type: number, nullable: true }
+        current_weight_kg: { type: number, nullable: true }
+        fitness_level: { $ref: '#/components/schemas/FitnessLevel', nullable: true }
+        training_experience: { $ref: '#/components/schemas/TrainingExperience', nullable: true }
+        training_frequency_weekly: { type: integer, minimum: 0, maximum: 7, nullable: true }
+        preferred_location: { $ref: '#/components/schemas/TrainingLocation', nullable: true }
+    ProfileBundle:
+      type: object
+      required: [user, profile]
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+        profile: { $ref: '#/components/schemas/UserProfile' }
+        active_goal: { $ref: '#/components/schemas/Goal', nullable: true }
+        preferences: { $ref: '#/components/schemas/TrainingPreference', nullable: true }
+
+    # ------------------------------------------------------------------------
+    # Goals
+    # ------------------------------------------------------------------------
+    Goal:
+      type: object
+      required: [id, type, status, start_date]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        type: { $ref: '#/components/schemas/GoalType' }
+        title: { type: string, maxLength: 120, nullable: true }
+        target_value: { type: number, nullable: true }
+        target_unit: { $ref: '#/components/schemas/GoalTargetUnit', nullable: true }
+        start_date: { type: string, format: date }
+        target_date: { type: string, format: date, nullable: true }
+        status: { $ref: '#/components/schemas/GoalStatus' }
+        completed_at: { type: string, format: date-time, nullable: true }
+        selected_plan: { $ref: '#/components/schemas/PlanCard', nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    GoalWrite:
+      type: object
+      required: [type]
+      properties:
+        type: { $ref: '#/components/schemas/GoalType' }
+        title: { type: string, maxLength: 120 }
+        target_value: { type: number, exclusiveMinimum: 0 }
+        target_unit: { $ref: '#/components/schemas/GoalTargetUnit' }
+        start_date: { type: string, format: date }
+        target_date: { type: string, format: date }
+        status: { $ref: '#/components/schemas/GoalStatus' }
+    PaginatedGoals:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          required: [results]
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/Goal'
+
+    # ------------------------------------------------------------------------
+    # Training preferences
+    # ------------------------------------------------------------------------
+    TrainingPreference:
+      type: object
+      required: [id, user]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        user: { $ref: '#/components/schemas/Id' }
+        days_per_week: { type: integer, minimum: 0, maximum: 7, nullable: true }
+        session_duration_minutes: { type: integer, nullable: true }
+        preferred_time_of_day: { $ref: '#/components/schemas/PreferredTimeOfDay', nullable: true }
+        note: { type: string, maxLength: 500, nullable: true }
+        available_equipment: { type: array, items: { $ref: '#/components/schemas/EquipmentCard' } }
+        preferred_exercises: { type: array, items: { $ref: '#/components/schemas/ExerciseCard' } }
+        avoided_exercises: { type: array, items: { $ref: '#/components/schemas/ExerciseCard' } }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    TrainingPreferenceWrite:
+      type: object
+      properties:
+        days_per_week: { type: integer, minimum: 0, maximum: 7 }
+        session_duration_minutes: { type: integer }
+        preferred_time_of_day: { $ref: '#/components/schemas/PreferredTimeOfDay' }
+        note: { type: string, maxLength: 500 }
+        available_equipment: { type: array, items: { type: integer } }
+        preferred_exercises: { type: array, items: { type: integer } }
+        avoided_exercises: { type: array, items: { type: integer } }
+
+    # ------------------------------------------------------------------------
+    # Onboarding
+    # ------------------------------------------------------------------------
+    OnboardingState:
+      type: object
+      required: [completed]
+      properties:
+        completed: { type: boolean }
+        profile: { $ref: '#/components/schemas/UserProfile' }
+    OnboardingSubmit:
+      type: object
+      required:
+        - date_of_birth
+        - gender
+        - height_cm
+        - current_weight_kg
+        - primary_objective
+        - fitness_level
+        - days_per_week
+        - session_duration_minutes
+        - preferred_location
+      properties:
+        date_of_birth: { type: string, format: date }
+        gender: { $ref: '#/components/schemas/Gender' }
+        height_cm: { type: number }
+        current_weight_kg: { type: number }
+        primary_objective: { $ref: '#/components/schemas/GoalType' }
+        fitness_level: { $ref: '#/components/schemas/FitnessLevel' }
+        training_experience: { $ref: '#/components/schemas/TrainingExperience' }
+        days_per_week: { type: integer, minimum: 1, maximum: 7 }
+        session_duration_minutes: { type: integer }
+        preferred_time_of_day: { $ref: '#/components/schemas/PreferredTimeOfDay' }
+        preferred_location: { $ref: '#/components/schemas/TrainingLocation' }
+        available_equipment: { type: array, items: { type: integer } }
+        preferred_exercises: { type: array, items: { type: integer } }
+        avoided_exercises: { type: array, items: { type: integer } }
+    OnboardingResult:
+      type: object
+      required: [onboarding_completed, profile]
+      properties:
+        onboarding_completed: { type: boolean }
+        profile: { $ref: '#/components/schemas/UserProfile' }
+        active_goal: { $ref: '#/components/schemas/Goal', nullable: true }
+        recommended_plan: { $ref: '#/components/schemas/Plan', nullable: true }
+
+    # ------------------------------------------------------------------------
+    # Content: muscles & equipment
+    # ------------------------------------------------------------------------
+    MuscleGroup:
+      type: object
+      required: [id, name, slug, region]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        slug: { type: string }
+        region: { $ref: '#/components/schemas/MuscleRegion' }
+        parent: { $ref: '#/components/schemas/MuscleGroup', nullable: true }
+    MuscleGroupList:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MuscleGroup'
+    Equipment:
+      type: object
+      required: [id, name, slug, category]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        slug: { type: string }
+        category: { $ref: '#/components/schemas/EquipmentCategory' }
+        description: { type: string, nullable: true }
+        image_url: { type: string, format: uri, nullable: true }
+    EquipmentCard:
+      type: object
+      required: [id, name]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        category: { $ref: '#/components/schemas/EquipmentCategory' }
+        image_url: { type: string, format: uri, nullable: true }
+    EquipmentList:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Equipment'
+
+    # ------------------------------------------------------------------------
+    # Content: exercises, media, alternatives
+    # ------------------------------------------------------------------------
+    ExerciseCard:
+      type: object
+      required: [id, name, slug, difficulty, movement_type]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        slug: { type: string }
+        difficulty: { $ref: '#/components/schemas/Difficulty' }
+        movement_type: { $ref: '#/components/schemas/MovementType' }
+        primary_focus: { $ref: '#/components/schemas/MuscleGroup', nullable: true }
+        image_url: { type: string, format: uri, nullable: true }
+    ExerciseMuscle:
+      type: object
+      required: [muscle, role]
+      properties:
+        muscle: { $ref: '#/components/schemas/MuscleGroup' }
+        role: { $ref: '#/components/schemas/MuscleRole' }
+    Exercise:
+      type: object
+      required: [id, name, slug, difficulty, movement_type, pattern, mechanics]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        instructions: { type: string, nullable: true }
+        difficulty: { $ref: '#/components/schemas/Difficulty' }
+        movement_type: { $ref: '#/components/schemas/MovementType' }
+        pattern: { $ref: '#/components/schemas/ExercisePattern' }
+        mechanics: { $ref: '#/components/schemas/ExerciseMechanics' }
+        primary_focus: { $ref: '#/components/schemas/MuscleGroup', nullable: true }
+        muscles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExerciseMuscle'
+        equipment:
+          type: array
+          items:
+            $ref: '#/components/schemas/EquipmentCard'
+        rep_guidance: { type: string, nullable: true }
+        set_guidance: { type: string, nullable: true }
+        rest_guidance_seconds: { type: integer, nullable: true }
+        safety_notes: { type: string, nullable: true }
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExerciseMedia'
+        alternatives:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlternativeExercise'
+    ExerciseMedia:
+      type: object
+      required: [id, media_type, url]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        media_type: { $ref: '#/components/schemas/MediaType' }
+        url: { type: string, format: uri }
+        alt_text: { type: string, nullable: true }
+        is_primary: { type: boolean }
+        sort_order: { type: integer }
+    ExerciseList:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExerciseCard'
+    PaginatedExercises:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          required: [results]
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/ExerciseCard'
+    AlternativeExercise:
+      type: object
+      required: [exercise, rationale, priority]
+      properties:
+        exercise: { $ref: '#/components/schemas/ExerciseCard' }
+        rationale: { $ref: '#/components/schemas/SubstitutionRationale' }
+        priority: { type: integer, description: 'Lower = preferred suggestion.' }
+    AlternativeList:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlternativeExercise'
+
+    # ------------------------------------------------------------------------
+    # Plans (training app)
+    # ------------------------------------------------------------------------
+    PlanCard:
+      type: object
+      required: [id, name]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        slug: { type: string }
+    Plan:
+      type: object
+      required: [id, name, slug, objective, difficulty, days_per_week]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        objective: { $ref: '#/components/schemas/PlanObjective' }
+        difficulty: { $ref: '#/components/schemas/Difficulty' }
+        duration_weeks: { type: integer, nullable: true }
+        days_per_week: { type: integer, minimum: 1, maximum: 7 }
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanDay'
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PlanDay:
+      type: object
+      required: [id, day_number, workout]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        day_number: { type: integer, description: '1-based, unique within plan.' }
+        name: { type: string, nullable: true }
+        workout:
+          $ref: '#/components/schemas/Workout'
+    Workout:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        objective: { $ref: '#/components/schemas/PlanObjective', nullable: true }
+        difficulty: { $ref: '#/components/schemas/Difficulty', nullable: true }
+        estimated_duration_minutes: { type: integer, nullable: true }
+        notes: { type: string, nullable: true }
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkoutExercise'
+    WorkoutExercise:
+      type: object
+      required: [id, exercise, order, progression_rule]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        exercise: { $ref: '#/components/schemas/ExerciseCard' }
+        order: { type: integer }
+        notes: { type: string, nullable: true }
+        rest_after_seconds: { type: integer, nullable: true }
+        progression_rule: { $ref: '#/components/schemas/ProgressionRule' }
+        is_warmup: { type: boolean }
+        prescribed_sets:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrescribedSet'
+    PrescribedSet:
+      type: object
+      required: [id, set_number, set_type, rest_after_seconds]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        set_number: { type: integer, description: '1-based, unique within workout exercise.' }
+        set_type: { $ref: '#/components/schemas/SetType' }
+        target_reps: { type: integer, nullable: true, description: 'Null for timed sets.' }
+        target_weight_kg: { type: number, nullable: true, description: 'Null = bodyweight/unloaded.' }
+        target_duration_seconds: { type: integer, nullable: true }
+        rpe_target: { type: number, nullable: true, description: '1–10.' }
+        rest_after_seconds: { type: integer }
+    PlanList:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plan'
+    PaginatedPlans:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          required: [results]
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/Plan'
+    AssignPlanRequest:
+      type: object
+      required: [plan_id]
+      properties:
+        plan_id: { type: integer }
+
+    # ------------------------------------------------------------------------
+    # Sessions & sets (sessions app)
+    # ------------------------------------------------------------------------
+    StartSessionActionRequest:
+      type: object
+      properties:
+        workout_id: { type: integer, nullable: true }
+        plan_day_id: { type: integer, nullable: true }
+        scheduled_for: { type: string, format: date, nullable: true }
+    ScheduleSessionRequest:
+      type: object
+      properties:
+        scheduled_for: { type: string, format: date, nullable: true }
+    Session:
+      type: object
+      required: [id, status, scheduled_for, workout]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        workout: { $ref: '#/components/schemas/WorkoutCard' }
+        plan_day: { type: integer, nullable: true, description: 'Plan day id (source context).' }
+        scheduled_for: { type: string, format: date }
+        status: { $ref: '#/components/schemas/SessionStatus' }
+        started_at: { type: string, format: date-time, nullable: true }
+        completed_at: { type: string, format: date-time, nullable: true }
+        duration_seconds: { type: integer, nullable: true }
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionExercise'
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    WorkoutCard:
+      type: object
+      required: [id, name]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        slug: { type: string }
+        estimated_duration_minutes: { type: integer, nullable: true }
+    SessionExercise:
+      type: object
+      required: [id, exercise, status, order]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        exercise: { $ref: '#/components/schemas/ExerciseCard' }
+        status: { $ref: '#/components/schemas/SessionExerciseStatus' }
+        order: { type: integer }
+        substituted_from: { $ref: '#/components/schemas/ExerciseCard', nullable: true }
+        note: { type: string, nullable: true }
+        previous_performance:
+          $ref: '#/components/schemas/PreviousPerformance'
+        performed_sets:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionSet'
+    SessionSet:
+      type: object
+      required: [id, set_number, set_type, is_completed]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        set_number: { type: integer, description: '1-based, unique within session exercise.' }
+        set_type: { $ref: '#/components/schemas/SetType' }
+        weight_kg: { type: number, nullable: true, description: 'Null = bodyweight/unloaded.' }
+        reps: { type: integer, nullable: true, description: 'Null for timed sets.' }
+        duration_seconds: { type: integer, nullable: true }
+        rpe: { type: number, nullable: true, description: '1–10.' }
+        is_completed: { type: boolean }
+        note: { type: string, maxLength: 300, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    SessionSetCreate:
+      type: object
+      required: [set_type, is_completed]
+      properties:
+        set_type: { $ref: '#/components/schemas/SetType' }
+        weight_kg: { type: number, minimum: 0 }
+        reps: { type: integer, minimum: 1 }
+        duration_seconds: { type: integer, minimum: 1 }
+        rpe: { type: number, minimum: 1, maximum: 10 }
+        is_completed: { type: boolean }
+        note: { type: string, maxLength: 300 }
+    SessionSetUpdate:
+      type: object
+      properties:
+        set_type: { $ref: '#/components/schemas/SetType' }
+        weight_kg: { type: number, minimum: 0 }
+        reps: { type: integer, minimum: 1 }
+        duration_seconds: { type: integer, minimum: 1 }
+        rpe: { type: number, minimum: 1, maximum: 10 }
+        is_completed: { type: boolean }
+        note: { type: string, maxLength: 300 }
+    SessionSetList:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionSet'
+    CompleteSessionRequest:
+      type: object
+      properties:
+        note: { type: string, nullable: true }
+    SubstituteRequest:
+      type: object
+      required: [alternative_exercise_id]
+      properties:
+        alternative_exercise_id: { type: integer }
+    PaginatedSessions:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          required: [results]
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/Session'
+
+    # ------------------------------------------------------------------------
+    # Previous performance
+    # ------------------------------------------------------------------------
+    PerformedSetRecord:
+      type: object
+      properties:
+        set_number: { type: integer }
+        set_type: { $ref: '#/components/schemas/SetType' }
+        weight_kg: { type: number, nullable: true }
+        reps: { type: integer, nullable: true }
+        duration_seconds: { type: integer, nullable: true }
+    PreviousPerformance:
+      type: object
+      required: [has_previous]
+      properties:
+        has_previous: { type: boolean }
+        last_session_date: { type: string, format: date-time, nullable: true }
+        last_sets:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PerformedSetRecord'
+        best_weight_kg: { type: number, nullable: true }
+        estimated_1rm: { type: number, nullable: true, description: 'Epley estimate from best working set.' }
+
+    # ------------------------------------------------------------------------
+    # Progress (progress app)
+    # ------------------------------------------------------------------------
+    BodyMeasurement:
+      type: object
+      required: [id, measurement_type, value, unit, measured_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        measurement_type: { $ref: '#/components/schemas/MeasurementType' }
+        value: { type: number, exclusiveMinimum: 0 }
+        unit: { $ref: '#/components/schemas/MeasurementUnit' }
+        measured_at: { type: string, format: date-time }
+    BodyMeasurementWrite:
+      type: object
+      required: [measurement_type, value, unit]
+      properties:
+        measurement_type: { $ref: '#/components/schemas/MeasurementType' }
+        value: { type: number, exclusiveMinimum: 0 }
+        unit: { $ref: '#/components/schemas/MeasurementUnit' }
+        measured_at: { type: string, format: date-time, nullable: true }
+    PaginatedMeasurements:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          required: [results]
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/BodyMeasurement'
+    PersonalRecord:
+      type: object
+      required: [id, exercise, metric, value, achieved_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        exercise: { $ref: '#/components/schemas/ExerciseCard' }
+        metric: { $ref: '#/components/schemas/PRMetric' }
+        value: { type: number }
+        achieved_at: { type: string, format: date-time }
+    PersonalRecordList:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonalRecord'
+    ProgressMetric:
+      type: object
+      required: [id, metric_type, value, period_start, period_end, computed_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        metric_type: { $ref: '#/components/schemas/ProgressMetricType' }
+        value: { type: number }
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+        computed_at: { type: string, format: date-time }
+    ProgressMetricList:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProgressMetric'
+
+    # ------------------------------------------------------------------------
+    # Calendar & dashboard
+    # ------------------------------------------------------------------------
+    Calendar:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalendarEntry'
+    CalendarEntry:
+      type: object
+      required: [date, status]
+      properties:
+        date: { type: string, format: date }
+        status:
+          type: string
+          enum: [planned, completed, missed, rest_day, upcoming]
+        session_id: { type: integer, nullable: true }
+        workout: { $ref: '#/components/schemas/WorkoutCard', nullable: true }
+    Dashboard:
+      type: object
+      required: [today_workout, weekly_progress]
+      properties:
+        today_workout: { $ref: '#/components/schemas/WorkoutCard', nullable: true }
+        next_workout: { $ref: '#/components/schemas/WorkoutCard', nullable: true }
+        active_goal: { $ref: '#/components/schemas/Goal', nullable: true }
+        weekly_progress:
+          type: object
+          properties:
+            completed: { type: integer }
+            planned: { type: integer }
+            total_volume_kg: { type: number, nullable: true }
+            workouts: { type: array, items: { $ref: '#/components/schemas/WorkoutCard' } }
+        recent_activity:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string }
+              title: { type: string }
+              occurred_at: { type: string, format: date-time }
+              entity_id: { type: integer, nullable: true }
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProgressMetric'
+        streak_days: { type: integer }
+
+    # ------------------------------------------------------------------------
+    # Notifications (notifications app)
+    # ------------------------------------------------------------------------
+    Notification:
+      type: object
+      required: [id, type, title, body, priority, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        type: { $ref: '#/components/schemas/NotificationType' }
+        title: { type: string }
+        body: { type: string }
+        deep_link: { type: string, nullable: true }
+        priority: { $ref: '#/components/schemas/NotificationPriority' }
+        is_read: { type: boolean }
+        created_at: { type: string, format: date-time }
+    PaginatedNotifications:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          required: [results]
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/Notification'
+
+    # ------------------------------------------------------------------------
+    # Subscription (accounts app)
+    # ------------------------------------------------------------------------
+    SubscriptionPlan:
+      type: object
+      required: [code, name, price_monthly]
+      properties:
+        code: { $ref: '#/components/schemas/SubscriptionPlanCode' }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        price_monthly: { type: number }
+        price_yearly: { type: number, nullable: true }
+        features: { type: array, items: { type: string } }
+    SubscriptionPlanList:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionPlan'
+    Subscription:
+      type: object
+      required: [plan, status, starts_at]
+      properties:
+        plan: { $ref: '#/components/schemas/SubscriptionPlanCode' }
+        status: { $ref: '#/components/schemas/SubscriptionStatus' }
+        starts_at: { type: string, format: date }
+        ends_at: { type: string, format: date, nullable: true }
+        cancelled_at: { type: string, format: date-time, nullable: true }
+
+    # ------------------------------------------------------------------------
+    # Common
+    # ------------------------------------------------------------------------
+    Pagination:
+      type: object
+      properties:
+        count: { type: integer }
+        next: { type: string, format: uri, nullable: true }
+        previous: { type: string, format: uri, nullable: true }
+    DetailResponse:
+      type: object
+      properties:
+        detail: { type: string }
+    ErrorResponse:
+      type: object
+      required: [detail, code]
+      properties:
+        detail:
+          type: string
+          description: Human-readable summary of the error.
+        code:
+          type: string
+          description: Stable machine-readable error code.
+        field_errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+          description: Field-keyed validation errors (DRF-style).
