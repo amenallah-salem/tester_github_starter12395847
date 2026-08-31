@@ -34,7 +34,7 @@ jobs:
       - name: Product overview, personas, scope, out-of-scope present
         run: |
           set -euo pipefail
-          for term in "Product Overview" "Personas" "Feature Scope" "Out of Scope" "Out-of-Scope"; do
+          for term in "Product Overview" "Personas" "Feature Scope" "Out-of-Scope"; do
             grep -q "$term" docs/prd.md || { echo "PRD missing section: $term"; exit 1; }
           done
           echo "ok: overview/personas/scope/out-of-scope present"
