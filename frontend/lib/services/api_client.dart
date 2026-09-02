@@ -67,3 +67,8 @@ class ApiClient {
     if (r.statusCode >= 300) throw Exception('workout: ${r.statusCode} ${r.body}');
   }
 }
+
+  // Auth / billing
+  Future<Response> checkSubscription() async => _dio.get('/billing/subscription');
+  Future<Response> upgradeSubscription(String tier) async => _dio.post('/billing/upgrade', data: {'tier': tier});
+  Future<Response> loginUser(String email, String password) => login(email, password);

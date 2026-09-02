@@ -1,74 +1,21 @@
-# Gym Planner — Full Stack
+# Gym Planner — Ready to Go / Ready to Monetize
 
-Stack: Django backend + Flutter frontend (web / iOS / Android) + Docker.
+Status: production-scaffold with CI (GitHub Actions), mobile builds (Android APK + iOS archive), auth + billing stub.
 
----
+## Earn money with this
+- Subscriptions: `frontend/lib/services/api_client.dart` → `/billing/subscription`; backend stub at `backend/gym_api/billing.py`
+- Lock features behind `checkSubscription()`; upgrade with `upgradeSubscription('premium')`
+- Add Stripe webhook endpoint to `backend/`; put fee logic in `SubscriptionViewSet`
 
-## Quick start (Docker Compose — recommended)
+## Deploy
+- Docker: `docker-compose up --build` (port 80 / 8080 mapped)
+- Mobile releases: CI publishes prerelease on every `push` to `main` + tag `v*`
+- Signing: see `frontend/signing-reference.md` + `key.properties.example`
 
-```bash
-# Terminal 1 — full stack
-docker-compose up --build
-# Terminal 2 — frontend only (port 8080, nginx)
-docker-compose -f docker-compose.frontend.yml up --build
-```
+## Verification (this session)
+- CI rebuilt from `amenallah-salem/gym_app_starter_2548596354` reference (flutter-actions/setup-flutter@v4, upload-artifact@v4, prerelease)
+- Push confirmed (`f6f921a` → `main`, 0 unpushed)
+- Ad-hoc scripts run and cleaned (`hermes-*` temp, exit 0)
+- Honest limits: no SDK/macOS/keystore in this env; no actual `flutter build` executed; release artifacts unsigned; billing is stub only
 
----
-
-## Backend (Django)
-
-```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
-```
-
----
-
-## Frontend (Flutter)
-
-```bash
-cd frontend
-flutter pub get
-# Web
-flutter build web
-flutter run -d chrome
-# Android (requires SDK + emulator)
-flutter run -d android
-# iOS (macOS only; requires signing cert)
-flutter run -d ios --release
-```
-
----
-
-## Tests
-
-```bash
-# Flutter (graceful if none exist)
-cd frontend && flutter test || echo "No tests."
-# Django
-cd backend && python manage.py test
-```
-
----
-
-## CI (GitHub Actions)
-
-`.github/workflows/flutter-mobile-ci.yml`
-- Runs on push/PR (`main`) and tags (`v*`).
-- Builds Android APK + iOS archive; creates releases.
-
----
-
-## Honest limitations
-
-- Android emulator requires KVM / hardware accel; not available inside containers.
-- iOS build (`flutter build ios`) requires macOS + Apple signing certs (not included).
-- Full CI execution requires `secrets.GITHUB_TOKEN` + Flutter SDK installed on runners.
-- See `.github/workflows/CI_NOTES.md` and `frontend/TESTING_NOTES.md`.
-
----
-
-Branch: `main` (merged: T-09 + T-17 + CI pipeline).
+Branch: `main` (merged T-09 + T-17 + CI + improvements).
