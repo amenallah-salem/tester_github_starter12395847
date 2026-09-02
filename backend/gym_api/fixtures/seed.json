@@ -1,0 +1,8 @@
+[
+  {"model": "auth.user", "pk": 1, "fields": {"username": "testuser", "email": "test@aigym.local", "password": "pbkdf2_sha256$600000$dummy$dummy", "first_name": "Test", "last_name": "User", "is_active": true, "is_staff": false, "is_superuser": false, "date_joined": "2025-01-01T00:00:00Z"}},
+  {"model": "gym_api.plan", "pk": 1, "fields": {"name": "Beginner Push", "level": "beginner", "description": "Intro upper body.", "weeks": 4}},
+  {"model": "gym_api.plan", "pk": 2, "fields": {"name": "Intermediate Full Body", "level": "intermediate", "description": "Balanced weekly split.", "weeks": 6}},
+  {"model": "gym_api.exercise", "pk": 1, "fields": {"name": "Bench Press", "muscle_group": "Chest", "equipment": "Barbell", "description": "Horizontal push."}},
+  {"model": "gym_api.exercise", "pk": 2, "fields": {"name": "Overhead Press", "muscle_group": "Shoulders", "equipment": "Barbell", "description": "Vertical push."}},
+  {"model": "gym_api.profile", "pk": 1, "fields": {"user": 1, "height_cm": 175.0, "weight_kg": 75.0, "goal": "Build muscle", "created_at": "2025-01-02T00:00:00Z"}}
+]

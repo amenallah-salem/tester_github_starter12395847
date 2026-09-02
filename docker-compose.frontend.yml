@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gym-planner-web
+    ports:
+      - "8080:80"
+    environment:
+      - FLUTTER_WEB_RENDERER=html
+    # Note: real Android emulator requires KVM / hardware accel; not provided here.
