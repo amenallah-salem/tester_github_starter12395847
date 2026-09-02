@@ -8,166 +8,107 @@ on:
     branches: [main]
 
 env:
-  FLUTTER_VERSION: 3.24.0
-  SEMVER_TAG: ${{ github.ref_name }}
+  FLUTTER_VERSION: 3.24.5
 
 jobs:
-  test:
+  analyze-test:
+    name: Analyze & test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v5
+      - uses: flutter-actions/setup-flutter@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          version: "3.24.5"
       - name: Install dependencies
         run: flutter pub get
         working-directory: frontend
-      - name: Run unit tests (if exist)
-        run: |
-          cd frontend
-          flutter test || echo "No tests found — continuing."
       - name: Analyze
         run: flutter analyze
         working-directory: frontend
+      - name: Test (fail if tests exist and break; no masking)
+        run: flutter test
+        working-directory: frontend
 
-  build-android:
-    needs: test
+  build-android-release:
+    name: Build Android release APK
+    needs: analyze-test
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'push'
-    outputs:
-      version: ${{ steps.version.outputs.semver }}
-      build_number: ${{ steps.version.outputs.build_number }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-      - name: Install / setup
-        run: flutter pub get
+          distribution: temurin
+          java-version: "17"
+      - uses: flutter-actions/setup-flutter@v4
+        with:
+          channel: stable
+          version: "3.24.5"
+      - run: flutter pub get
         working-directory: frontend
-      - name: Set Android version from tag
-        id: version
-        run: |
-          # Derive semantic version: vMAJOR.MINOR.PATCH from git tag or default 0.0.1
-          TAG="${{ github.ref_name }}"
-          if echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            SEMVER="${TAG#v}"
-            MAJOR=$(echo $SEMVER | cut -d. -f1)
-            MINOR=$(echo $SEMVER | cut -d. -f2)
-            PATCH=$(echo $SEMVER | cut -d. -f3)
-          else
-            SEMVER="0.0.1"
-            MAJOR=0; MINOR=0; PATCH=1
-          fi
-          # Build number derived from git rev count for incremental builds
-          BUILD=$(git rev-list --count HEAD)
-          echo "semver=$SEMVER" >> $GITHUB_OUTPUT
-          echo "build_number=$BUILD" >> $GITHUB_OUTPUT
-          echo "MAJOR=$MAJOR MINOR=$MINOR PATCH=$PATCH BUILD=$BUILD"
-      - name: Configure Android version
-        run: |
-          # Update pubspec.yaml with version using Python (avoids extra deps)
-          python3 - <<'PY'
-          import re, pathlib
-          p = pathlib.Path('frontend/pubspec.yaml')
-          t = p.read_text()
-          new = "${{ steps.version.outputs.semver }}+${{ steps.version.outputs.build_number }}"
-          t2 = re.sub(r'(?m)^version:\s*.*$', f'version: {new}', t)
-          p.write_text(t2)
-          print('pubspec.yaml version ->', new)
-          PY
-          echo "versionName=${{ steps.version.outputs.semver }}" >> $GITHUB_ENV
-          echo "versionCode=${{ steps.version.outputs.build_number }}" >> $GITHUB_ENV
-      - name: Build APK release
-        run: |
-          flutter build apk --release             --build-number=${{ steps.version.outputs.build_number }}             --dart-define=SEMVER=${{ steps.version.outputs.semver }}
-          ls build/app/outputs/flutter-apk/app-release.apk
+      - name: Build release APK
+        run: flutter build apk --release
         working-directory: frontend
-      - name: Upload APK to release assets
+      - name: Upload Android release APK
         uses: actions/upload-artifact@v4
         with:
-          name: android-release-v${{ steps.version.outputs.semver }}-b${{ steps.version.outputs.build_number }}
+          name: android-release-apk-v${{ github.run_id }}
           path: frontend/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 90
-        if: startsWith(github.ref, 'refs/tags/v')
+          retention-days: 30
 
-  build-ios:
-    needs: test
+  build-ios-release:
+    name: Build iOS release archive
+    needs: analyze-test
     runs-on: macos-latest
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v5
+      - uses: flutter-actions/setup-flutter@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-      - name: Install / setup
-        run: flutter pub get
+          channel: stable
+          version: "3.24.5"
+      - run: flutter pub get
         working-directory: frontend
-      - name: Derive iOS version from tag
-        id: version
-        run: |
-          TAG="${{ github.ref_name }}"
-          if echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            SEMVER="${TAG#v}"
-          else
-            SEMVER="0.0.1"
-          fi
-          BUILD=$(git rev-list --count HEAD)
-          echo "semver=$SEMVER" >> $GITHUB_OUTPUT
-          echo "build_number=$BUILD" >> $GITHUB_OUTPUT
-      - name: Configure iOS version
-        run: |
-          # Update pubspec.yaml version using Python
-          python3 - <<'PY'
-          import re, pathlib
-          pub = pathlib.Path('frontend/pubspec.yaml')
-          t = pub.read_text()
-          new = "${{ steps.version.outputs.semver }}+${{ steps.version.outputs.build_number }}"
-          pub.write_text(re.sub(r'(?m)^version:\s*.*$', f'version: {new}', t))
-          print('pubspec version ->', new)
-          PY
-          # Update Info.plist marketing version and build number (if file exists)
-          if [ -f frontend/ios/Runner/Info.plist ]; then
-            plutil -replace CFBundleShortVersionString -string "${{ steps.version.outputs.semver }}" frontend/ios/Runner/Info.plist
-            plutil -replace CFBundleVersion -string "${{ steps.version.outputs.build_number }}" frontend/ios/Runner/Info.plist
-            echo "Info.plist updated"
-          else
-            echo "No Info.plist found — skipping iOS plist update"
-          fi
-      - name: Install pods
-        run: |
-          cd frontend/ios
-          pod install || echo "No Podfile — skip"
-      - name: Build iOS archive
-        run: |
-          flutter build ios --release --no-codesign             --build-number=${{ steps.version.outputs.build_number }}
+      - name: Build iOS release (no codesign for CI)
+        run: flutter build ios --release --no-codesign
         working-directory: frontend
       - name: Upload iOS archive
         uses: actions/upload-artifact@v4
         with:
-          name: ios-release-v${{ steps.version.outputs.semver }}-b${{ steps.version.outputs.build_number }}
-          path: frontend/build/ios/ipa/*.ipa
-          retention-days: 90
-        if: startsWith(github.ref, 'refs/tags/v')
+          name: ios-release-app-v${{ github.run_id }}
+          path: frontend/build/ios/iphoneos/Runner.app
+          retention-days: 30
+          if-no-files-found: warn
 
-  tag-release:
-    needs: [build-android, build-ios]
+  publish-release:
+    name: Publish release artifacts
+    needs: [build-android-release, build-ios-release]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          body: |
-            Automated release for ${{ github.ref_name }}.
-            - Android APK: version ${{ needs.build-android.outputs.version }} (build ${{ needs.build-android.outputs.build_number }})
-            - iOS archive: version ${{ needs.build-ios.outputs.version }} (build ${{ needs.build-ios.outputs.build_number }})
-          draft: false
-          prerelease: false
-          files: |
-            frontend/build/app/outputs/flutter-apk/app-release.apk
-            frontend/build/ios/ipa/*.ipa
+          name: android-release-apk-v${{ github.run_id }}
+          path: artifacts/android
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-release-app-v${{ github.run_id }}
+          path: artifacts/ios
+      - name: Zip iOS archive for release
+        run: |
+          mkdir -p artifacts/ios
+          if [ -d artifacts/ios/Runner.app ]; then
+            cd artifacts/ios && zip -r ios-release.app.zip Runner.app || echo "iOS zip skipped"
+          else
+            echo "No Runner.app found — iOS artifact missing or empty."
+          fi
+      - name: Create prerelease (tags) or release (push)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if echo "${{ github.ref }}" | grep -q "refs/tags/v"; then
+            gh release create "${{ github.ref_name }}"               --repo "${{ github.repository }}"               --title "Release ${{ github.ref_name }}"               --prerelease --generate-notes               artifacts/android/app-release.apk               artifacts/ios/ios-release.app.zip || echo "Release already exists or skipped."
+          else
+            gh release create "build-${{ github.run_number }}-${{ github.sha }}"               --repo "${{ github.repository }}"               --title "Build ${{ github.run_number }} (push to main)"               --notes "Automated build from ${{ github.sha }} (run ${{ github.run_number }})."               --prerelease               artifacts/android/app-release.apk               artifacts/ios/ios-release.app.zip || echo "Prerelease creation skipped or already exists."
+          fi
