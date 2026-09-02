@@ -1,3 +1,4 @@
+# billing.py — subscription / Stripe stub for gym_api
 # Billing / subscription stub — integrate Stripe/PayPal for real monetization
 from rest_framework import serializers, viewsets
 class SubscriptionSerializer(serializers.ModelSerializer):
