@@ -18,7 +18,7 @@ class GymPlannerApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<ApiClient>(
-          create: (_) => ApiClient(baseUrl: 'http://localhost:8080'),
+          create: (_) => ApiClient(),
         ),
       ],
       child: MaterialApp(
@@ -42,10 +42,10 @@ class GymPlannerApp extends StatelessWidget {
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  State<MainNavigation> createState() => MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class MainNavigationState extends State<MainNavigation> {
   int _index = 0;
   final _pages = [
     const OnboardingPage(),
