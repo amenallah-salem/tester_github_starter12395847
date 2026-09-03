@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tes2.app/schemas/plan_contract.v1.json",
+  "title": "TES2 Workout Plan Contract",
+  "description": "Structured workout plan returned by the AI coach (OpenRouter) and consumed by the Flutter app. Schema version 1.0.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "planId",
+    "generatedAt",
+    "model",
+    "profile",
+    "summary",
+    "weeklySplit",
+    "days",
+    "progression",
+    "safetyNotes",
+    "disclaimer"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Contract version. Bump when the shape changes so the app can gate unsupported plans."
+    },
+    "planId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Stable id for this generated plan (used as cache key)."
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp."
+    },
+    "model": {
+      "type": "string",
+      "description": "OpenRouter model id used to generate the plan, e.g. 'openai/gpt-4o-mini'."
+    },
+    "profile": {
+      "type": "object",
+      "description": "Echo of the onboarding inputs that produced this plan.",
+      "required": [
+        "goal",
+        "experience",
+        "daysPerWeek",
+        "sessionMinutes",
+        "equipment",
+        "focusAreas"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "goal": {
+          "type": "string",
+          "enum": ["hypertrophy", "strength", "fatloss", "endurance", "general"]
+        },
+        "experience": {
+          "type": "string",
+          "enum": ["beginner", "intermediate", "advanced"]
+        },
+        "daysPerWeek": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7
+        },
+        "sessionMinutes": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 240
+        },
+        "equipment": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["barbell", "dumbbell", "kettlebell", "machine", "cable", "bodyweight", "resistance_band"]
+          }
+        },
+        "focusAreas": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["chest", "back", "legs", "shoulders", "arms", "core", "full_body", "cardio"]
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Free-text injuries/limitations, e.g. ['knee','lower_back']."
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "description": "Free-text onboarding notes."
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 280,
+      "description": "One or two sentence human-readable overview of the plan."
+    },
+    "weeklySplit": {
+      "type": "string",
+      "enum": ["full_body", "upper_lower", "push_pull_legs", "body_part_split", "custom"],
+      "description": "How training days are organized across the week."
+    },
+    "days": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 14,
+      "items": { "$ref": "#/$defs/day" }
+    },
+    "progression": {
+      "type": "string",
+      "description": "How the trainee should progress load/volume over time."
+    },
+    "safetyNotes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "General safety cues for the whole plan."
+    },
+    "disclaimer": {
+      "type": "string",
+      "description": "Must always be present and include a 'not medical advice' statement."
+    }
+  },
+  "$defs": {
+    "day": {
+      "type": "object",
+      "required": ["dayIndex", "dayLabel", "focus", "blocks", "estimatedMinutes"],
+      "additionalProperties": false,
+      "properties": {
+        "dayIndex": { "type": "integer", "minimum": 1 },
+        "dayLabel": {
+          "type": "string",
+          "maxLength": 12,
+          "description": "Display label, e.g. 'Mon', 'Day A', 'Push'."
+        },
+        "focus": {
+          "type": "string",
+          "description": "Short focus label, e.g. 'Push', 'Upper', 'Legs'."
+        },
+        "warmup": { "type": ["string", "null"] },
+        "cooldown": { "type": ["string", "null"] },
+        "blocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/block" }
+        },
+        "estimatedMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "required": ["blockType", "exercises"],
+      "additionalProperties": false,
+      "properties": {
+        "blockType": {
+          "type": "string",
+          "enum": ["straight", "superset", "circuit", "amrap", "rest"]
+        },
+        "rounds": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Rounds for superset/circuit/amrap. Null for straight sets."
+        },
+        "exercises": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/exercise" }
+        }
+      }
+    },
+    "exercise": {
+      "type": "object",
+      "required": ["exerciseId", "name", "equipment", "muscleGroups", "sets", "reps", "restSec"],
+      "additionalProperties": false,
+      "properties": {
+        "exerciseId": {
+          "type": "string",
+          "description": "Stable slug referencing the exercise library, e.g. 'barbell_bench_press'."
+        },
+        "name": { "type": "string" },
+        "equipment": {
+          "type": "string",
+          "enum": ["barbell", "dumbbell", "kettlebell", "machine", "cable", "bodyweight", "resistance_band"]
+        },
+        "muscleGroups": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["chest", "back", "legs", "shoulders", "arms", "core", "cardio"]
+          }
+        },
+        "sets": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "reps": {
+          "type": "string",
+          "description": "Rep scheme as string: '8-10', '12', '15+', 'to failure'."
+        },
+        "weight": {
+          "type": ["string", "null"],
+          "description": "Weight guidance: 'RPE 7', 'bodyweight', 'warmup', or null if unspecified."
+        },
+        "restSec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1200,
+          "description": "Rest after the set/round, in seconds."
+        },
+        "tempo": {
+          "type": ["string", "null"],
+          "description": "Optional 4-phase tempo 'ecc-pause-con-pause', e.g. '2-0-1-0'."
+        },
+        "notes": { "type": ["string", "null"] },
+        "substitutes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Alternative exerciseId slugs if equipment/limitation requires swap."
+        }
+      }
+    }
+  }
+}
