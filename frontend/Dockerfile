@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM ubuntu:24.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     curl git unzip xz-utils zip libglu1-mesa openjdk-17-jdk wget \
@@ -33,8 +33,6 @@ RUN flutter pub get
 COPY . .
 RUN flutter build web --release
 
-# Serve with nginx for web testing
-RUN apt-get update && apt-get install -y nginx && rm -rf /var/lib/apt/lists/*
-COPY --from=0 /app/build/web /var/www/html
+FROM nginx:alpine
+COPY --from=builder /app/build/web /usr/share/nginx/html
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
