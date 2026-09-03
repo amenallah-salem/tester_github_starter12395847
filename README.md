@@ -1,4 +1,6 @@
 # Gym Planner — Ready to Go / Ready to Monetize
+- Backend: docker compose up --build -d
+- Frontend: docker compose -f docker-compose.frontend.yml up --build -d
 
 Status: production-scaffold with CI (GitHub Actions), mobile builds (Android APK + iOS archive), auth + billing stub.
 
