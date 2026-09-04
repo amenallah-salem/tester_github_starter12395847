@@ -116,6 +116,32 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    @action(detail=True, methods=['post'], url_path='log-metric')
+    def log_metric(self, request, pk=None):
+        session = self.get_object()
+        exercise_name = str(request.data.get('exercise_name', '')).strip()
+        if not exercise_name:
+            return Response({'exercise_name': 'This field is required.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        exercise, _ = Exercise.objects.get_or_create(
+            user=request.user,
+            name=exercise_name,
+            plan=session.plan,
+            defaults={'description': 'Logged from a completed workout.'},
+        )
+        payload = {
+            'session': session.id,
+            'exercise': exercise.id,
+            'set_number': request.data.get('set_number', 1),
+            'reps': request.data.get('reps', 0),
+            'weight_kg': request.data.get('weight_kg'),
+            'duration_seconds': request.data.get('duration_seconds'),
+        }
+        serializer = ProgressMetricSerializer(data=payload, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
 class ProgressMetricViewSet(viewsets.ModelViewSet):
     """ViewSet for progress metrics."""

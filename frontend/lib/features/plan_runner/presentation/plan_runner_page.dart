@@ -38,6 +38,8 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   Timer? _timer;
   String _coach = '';
   bool _finished = false;
+  final List<Map<String, Object?>> _loggedSets = [];
+  final _weightController = TextEditingController();
 
   PlanExercise get _ex => _exercises[_exIndex];
 
@@ -63,6 +65,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _weightController.dispose();
     super.dispose();
   }
 
@@ -143,6 +146,14 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
 
   void _doneSet() {
     if (_finished) return;
+    final completedSet = _setIndex + 1;
+    final weight = double.tryParse(_weightController.text.trim());
+    _loggedSets.add({
+      'exercise': _ex.name,
+      'set': completedSet,
+      'reps': _repsAdj,
+      'weight': weight,
+    });
     if (_phase == _Phase.work) {
       _enterRest();
     } else {
@@ -195,9 +206,26 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
           minutes: plan.profile.sessionMinutes,
           exerciseNames: _exercises.map((e) => e.name).toList(),
         ));
-    unawaited(
-      ApiClient.I.createWorkout(notes: 'Completed in the workout runner.'),
+    unawaited(_persistWorkout());
+    ref.invalidate(progressMetricsProvider);
+  }
+
+  Future<void> _persistWorkout() async {
+    if (ApiClient.I.accessToken == null) return;
+    final session = await ApiClient.I.createWorkout(
+      notes: 'Completed in the workout runner.',
     );
+    final sessionId = session['id']?.toString();
+    if (sessionId == null) return;
+    for (final set in _loggedSets) {
+      await ApiClient.I.logWorkoutMetric(
+        sessionId: sessionId,
+        exerciseName: set['exercise']! as String,
+        setNumber: set['set']! as int,
+        reps: set['reps']! as int,
+        weightKg: set['weight'] as double?,
+      );
+    }
   }
 
   int get _totalSets => _exercises.fold(0, (sum, e) => sum + e.sets);
@@ -316,6 +344,17 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
               'Logged reps: $_repsAdj / ${_ex.reps}',
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppTheme.mut),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _weightController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Weight (kg)',
+                hintText: 'Optional',
+                prefixIcon: Icon(Icons.fitness_center_outlined),
+              ),
             ),
             const SizedBox(height: 10),
             FilledButton.icon(

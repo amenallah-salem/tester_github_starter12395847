@@ -10,6 +10,7 @@ import 'package:gym_app/core/widgets/common.dart';
 import 'package:gym_app/features/progress/presentation/progress_charts.dart';
 import 'package:gym_app/features/progress/domain/workout_session.dart';
 import 'package:gym_app/features/progress/state/workout_sessions.dart';
+import 'package:gym_app/models/progress_metric.dart';
 
 /// History & progress (Progress tab). Renders first-run empty, loading
 /// shimmer, and the populated stats view (TES-6 §3.5 and §4).
@@ -48,6 +49,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
   Widget build(BuildContext context) {
     final strings = ref.watch(coachingStringsProvider);
     final sessions = ref.watch(workoutSessionsProvider);
+    final metrics = ref.watch(progressMetricsProvider).value ?? const [];
     final visible = _visible(sessions);
 
     return mobileWrap(
@@ -163,6 +165,15 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                     onSelectionChanged: (s) => setState(() => _range = s.first),
                   ),
                   const SizedBox(height: 12),
+                  if (metrics.isNotEmpty) ...[
+                   const Text(
+                     'Lift progress',
+                     style: TextStyle(fontWeight: FontWeight.w700),
+                   ),
+                   const SizedBox(height: 8),
+                   _LiftProgressCard(metrics: metrics),
+                   const SizedBox(height: 12),
+                  ],
                   const Text(
                     'Weekly rhythm',
                     style: TextStyle(fontWeight: FontWeight.w700),
@@ -258,6 +269,55 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
   static String _fmtDate(DateTime d) => '${_wd(d.weekday)} ${d.day}/${d.month}';
   static String _wd(int d) =>
       const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1];
+}
+
+class _LiftProgressCard extends StatelessWidget {
+  const _LiftProgressCard({required this.metrics});
+  final List<ProgressMetric> metrics;
+  @override
+  Widget build(BuildContext context) {
+    final grouped = <String, List<ProgressMetric>>{};
+    for (final metric in metrics) {
+      grouped.putIfAbsent(metric.exerciseName ?? 'Exercise', () => []).add(metric);
+    }
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            for (final entry in grouped.entries.take(4))
+              _LiftRow(name: entry.key, metrics: entry.value),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LiftRow extends StatelessWidget {
+  const _LiftRow({required this.name, required this.metrics});
+  final String name;
+  final List<ProgressMetric> metrics;
+  @override
+  Widget build(BuildContext context) {
+    final weighted = metrics.where((metric) => metric.weightKg != null).toList();
+    final latest = weighted.isEmpty ? null : weighted.last.weightKg!;
+    final previous = weighted.length < 2 ? null : weighted[weighted.length - 2].weightKg;
+    final delta = latest != null && previous != null ? latest - previous : null;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+      subtitle: Text(latest == null
+          ? 'Bodyweight · ${metrics.last.reps} reps'
+          : '${latest.toStringAsFixed(1)} kg · ${metrics.last.reps} reps'),
+      trailing: delta == null
+          ? const Icon(Icons.trending_flat, color: AppTheme.mut)
+          : Text('${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(1)} kg',
+              style: TextStyle(
+                  color: delta >= 0 ? AppTheme.primary : AppTheme.secondary,
+                  fontWeight: FontWeight.w700)),
+    );
+  }
 }
 
 class _SummaryCard extends StatelessWidget {

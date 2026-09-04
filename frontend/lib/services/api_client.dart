@@ -157,8 +157,8 @@ class ApiClient {
         .toList();
   }
 
-  Future<void> createWorkout({required String notes}) async {
-    await _send(
+  Future<Map<String, dynamic>> createWorkout({required String notes}) async {
+    final response = await _send(
       () => http.post(
         _uri('/sessions/'),
         headers: _headers(json: true),
@@ -166,6 +166,30 @@ class ApiClient {
       ),
       method: 'POST',
       path: '/sessions/',
+    );
+    return _jsonObject(response, 'workout creation');
+  }
+
+  Future<void> logWorkoutMetric({
+    required String sessionId,
+    required String exerciseName,
+    required int setNumber,
+    required int reps,
+    double? weightKg,
+  }) async {
+    await _send(
+      () => http.post(
+        _uri('/sessions/$sessionId/log-metric/'),
+        headers: _headers(json: true),
+        body: jsonEncode({
+          'exercise_name': exerciseName,
+          'set_number': setNumber,
+          'reps': reps,
+          'weight_kg': weightKg,
+        }),
+      ),
+      method: 'POST',
+      path: '/sessions/$sessionId/log-metric/',
     );
   }
 

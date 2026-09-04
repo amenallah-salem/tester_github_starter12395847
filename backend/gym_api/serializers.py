@@ -99,11 +99,13 @@ class PlanListSerializer(serializers.ModelSerializer):
 
 
 class ProgressMetricSerializer(serializers.ModelSerializer):
+    exercise_name = serializers.CharField(source='exercise.name', read_only=True)
+
     class Meta:
         model = ProgressMetric
         fields = [
             'id', 'session', 'exercise', 'set_number',
-            'reps', 'weight_kg', 'duration_seconds', 'logged_at',
+            'reps', 'weight_kg', 'duration_seconds', 'logged_at', 'exercise_name',
         ]
         read_only_fields = ['id', 'logged_at']
 
