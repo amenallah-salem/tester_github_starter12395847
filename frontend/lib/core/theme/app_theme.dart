@@ -94,15 +94,15 @@ class AppTheme {
       centerTitle: true,
       surfaceTintColor: Colors.transparent,
     ),
-    cardTheme: CardThemeData(
-      color: surface,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(radiusLg),
-        side: const BorderSide(color: outlineVariant),
-      ),
-    ),
+    cardTheme: ThemeData.light().cardTheme.copyWith(
+          color: surface,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusLg),
+            side: const BorderSide(color: outlineVariant),
+          ),
+        ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: surface,
       selectedItemColor: primary,
@@ -204,15 +204,15 @@ class AppTheme {
       centerTitle: true,
       surfaceTintColor: Colors.transparent,
     ),
-    cardTheme: CardThemeData(
-      color: const Color(0xFF1A231B),
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(radiusLg),
-        side: const BorderSide(color: Color(0xFF3D4A41)),
-      ),
-    ),
+    cardTheme: ThemeData.dark().cardTheme.copyWith(
+          color: const Color(0xFF1A231B),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusLg),
+            side: const BorderSide(color: Color(0xFF3D4A41)),
+          ),
+        ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: Color(0xFF1A231B),
       selectedItemColor: primaryContainer,
