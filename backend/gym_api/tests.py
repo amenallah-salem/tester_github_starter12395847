@@ -98,3 +98,14 @@ class APITests(APITestCase):
         self.client.force_authenticate(user=None)
         resp = self.client.get('/api/plans/')
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_registration_returns_field_specific_validation_errors(self):
+        resp = self.client.post('/api/auth/register/', {
+            'username': 'apiuser',
+            'email': 'not-an-email',
+            'password': '123',
+        })
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', resp.data)
+        self.assertIn('email', resp.data)
+        self.assertIn('password', resp.data)

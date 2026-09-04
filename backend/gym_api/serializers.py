@@ -2,17 +2,23 @@
 REST serializers for the Gym Planner API.
 """
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
+    email = serializers.EmailField(required=False, allow_blank=True)
     class Meta:
         model = User
         fields = ['username', 'email', 'password', 'first_name', 'last_name']
     def create(self, validated):
         return User.objects.create_user(**validated)
+
+    def validate_password(self, password):
+        validate_password(password)
+        return password
 
 class UserSerializer(serializers.ModelSerializer):
     """Lightweight User serializer for nested representations."""

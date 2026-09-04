@@ -20,6 +20,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   bool _busy = false;
   bool _registering = false;
   String? _error;
+  Map<String, List<String>> _fieldErrors = const {};
 
   @override
   void dispose() {
@@ -37,6 +38,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     setState(() {
       _busy = true;
       _error = null;
+      _fieldErrors = const {};
     });
     try {
       final result = _registering
@@ -65,8 +67,19 @@ class _SignInPageState extends ConsumerState<SignInPage> {
         username: ref.read(currentUsernameProvider) ?? _username.text.trim(),
       );
       if (mounted) context.go('/');
-    } catch (e) {
-      setState(() => _error = e.toString());
+    } catch (error) {
+      if (!mounted) return;
+      if (error is ApiException) {
+        setState(() {
+          _error = error.fieldErrors.isEmpty ? error.message : null;
+          _fieldErrors = error.fieldErrors;
+        });
+      } else {
+        setState(() {
+          _error = 'Unable to complete the request: $error';
+          _fieldErrors = const {};
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -78,29 +91,34 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Scaffold(
-          appBar:
-              AppBar(title: Text(_registering ? 'Create account' : 'Sign in')),
+          appBar: AppBar(
+            title: Text(_registering ? 'Create account' : 'Sign in'),
+          ),
           body: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Welcome',
-                    style:
-                        TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Welcome',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 32),
                 TextField(
                   controller: _username,
                   decoration: const InputDecoration(
-                      labelText: 'Username', border: OutlineInputBorder()),
+                    labelText: 'Username',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 if (_registering)
                   TextField(
                     controller: _email,
                     decoration: const InputDecoration(
-                        labelText: 'Email (optional)',
-                        border: OutlineInputBorder()),
+                      labelText: 'Email (optional)',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 if (_registering) const SizedBox(height: 16),
                 const SizedBox(height: 16),
@@ -108,12 +126,31 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   controller: _password,
                   obscureText: true,
                   decoration: const InputDecoration(
-                      labelText: 'Password', border: OutlineInputBorder()),
+                    labelText: 'Password',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-                if (_error != null) ...[
+                if (_error != null || _fieldErrors.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  Text(_error!,
-                      style: const TextStyle(color: Colors.redAccent)),
+                  if (_error != null)
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.redAccent),
+                    ),
+                  ..._fieldErrors.entries.expand(
+                    (entry) => entry.value.map(
+                      (message) => Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '${entry.key}: $message',
+                            style: const TextStyle(color: Colors.redAccent),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 24),
                 SizedBox(
@@ -130,9 +167,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   onPressed: _busy
                       ? null
                       : () => setState(() => _registering = !_registering),
-                  child: Text(_registering
-                      ? 'Already have an account? Sign in'
-                      : 'New here? Create an account'),
+                  child: Text(
+                    _registering
+                        ? 'Already have an account? Sign in'
+                        : 'New here? Create an account',
+                  ),
                 ),
               ],
             ),
