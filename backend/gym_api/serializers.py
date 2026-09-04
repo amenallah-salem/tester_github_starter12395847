@@ -3,7 +3,7 @@ REST serializers for the Gym Planner API.
 """
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric
+from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -39,7 +39,13 @@ class ExerciseSerializer(serializers.ModelSerializer):
             'target_sets', 'target_reps', 'target_weight_kg',
             'order', 'created_at',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']
+
+    def validate_plan(self, plan):
+        user = self.context['request'].user
+        if plan is not None and plan.user_id != user.id:
+            raise serializers.ValidationError('You can only use your own plans.')
+        return plan
 
 
 class ExerciseNestedSerializer(serializers.ModelSerializer):
@@ -95,6 +101,18 @@ class ProgressMetricSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'logged_at']
 
+    def validate(self, attrs):
+        user = self.context['request'].user
+        session = attrs.get('session', getattr(self.instance, 'session', None))
+        exercise = attrs.get('exercise', getattr(self.instance, 'exercise', None))
+        if session and session.user_id != user.id:
+            raise serializers.ValidationError({'session': 'This session does not belong to you.'})
+        if exercise and exercise.user_id != user.id:
+            raise serializers.ValidationError({'exercise': 'This exercise does not belong to you.'})
+        if session and exercise and exercise.plan_id and session.plan_id != exercise.plan_id:
+            raise serializers.ValidationError({'exercise': 'The exercise must belong to the session plan.'})
+        return attrs
+
 
 class WorkoutSessionSerializer(serializers.ModelSerializer):
     metrics = ProgressMetricSerializer(many=True, read_only=True)
@@ -108,14 +126,36 @@ class WorkoutSessionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'started_at']
 
+    def validate_plan(self, plan):
+        if plan is not None and plan.user_id != self.context['request'].user.id:
+            raise serializers.ValidationError('You can only use your own plans.')
+        return plan
+
 
 class WorkoutSessionListSerializer(serializers.ModelSerializer):
     metric_count = serializers.IntegerField(source='metrics.count', read_only=True)
+    exercise_names = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkoutSession
         fields = [
             'id', 'plan', 'name', 'started_at',
-            'finished_at', 'metric_count',
+            'finished_at', 'metric_count', 'exercise_names',
         ]
         read_only_fields = ['id', 'started_at']
+
+    def get_exercise_names(self, obj):
+        return list(obj.metrics.values_list('exercise__name', flat=True).distinct())
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subscription
+        fields = [
+            'id', 'user', 'plan_name', 'status', 'current_period_start',
+            'current_period_end', 'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'user', 'status', 'current_period_start',
+            'current_period_end', 'created_at', 'updated_at',
+        ]

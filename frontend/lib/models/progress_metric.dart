@@ -1,5 +1,5 @@
 class ProgressMetric {
-  final int id;
+  final String id;
   final String date;
   final int reps;
   final double? weightKg;
@@ -14,7 +14,7 @@ class ProgressMetric {
   });
 
   factory ProgressMetric.fromJson(Map<String, dynamic> json) => ProgressMetric(
-        id: json['id'] as int,
+        id: json['id'].toString(),
         date: json['logged_at'] as String? ?? '',
         reps: json['reps'] as int,
         weightKg: (json['weight_kg'] as num?)?.toDouble(),

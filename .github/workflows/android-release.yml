@@ -1,0 +1,156 @@
+name: Android release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-main
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: 3.24.5
+
+jobs:
+  release:
+    name: Test, build, tag, and publish Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the pushed commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Generate Drift code
+        working-directory: frontend
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Run analyzer
+        working-directory: frontend
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        working-directory: frontend
+        run: flutter test
+
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > frontend/android/release-keystore.jks
+            cat > frontend/android/key.properties <<EOF
+            storeFile=../release-keystore.jks
+              storePassword=$ANDROID_KEYSTORE_PASSWORD
+              keyAlias=$ANDROID_KEY_ALIAS
+              keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+          fi
+
+      - name: Determine next semantic version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          current="$(sed -nE 's/^version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)[[:space:]]*$/\1 \2/p' frontend/pubspec.yaml)"
+          read -r configured_version configured_code <<< "$current"
+          existing_tag="$(git tag --points-at "$GITHUB_SHA" --list 'v[0-9]*.[0-9]*.[0-9]*' | head -n 1)"
+          if [ -n "$existing_tag" ]; then
+            version="${existing_tag#v}"
+            version_code="$((configured_code + $(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' | wc -l | tr -d ' ')))"
+            tag_exists=true
+          else
+            latest_tag="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)"
+            if [ -z "$latest_tag" ]; then
+              version="$configured_version"
+              version_code="$configured_code"
+            else
+              latest="${latest_tag#v}"
+              IFS=. read -r major minor patch <<< "$latest"
+              version="$major.$minor.$((patch + 1))"
+              version_code="$((configured_code + $(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' | wc -l | tr -d ' ')))"
+            fi
+            tag_exists=false
+          fi
+
+          tag="v$version"
+          if [ "$tag_exists" = false ] && git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists for another commit; refusing to overwrite it." >&2
+            exit 1
+          fi
+
+          {
+            echo "version=$version"
+            echo "version_code=$version_code"
+            echo "tag=$tag"
+            echo "tag_exists=$tag_exists"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build release APK
+        working-directory: frontend
+        run: flutter build apk --release --build-name "${{ steps.version.outputs.version }}" --build-number "${{ steps.version.outputs.version_code }}"
+
+      - name: Build release AAB
+        working-directory: frontend
+        run: flutter build appbundle --release --build-name "${{ steps.version.outputs.version }}" --build-number "${{ steps.version.outputs.version_code }}"
+
+      - name: Verify generated artifacts
+        run: |
+          test -s frontend/build/app/outputs/flutter-apk/app-release.apk
+          test -s frontend/build/app/outputs/bundle/release/app-release.aab
+
+      - name: Create and push release tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if [ "${{ steps.version.outputs.tag_exists }}" = "true" ]; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" "$GITHUB_SHA" -m "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub Release and upload Android assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+              "frontend/build/app/outputs/flutter-apk/app-release.apk#gym_app-$VERSION.apk" \
+              "frontend/build/app/outputs/bundle/release/app-release.aab#gym_app-$VERSION.aab"
+          else
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "Release $TAG" \
+              --generate-notes \
+              "frontend/build/app/outputs/flutter-apk/app-release.apk#gym_app-$VERSION.apk" \
+              "frontend/build/app/outputs/bundle/release/app-release.aab#gym_app-$VERSION.aab"
+          fi

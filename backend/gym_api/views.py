@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric
+from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
 from .serializers import (
     ProfileSerializer,
     PlanSerializer,
@@ -17,6 +17,7 @@ from .serializers import (
     WorkoutSessionListSerializer,
     ProgressMetricSerializer,
     RegisterSerializer,
+    SubscriptionSerializer,
 )
 
 
@@ -128,3 +129,26 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save()
+
+
+class SubscriptionViewSet(viewsets.ModelViewSet):
+    """Expose only the authenticated user's subscription."""
+    serializer_class = SubscriptionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
+
+    def get_queryset(self):
+        return Subscription.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=['get', 'patch'], url_path='subscription')
+    def current(self, request):
+        subscription, _ = Subscription.objects.get_or_create(user=request.user)
+        serializer = self.get_serializer(subscription, data=request.data or None,
+                                         partial=True) if request.method == 'PATCH' else self.get_serializer(subscription)
+        if request.method == 'PATCH':
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+        return Response(serializer.data)

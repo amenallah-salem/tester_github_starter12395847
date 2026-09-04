@@ -1,15 +1,29 @@
-# CI Pipeline Note (T-17 follow-up) — HONEST LIMITATIONS
+# CI pipeline
 
-What this does:
-- `.github/workflows/flutter-mobile-ci.yml`: triggers on push/PR + tags (`v*`).
-- Test step runs `flutter test` (graceful if no tests exist).
-- Android job (`ubuntu-latest`): builds release APK with `flutter build apk --release`, versions from git tag (`vX.Y.Z`) + `git rev-list --count HEAD` as build number.
-- iOS job (`macos-latest`): builds release archive with `flutter build ios --release --no-codesign`, updates `Info.plist` and `pubspec.yaml` version from same tag.
-- Artifacts uploaded (retention 90d); `tag-release` job creates GitHub release from artifacts when build triggered by `v*` tag.
+Pull requests run the analyzer and Flutter tests through `ci.yml`.
+Pushes to `main` run the same checks in `android-release.yml`, then build and
+publish the Android APK and AAB.
+## Android releases
 
-WHAT IS NOT REAL / BLOCKED:
-- This is a YAML file only; `flutter` binary / `macos-latest` / Android SDK / code-signing certs / `secrets.GITHUB_TOKEN` are NOT present in this environment — full execution is NOT verified here.
-- No `tests/` folder exists in `frontend/` — the `flutter test || echo` guard is required.
-- iOS code-signing (`--no-codesign`) skips signing; actual App Store / TestFlight distribution requires Apple Developer cert + provisioning profile (not included).
-- Android APK is release unsigned; Play Store / internal sharing requires keystore (`key.properties` + `jks`) — reference only, not included.
-- The `yq` dependency was removed in favor of Python `re.sub` to avoid extra package installs.
+`android-release.yml` runs automatically for every push to `main`. It runs the
+Flutter analyzer and tests, generates Drift sources, builds both Android
+artifacts, then creates a tag and GitHub Release only after both builds succeed.
+The release workflow is serialized with Actions concurrency so rapid pushes are
+published in order.
+
+The first release uses the semantic version in `frontend/pubspec.yaml`
+(`0.1.0+1` in this repository). Each later release increments the patch
+component and uses `configured versionCode + number of existing semantic
+release tags`. Tags are annotated as `vMAJOR.MINOR.PATCH` and point at the
+pushed commit that produced the artifacts.
+
+Release signing is optional until production credentials are available. To
+enable it, configure these GitHub Actions secrets:
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+Without them, Gradle uses its local debug key so CI remains buildable, but that
+APK/AAB must not be distributed as a production-signed application.

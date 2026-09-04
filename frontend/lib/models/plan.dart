@@ -1,5 +1,5 @@
 class Plan {
-  final int id;
+  final String id;
   final String name;
   final String description;
   final bool isActive;
@@ -14,7 +14,7 @@ class Plan {
   });
 
   factory Plan.fromJson(Map<String, dynamic> j) => Plan(
-        id: j['id'] as int,
+        id: j['id'].toString(),
         name: j['name'] as String,
         description: j['description'] as String? ?? '',
         isActive: j['is_active'] as bool? ?? false,

@@ -6,6 +6,9 @@ import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/strings/coaching.dart';
 import 'package:gym_app/features/plan/data/sample_plan.dart';
 import 'package:gym_app/features/plan/state/plan_notifier.dart';
+import 'package:gym_app/core/state/auth_state.dart';
+import 'package:gym_app/services/api_client.dart';
+import 'package:go_router/go_router.dart';
 
 /// Welora profile + settings tab. Enhanced per Stitch:
 /// - welora_profile_rhythm (name, goal, rhythm)
@@ -23,6 +26,7 @@ class _YouPageState extends ConsumerState<YouPage> {
   bool _heartRateAlerts = true;
   bool _restVibration = true;
   bool _voicePrompts = true;
+  bool _upgrading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +67,54 @@ class _YouPageState extends ConsumerState<YouPage> {
             ],
           ),
           const SizedBox(height: 12),
+          _SectionCard(
+            title: 'Membership',
+            child: FutureBuilder<Map<String, dynamic>>(
+              future: ApiClient.I.fetchSubscription(),
+              builder: (context, snapshot) {
+                final plan = snapshot.data?['plan_name'] as String? ?? 'free';
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        plan == 'free'
+                            ? 'Free plan · unlock more coaching with Premium.'
+                            : 'Premium plan active.',
+                      ),
+                    ),
+                    if (plan == 'free')
+                      FilledButton(
+                        onPressed: _upgrading
+                            ? null
+                            : () async {
+                                setState(() => _upgrading = true);
+                                try {
+                                  await ApiClient.I.upgradeSubscription();
+                                  if (mounted) setState(() {});
+                                } finally {
+                                  if (mounted)
+                                    setState(() => _upgrading = false);
+                                }
+                              },
+                        child: Text(_upgrading ? '...' : 'Upgrade'),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.tonalIcon(
+            onPressed: () {
+              ref.read(accessTokenProvider.notifier).state = null;
+              ref.read(refreshTokenProvider.notifier).state = null;
+              ApiClient.I.accessToken = null;
+              ref.read(onboardingDoneProvider.notifier).state = false;
+              context.go('/sign-in');
+            },
+            icon: const Icon(Icons.logout),
+            label: const Text('Sign out'),
+          ),
 
           // ── Goal card ──
           Card(
@@ -72,11 +124,18 @@ class _YouPageState extends ConsumerState<YouPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Your goal', style: TextStyle(color: AppTheme.mut)),
+                  const Text(
+                    'Your goal',
+                    style: TextStyle(color: AppTheme.mut),
+                  ),
                   const SizedBox(height: 4),
-                  Text(plan.profile.goal.name,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700)),
+                  Text(
+                    plan.profile.goal.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     '${plan.profile.daysPerWeek}-day plan · ${plan.weeklySplit.name}',
@@ -113,17 +172,16 @@ class _YouPageState extends ConsumerState<YouPage> {
                     ),
                   ],
                   selected: {themeMode},
-                  onSelectionChanged: (s) => ref
-                      .read(themeModeProvider.notifier)
-                      .state = s.first,
+                  onSelectionChanged: (s) =>
+                      ref.read(themeModeProvider.notifier).state = s.first,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   themeMode == ThemeMode.light
                       ? 'Bright cream with forest-green accents.'
                       : themeMode == ThemeMode.dark
-                          ? 'Deep forest, easy on the eyes at night.'
-                          : 'Matches your device setting.',
+                      ? 'Deep forest, easy on the eyes at night.'
+                      : 'Matches your device setting.',
                   style: const TextStyle(color: AppTheme.mut, fontSize: 13),
                 ),
               ],
@@ -149,9 +207,8 @@ class _YouPageState extends ConsumerState<YouPage> {
                     ),
                   ],
                   selected: {tone},
-                  onSelectionChanged: (s) => ref
-                      .read(coachingToneProvider.notifier)
-                      .state = s.first,
+                  onSelectionChanged: (s) =>
+                      ref.read(coachingToneProvider.notifier).state = s.first,
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -232,7 +289,9 @@ class _YouPageState extends ConsumerState<YouPage> {
   }
 
   void _editName(BuildContext context) {
-    final controller = TextEditingController(text: ref.read(profileNameProvider));
+    final controller = TextEditingController(
+      text: ref.read(profileNameProvider),
+    );
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
@@ -263,9 +322,9 @@ class _YouPageState extends ConsumerState<YouPage> {
 }
 
 ShapeBorder _cardShape() => RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
-      side: const BorderSide(color: AppTheme.outlineVariant),
-    );
+  borderRadius: BorderRadius.circular(20),
+  side: const BorderSide(color: AppTheme.outlineVariant),
+);
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.title, required this.child});

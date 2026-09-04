@@ -16,11 +16,11 @@ import 'package:gym_app/features/plan_runner/presentation/workout_setup_page.dar
 import 'package:gym_app/features/biomechanics/presentation/form_vault_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/replay_3d_page.dart';
 import 'package:gym_app/core/state/app_state.dart';
+import 'package:gym_app/core/state/auth_state.dart';
 
 /// App navigation — Welora routes.
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final onboardingDone = ref.watch(onboardingDoneProvider);
-
+  final accessToken = ref.watch(accessTokenProvider);
   return GoRouter(
     initialLocation: '/sign-in',
     routes: [
@@ -85,9 +85,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final loc = state.matchedLocation;
       final done = ref.read(onboardingDoneProvider);
+      if (accessToken == null && loc != '/sign-in') return '/sign-in';
+      if (accessToken != null && loc == '/sign-in')
+        return done ? '/' : '/onboarding';
       // After onboarding completes, stay inside app for all non-auth routes.
       if (loc == '/sign-in' && done) return '/';
-      if (!done && !loc.startsWith('/sign-in') && !loc.startsWith('/onboarding')) {
+      if (!done &&
+          !loc.startsWith('/sign-in') &&
+          !loc.startsWith('/onboarding')) {
         return '/onboarding';
       }
       return null;
@@ -99,8 +104,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 class ExerciseExplorerPage extends ConsumerStatefulWidget {
   const ExerciseExplorerPage({super.key});
   @override
-  ConsumerState<ExerciseExplorerPage> createState() => _ExerciseExplorerPageState();
+  ConsumerState<ExerciseExplorerPage> createState() =>
+      _ExerciseExplorerPageState();
 }
+
 class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
   String? _selectedMuscle;
   @override
@@ -120,12 +127,23 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: const [
-                ListTile(title: Text('Goblet Squat'), subtitle: Text('Quads · Dumbbell')),
-                ListTile(title: Text('Push-Up'), subtitle: Text('Chest · Bodyweight')),
-                ListTile(title: Text('Barbell Squat'), subtitle: Text('Legs · Barbell')),
-                ListTile(title: Text('Bench Press'), subtitle: Text('Chest · Barbell')),
-                ListTile(title: Text('Dumbbell Row'), subtitle: Text('Back · Dumbbell')),
-                ListTile(title: Text('Plank'), subtitle: Text('Core · Bodyweight')),
+                ListTile(
+                    title: Text('Goblet Squat'),
+                    subtitle: Text('Quads · Dumbbell')),
+                ListTile(
+                    title: Text('Push-Up'),
+                    subtitle: Text('Chest · Bodyweight')),
+                ListTile(
+                    title: Text('Barbell Squat'),
+                    subtitle: Text('Legs · Barbell')),
+                ListTile(
+                    title: Text('Bench Press'),
+                    subtitle: Text('Chest · Barbell')),
+                ListTile(
+                    title: Text('Dumbbell Row'),
+                    subtitle: Text('Back · Dumbbell')),
+                ListTile(
+                    title: Text('Plank'), subtitle: Text('Core · Bodyweight')),
               ],
             ),
           ),

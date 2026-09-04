@@ -19,7 +19,7 @@ class HomePage extends StatelessWidget {
   ];
 
   int _indexFor(String location) {
-    final idx = _tabs.indexWhere((t) => t.path == location);
+    final idx = _tabs.indexWhere((t) => location == t.path || location.startsWith('${t.path}/'));
     return idx == -1 ? 0 : idx;
   }
 
