@@ -168,13 +168,14 @@ class _YouPageState extends ConsumerState<YouPage> {
           ),
           const SizedBox(height: 12),
           FilledButton.tonalIcon(
-            onPressed: () {
+            onPressed: () async {
               ref.read(accessTokenProvider.notifier).state = null;
               ref.read(refreshTokenProvider.notifier).state = null;
               ApiClient.I.accessToken = null;
+              ApiClient.I.refreshToken = null;
               ref.read(onboardingDoneProvider.notifier).state = false;
-              clearPersistedAuth();
-              clearPersistedOnboarding();
+              await clearPersistedAuth();
+              await clearPersistedOnboarding();
               context.go('/sign-in');
             },
             icon: const Icon(Icons.logout),

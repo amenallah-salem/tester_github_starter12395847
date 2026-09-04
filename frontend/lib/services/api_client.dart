@@ -11,6 +11,7 @@ class ApiClient {
 
   final String baseUrl;
   String? accessToken;
+  String? refreshToken;
 
   ApiClient({String? baseUrl}) : baseUrl = baseUrl ?? _defaultBaseUrl();
 
@@ -44,7 +45,11 @@ class ApiClient {
   }) async {
     final uri = _uri(path);
     try {
-      final response = await request();
+      var response = await request();
+      if (response.statusCode == 401 && refreshToken != null) {
+        final refreshed = await _refreshAccessToken();
+        if (refreshed) response = await request();
+      }
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw ApiException.fromResponse(
           method: method,
@@ -64,6 +69,24 @@ class ApiClient {
         cause: error.message,
       );
     }
+
+  }
+
+  Future<bool> _refreshAccessToken() async {
+    final token = refreshToken;
+    if (token == null) return false;
+    final response = await http.post(
+      _uri('/auth/token/refresh/'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'refresh': token}),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) return false;
+    final data = jsonDecode(response.body);
+    if (data is! Map<String, dynamic> || data['access'] is! String) {
+      return false;
+    }
+    accessToken = data['access'] as String;
+    return true;
   }
 
   Future<Map<String, dynamic>> login({

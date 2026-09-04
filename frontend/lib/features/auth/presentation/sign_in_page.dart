@@ -55,6 +55,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       ApiClient.I.accessToken = result['access'] as String;
       if (result['refresh'] case final String refresh) {
         ref.read(refreshTokenProvider.notifier).state = refresh;
+        ApiClient.I.refreshToken = refresh;
       }
       await ref.read(planNotifierProvider.notifier).refreshFromApi();
       await ref.read(workoutSessionsProvider.notifier).loadRemote();
