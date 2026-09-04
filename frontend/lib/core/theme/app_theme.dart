@@ -94,7 +94,7 @@ class AppTheme {
       centerTitle: true,
       surfaceTintColor: Colors.transparent,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
@@ -204,7 +204,7 @@ class AppTheme {
       centerTitle: true,
       surfaceTintColor: Colors.transparent,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: const Color(0xFF1A231B),
       surfaceTintColor: Colors.transparent,
       elevation: 0,
@@ -262,6 +262,7 @@ class AppTheme {
       ),
       selectedColor: primaryContainer,
     ),
-    progressIndicatorTheme: const ProgressIndicatorThemeData(color: primaryContainer),
+    progressIndicatorTheme:
+        const ProgressIndicatorThemeData(color: primaryContainer),
   );
 }

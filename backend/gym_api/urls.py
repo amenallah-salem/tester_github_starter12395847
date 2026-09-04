@@ -12,6 +12,7 @@ from .views import (
     WorkoutSessionViewSet,
     ProgressMetricViewSet,
     RegisterView,
+    SubscriptionViewSet,
 )
 
 router = DefaultRouter()
@@ -20,6 +21,7 @@ router.register(r'plans', PlanViewSet, basename='plan')
 router.register(r'exercises', ExerciseViewSet, basename='exercise')
 router.register(r'sessions', WorkoutSessionViewSet, basename='session')
 router.register(r'metrics', ProgressMetricViewSet, basename='metric')
+router.register(r'billing', SubscriptionViewSet, basename='subscription')
 
 urlpatterns = [
     # JWT auth endpoints

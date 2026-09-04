@@ -15,6 +15,7 @@ Django REST Framework backend for the Gym Planner application.
 - `Exercise` – exercise definition
 - `WorkoutSession` – a concrete workout
 - `ProgressMetric` – per-set progress log
+- `Subscription` – per-user billing plan and provider-managed status
 
 ## Quick start (Docker)
 
@@ -38,6 +39,7 @@ Django admin: `http://localhost:8000/admin/`.
 | GET/POST | `/api/exercises/` | List / create exercises |
 | GET/POST | `/api/sessions/` | List / create workout sessions |
 | GET/POST | `/api/metrics/` | List / create progress metrics |
+| GET/PATCH | `/api/billing/subscription/` | Current user's subscription |
 
 All endpoints except `/api/auth/token/*` require a Bearer token.
 

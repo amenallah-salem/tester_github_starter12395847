@@ -12,6 +12,7 @@ import 'package:gym_app/features/plan/state/plan_notifier.dart';
 import 'package:gym_app/features/progress/domain/workout_session.dart';
 import 'package:gym_app/features/progress/state/workout_sessions.dart';
 import 'package:gym_app/features/plan_runner/presentation/timer_widget.dart';
+import 'package:gym_app/services/api_client.dart';
 
 enum _Phase { work, rest, finished }
 
@@ -96,7 +97,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       if (_phase == _Phase.work) {
         if (_workRemaining > 1) {
           _workRemaining--;
-           if (_workRemaining == _workSeconds(_ex) - 1) {
+          if (_workRemaining == _workSeconds(_ex) - 1) {
             final s = ref.read(coachingStringsProvider);
             _coach = _setIndex == _ex.sets - 1
                 ? s.lastSetCue
@@ -118,7 +119,8 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   void _enterRest() {
     _phase = _Phase.rest;
     _restRemaining = _ex.restSec;
-    _coach = ref.read(coachingStringsProvider).restCue('${_ex.restSec}', _setIndex);
+    _coach =
+        ref.read(coachingStringsProvider).restCue('${_ex.restSec}', _setIndex);
   }
 
   void _enterNextSetOrExercise() {
@@ -184,8 +186,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       _phase = _Phase.finished;
     });
     final plan = ref.read(planNotifierProvider).value ?? samplePlan;
-    final totalSets =
-        _exercises.fold(0, (sum, e) => sum + e.sets);
+    final totalSets = _exercises.fold(0, (sum, e) => sum + e.sets);
     ref.read(workoutSessionsProvider.notifier).add(WorkoutSession(
           date: DateTime.now(),
           name: plan.todaySession.dayLabel,
@@ -194,10 +195,12 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
           minutes: plan.profile.sessionMinutes,
           exerciseNames: _exercises.map((e) => e.name).toList(),
         ));
+    unawaited(
+      ApiClient.I.createWorkout(notes: 'Completed in the workout runner.'),
+    );
   }
 
-  int get _totalSets =>
-      _exercises.fold(0, (sum, e) => sum + e.sets);
+  int get _totalSets => _exercises.fold(0, (sum, e) => sum + e.sets);
 
   double get _overallProgress {
     int done = 0;

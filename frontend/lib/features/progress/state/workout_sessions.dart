@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:gym_app/features/progress/domain/workout_session.dart';
+import 'package:gym_app/services/api_client.dart';
 
 /// Holds completed sessions for the Progress tab.
 class WorkoutSessions extends Notifier<List<WorkoutSession>> {
@@ -12,6 +13,23 @@ class WorkoutSessions extends Notifier<List<WorkoutSession>> {
   }
 
   void clear() => state = const [];
+
+  Future<void> loadRemote() async {
+    if (ApiClient.I.accessToken == null) return;
+    final remote = await ApiClient.I.fetchSessions();
+    state = remote.map((item) {
+      final names =
+          (item['exercise_names'] as List? ?? const []).cast<String>();
+      return WorkoutSession(
+        date: DateTime.parse(item['started_at'] as String),
+        name: item['name'] as String? ?? 'Workout',
+        exerciseCount: names.length,
+        setCount: (item['metric_count'] as num?)?.toInt() ?? 0,
+        minutes: 0,
+        exerciseNames: names,
+      );
+    }).toList();
+  }
 }
 
 final workoutSessionsProvider =

@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APITestCase
 from rest_framework import status
-from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric
+from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
 
 
 class ModelTests(TestCase):
@@ -29,6 +29,7 @@ class ModelTests(TestCase):
 class APITests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user('apiuser', 'api@example.com', 'apipass123')
+        self.other_user = User.objects.create_user('other', 'other@example.com', 'otherpass123')
         self.client.force_authenticate(user=self.user)
 
     def test_profile_me(self):
@@ -69,6 +70,29 @@ class APITests(APITestCase):
             'weight_kg': 60.0,
         })
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+    def test_related_objects_must_belong_to_current_user(self):
+        other_plan = Plan.objects.create(user=self.other_user, name='Private plan')
+        resp = self.client.post('/api/exercises/', {'name': 'Leaked', 'plan': str(other_plan.id)})
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+        other_session = WorkoutSession.objects.create(user=self.other_user)
+        resp = self.client.post('/api/metrics/', {
+            'session': str(other_session.id), 'reps': 1,
+        })
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_current_subscription_is_private_and_updatable(self):
+        resp = self.client.get('/api/billing/subscription/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['plan_name'], 'free')
+        self.assertEqual(Subscription.objects.filter(user=self.user).count(), 1)
+
+        resp = self.client.patch('/api/billing/subscription/', {'plan_name': 'pro'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['plan_name'], 'pro')
+        self.assertEqual(resp.data['user'], self.user.id)
+        self.assertNotIn('provider_customer_id', resp.data)
 
     def test_unauthenticated_rejected(self):
         self.client.force_authenticate(user=None)
