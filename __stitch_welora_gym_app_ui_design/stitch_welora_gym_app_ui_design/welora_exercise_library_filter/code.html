@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#f1fcf3;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "surface-container-lowest": "#ffffff", "surface-container-highest": "#dae5dc", "secondary-fixed": "#c6ebd1", "surface-dim": "#d1ddd4", "background": "#f1fcf3", "tertiary": "#7a391d", "tertiary-fixed": "#ffdbce", "on-surface-variant": "#424842", "on-tertiary": "#ffffff", "tertiary-container": "#985032", "secondary-fixed-dim": "#abcfb6", "surface-container-low": "#ebf7ed", "secondary-container": "#c3e9cf", "on-background": "#141e18", "on-error-container": "#93000a", "primary": "#32533c", "surface-container": "#e5f1e7", "surface-container-high": "#e0ebe2", "on-surface": "#141e18", "surface-tint": "#45664e", "on-secondary": "#ffffff", "surface": "#f1fcf3", "error-container": "#ffdad6", "on-primary-container": "#c5eacc", "on-secondary-container": "#496a55", "primary-fixed": "#c7ecce", "primary-fixed-dim": "#abcfb2", "inverse-on-surface": "#e8f4ea", "inverse-primary": "#abcfb2", "on-secondary-fixed-variant": "#2d4d3a", "on-primary": "#ffffff", "on-primary-fixed": "#01210f", "on-tertiary-fixed": "#370e00", "on-secondary-fixed": "#002111", "on-tertiary-container": "#ffd9cc", "primary-container": "#4a6b53", "on-error": "#ffffff", "inverse-surface": "#29332c", "on-primary-fixed-variant": "#2e4e37", "outline-variant": "#c2c8c0", "surface-variant": "#dae5dc", "error": "#ba1a1a", "on-tertiary-fixed-variant": "#743419", "secondary": "#446651", "tertiary-fixed-dim": "#ffb599", "outline": "#727972", "surface-bright": "#f1fcf3" }, borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, spacing: { "space-xs": "0.5rem", "card-padding": "1.25rem", "space-xl": "1.5rem", "space-3xl": "2.5rem", "space-lg": "1.25rem", "gap-compact": "0.625rem", "gutter-screen": "1.25rem", "bottom-bar-height": "4.5rem", "space-md": "1rem", "space-2xs": "0.25rem", "space-2xl": "2rem", "space-sm": "0.75rem" }, fontFamily: { "headline-lg": ["Plus Jakarta Sans"], "title-sm": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "metric-display": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "display": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "title-md": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"] }, fontSize: { "headline-lg": ["28px", { lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "600" }], "title-sm": ["14px", { lineHeight: "20px", fontWeight: "600" }], "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }], "headline-md": ["22px", { lineHeight: "28px", letterSpacing: "-0.01em", fontWeight: "600" }], "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }], "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }], "metric-display": ["24px", { lineHeight: "28px", fontWeight: "700" }], "label-md": ["13px", { lineHeight: "18px", letterSpacing: "0.01em", fontWeight: "500" }], "display": ["36px", { lineHeight: "44px", letterSpacing: "-0.02em", fontWeight: "600" }], "headline-sm": ["18px", { lineHeight: "24px", fontWeight: "600" }], "title-md": ["16px", { lineHeight: "22px", fontWeight: "600" }], "label-sm": ["11px", { lineHeight: "14px", letterSpacing: "0.02em", fontWeight: "500" }] } } } }</script></head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-xl shadow-[0_1px_12px_rgba(31,41,35,0.04)]"><div class="h-16 px-gutter-screen flex items-center justify-between"><div class="flex items-center gap-space-xs"><span class="font-headline-md text-headline-md font-semibold tracking-tight text-primary lowercase">welora</span></div><div class="flex items-center gap-space-xs"><button aria-label="Notifications" class="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors"><span class="material-symbols-outlined text-[22px]">notifications</span></button><a aria-label="Profile" class="w-11 h-11 flex items-center justify-center" data-path="profile-settings" href="#"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></a></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-28 bg-surface"><div class="flex flex-col w-full">
+<!-- Search & Filter Bar Section -->
+<section class="px-gutter-screen pt-space-xs pb-space-sm">
+<div class="flex items-center gap-space-xs">
+<div class="flex-1 flex items-center bg-surface-container-low rounded-full px-space-md py-2.5 shadow-sm">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] mr-2">search</span>
+<input class="w-full bg-transparent text-on-surface placeholder:text-on-surface-variant/70 font-body-md text-body-md focus:outline-none" placeholder="Search 200+ exercises or muscles..." type="text"/>
+</div>
+<button aria-label="Filter Options" class="relative w-11 h-11 rounded-full bg-surface-container-high flex items-center justify-center text-primary shadow-sm hover:bg-surface-container-highest transition-colors flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+<span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary ring-2 ring-surface"></span>
+</button>
+</div>
+</section>
+<!-- Sticky Category Pills Carousel -->
+<section class="w-full overflow-x-auto no-scrollbar py-space-2xs px-gutter-screen">
+<div class="flex items-center gap-space-xs min-w-max">
+<!-- All (Inactive) -->
+<button class="px-space-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+        All
+      </button>
+<!-- Strength (Active Primary Chip) -->
+<button class="flex items-center gap-1.5 px-space-md py-1.5 rounded-full bg-primary-container text-on-primary font-label-md text-label-md shadow-sm">
+<span>Strength</span>
+<span class="bg-surface/20 text-on-primary text-label-sm font-label-sm px-1.5 py-0.5 rounded-full">84</span>
+</button>
+<!-- Mobility (Active Lavender/Tinted Chip) -->
+<button class="flex items-center gap-1.5 px-space-md py-1.5 rounded-full bg-secondary-container text-on-secondary-container font-label-md text-label-md shadow-sm">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span>Mobility</span>
+<span class="bg-surface/40 text-on-secondary-container text-label-sm font-label-sm px-1.5 py-0.5 rounded-full">42</span>
+</button>
+<!-- Cardio (Inactive) -->
+<button class="px-space-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+        Cardio
+      </button>
+<!-- Recovery (Inactive) -->
+<button class="px-space-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+        Recovery
+      </button>
+<!-- Bodyweight (Inactive) -->
+<button class="px-space-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+        Bodyweight
+      </button>
+</div>
+</section>
+<!-- Secondary Filter & Muscle Group Selector -->
+<section class="px-gutter-screen pt-space-sm pb-space-xs">
+<div class="flex items-center gap-space-xs overflow-x-auto no-scrollbar pb-1">
+<!-- Target Muscle Filter -->
+<button class="flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container-high text-on-surface font-label-sm text-label-sm whitespace-nowrap shadow-sm">
+<span class="text-on-surface-variant">Target:</span>
+<span class="font-medium text-primary">Quads &amp; Glutes</span>
+<span class="material-symbols-outlined text-[14px]">expand_more</span>
+</button>
+<!-- Equipment Filter -->
+<button class="flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap">
+<span>Equipment:</span>
+<span class="text-on-surface">Dumbbell / Barbell</span>
+<span class="material-symbols-outlined text-[14px]">expand_more</span>
+</button>
+<!-- Difficulty Filter -->
+<button class="flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap">
+<span>Difficulty:</span>
+<span class="text-on-surface">All Levels</span>
+<span class="material-symbols-outlined text-[14px]">expand_more</span>
+</button>
+</div>
+<!-- Anatomical Muscle Focus Pill Banner -->
+<div class="mt-space-xs flex items-center justify-between px-space-md py-2 bg-surface-container-low rounded-xl">
+<div class="flex items-center gap-1.5 min-w-0">
+<span class="text-[14px]">🎯</span>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">
+<span class="text-primary font-semibold">Focus:</span> Posterior Chain &amp; Hip Mobility Flow
+        </p>
+</div>
+<span class="text-label-sm font-label-sm text-primary font-medium flex-shrink-0 ml-2">Edit</span>
+</div>
+</section>
+<!-- Exercise Cards List -->
+<section class="px-gutter-screen py-space-sm flex flex-col gap-space-sm">
+<!-- Exercise 1: Goblet Squat -->
+<article class="bg-surface-container-lowest rounded-lg p-card-padding shadow-[0_4px_20px_rgba(31,41,35,0.04)] flex flex-col gap-space-sm">
+<div class="flex gap-space-md items-start">
+<div class="w-20 h-20 rounded-lg bg-surface-container overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Mindful athlete performing a controlled kettlebell goblet squat in an airy, sunlit Scandinavian gym sanctuary with soft morning mist, indoor plants, and muted sage and natural wood aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0SURfVr1XlGNjwEfT6ddQiVbN8DqOm9XTJumun8I21J7VOGDBzQXC9PrpoihkH5CfzFEsRHrbxm0ls8dmcsMwWGCRfzOH0VdFeDnDlNDgpoiIqpdNoTXBt-tJExhYDnstTvI6e1SC-nYX0FGfwqsOMGq6krbF1lJnjA5bFZHOzl75HcvZfzgOQXvo2c3Ictlw5_5YxFU5SZa9vnaXxJcahohZ-HHWgHxaeub-QxAQYSsPkvyVm4DJ"/>
+<div class="absolute bottom-1 right-1 bg-surface-container-lowest/90 px-1.5 py-0.5 rounded-full text-label-sm font-label-sm text-primary">
+            3D
+          </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="text-label-sm font-label-sm text-primary uppercase tracking-wider font-semibold truncate">
+              Strength • Primary Quads &amp; Core
+            </span>
+<button aria-label="Bookmark Goblet Squat" class="text-on-surface-variant hover:text-primary transition-colors flex-shrink-0">
+<span class="material-symbols-outlined text-[18px]">favorite</span>
+</button>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface truncate mt-0.5">Goblet Squat</h2>
+<div class="flex items-center gap-2 mt-1.5 flex-wrap">
+<span class="px-2 py-0.5 bg-surface-container-high rounded-full font-label-sm text-label-sm text-on-surface-variant">
+              Intermediate
+            </span>
+<span class="px-2 py-0.5 bg-surface-container-low rounded-full font-label-sm text-label-sm text-on-surface-variant">
+              Dumbbell or Kettlebell
+            </span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+          3–4 sets • 8–12 reps
+        </span>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary-container text-on-secondary-container hover:bg-primary hover:text-on-primary font-label-sm text-label-sm transition-all shadow-sm">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span>Add to routine</span>
+</button>
+</div>
+</article>
+<!-- Exercise 2: 90/90 Hip Flow & Shin Box -->
+<article class="bg-surface-container-lowest rounded-lg p-card-padding shadow-[0_4px_20px_rgba(31,41,35,0.04)] flex flex-col gap-space-sm">
+<div class="flex gap-space-md items-start">
+<div class="w-20 h-20 rounded-lg bg-secondary-container/40 overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Gentle mobility flow posture of 90/90 hip opener seated on an organic linen yoga mat in a serene, earthy wellness studio with calm sage wall tones and soft morning ambient light." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3epulcZxIRVKsvv6j_IlyjeFqrtatOcrvUAjtF7DxTH1LN1SUD7nkeygFBGL4sEsIIWbytbW-3wjDQSHPiNDzRpv5ugDJptOMxSY3kGn-vVE-AOfhLZwjasoVXRzjOqjlAFkgVzEknQf8FlYtSuujes0oJsyoaXDWl3lXgtjmR_zR_2hhMbOvVPjg2mEVuIfQJYnq22ZFRThRHGAXafOdY3tWHxfPOLaXfnrLHa6k-MHunk0QrdMn"/>
+<div class="absolute bottom-1 right-1 bg-surface-container-lowest/90 px-1.5 py-0.5 rounded-full text-label-sm font-label-sm text-secondary">
+            Flow
+          </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="text-label-sm font-label-sm text-secondary uppercase tracking-wider font-semibold truncate">
+              Mobility • Hip Openers
+            </span>
+<button aria-label="Bookmark 90/90 Hip Flow" class="text-on-surface-variant hover:text-primary transition-colors flex-shrink-0">
+<span class="material-symbols-outlined text-[18px]">favorite</span>
+</button>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface truncate mt-0.5">90/90 Hip Flow &amp; Shin Box</h2>
+<div class="flex items-center gap-2 mt-1.5 flex-wrap">
+<span class="px-2 py-0.5 bg-secondary-container/70 text-on-secondary-container rounded-full font-label-sm text-label-sm">
+              All Levels
+            </span>
+<span class="px-2 py-0.5 bg-surface-container-low rounded-full font-label-sm text-label-sm text-on-surface-variant">
+              Mat only
+            </span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate mr-2">
+          2–3 mins • Joint health &amp; pelvic alignment
+        </span>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm shadow-sm flex-shrink-0">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span>Added</span>
+</button>
+</div>
+</article>
+<!-- Exercise 3: Romanian Deadlift (RDL) with Compound Milestone Badge -->
+<article class="bg-surface-container-lowest rounded-lg p-card-padding shadow-[0_4px_20px_rgba(31,41,35,0.04)] flex flex-col gap-space-sm relative overflow-hidden">
+<div class="flex gap-space-md items-start">
+<div class="w-20 h-20 rounded-lg bg-surface-container overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Cinematic form demonstration of a balanced Romanian deadlift performed with dumbbells, neutral spine, in a minimalist natural wood and pale stone fitness sanctuary with peaceful green garden view." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyLP_VPBa93YbI-f2W2ltXin7UR88SaIWLEuLmgKf-jsL5YIvUCj-gcOBA9QGmJ0D8h9WAb-533XIPaKuX0yKCJ31sFFnkwFsjAeR1f7v2v6RDAWES53qlmoRJgkN3t_bRRQ28QMHlf07uyHIMxgw0PxhN1MFlo2U-dXJaz0o-YwlLhk_VXs-H7QldcbtnK67b3FcfK7sg4e80ft8JmGZUrMW_m6VDSE_NuzSKaVr5Wap6QEuvc4P8"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent"></div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="text-label-sm font-label-sm text-primary uppercase tracking-wider font-semibold truncate">
+              Strength • Hamstrings &amp; Glutes
+            </span>
+<button aria-label="Bookmark RDL" class="text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface truncate mt-0.5">Romanian Deadlift (RDL)</h2>
+<div class="flex items-center gap-2 mt-1.5 flex-wrap">
+<span class="px-2 py-0.5 bg-surface-container-high rounded-full font-label-sm text-label-sm text-on-surface-variant">
+              Intermediate
+            </span>
+<span class="px-2 py-0.5 bg-surface-container-low rounded-full font-label-sm text-label-sm text-on-surface-variant">
+              Barbell / Dumbbells
+            </span>
+</div>
+</div>
+</div>
+<!-- Compound Milestone Badge Card Integration -->
+<div class="flex items-center gap-2.5 px-space-sm py-2 bg-surface-container-low rounded-lg">
+<img alt="Strength Milestone Emblem" class="w-7 h-7 object-contain rounded-full flex-shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBhZlIuUBvOqelidE8_0eHi7kg_50kH376u17OIR9T__nByi1VQ9j97GoxNzoLA2U8VtY0Gy-SgCeXUXhYQlOHCJekn7UWzvdSbn4MCehFKe0kyZ1FZvXyMXJRr7EBs7Uel-ne5bmCaeKtMWwjSblHDzHXvvLctHyKOo1Sv7C2Wltukp-Gekb5My5M_wC-l22_StfmPRiNjwpftQgsEYKvMwPU_jWpfQmUNdFMpPEaoiS1HIfySlW7d81WWf6TfpFaiw"/>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-sm text-label-sm font-semibold text-primary">Compound PR Milestone</span>
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Tier 2 Ready</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant/80 truncate">Tempo: 3-1-1 • Spine neutral cue</p>
+</div>
+</div>
+<div class="flex items-center justify-between pt-0.5">
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+          Target: 3 × 10 (RPE 7.5)
+        </span>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm shadow-sm">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span>Added</span>
+</button>
+</div>
+</article>
+<!-- Exercise 4: Thoracic Spine Windmill -->
+<article class="bg-surface-container-lowest rounded-lg p-card-padding shadow-[0_4px_20px_rgba(31,41,35,0.04)] flex flex-col gap-space-sm">
+<div class="flex gap-space-md items-start">
+<div class="w-20 h-20 rounded-lg bg-surface-container-high overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Serene lateral floor windmill exercise for thoracic spine rotation, soft daylight filtering through sheer botanical curtains onto a pale sage yoga floor." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8_rFNN4jBQsipx0V6_2NzOZsIINx4h7W-345q1ZeE9qfgRweaaykVmo7KXjttwj0ao7EhI-1hNuFMfErSagFQy-AkNy0qQlwtZc7FMpHNP8YI2RDWf_YKuNyXFN_-zEcbQGYR6ZbtnUPlABErEGjTJ9_OCAD8-jKcP-DCFKmMh6lH0qDg1bDVwVgRXXspRwYJT_mzqaukf-ME3LvDb0y7SLQpRflX0Ih9gRprFqTwhH1vQhro3vZ-"/>
+<div class="absolute bottom-1 right-1 bg-surface-container-lowest/90 px-1.5 py-0.5 rounded-full text-label-sm font-label-sm text-primary">
+            Restore
+          </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="text-label-sm font-label-sm text-secondary uppercase tracking-wider font-semibold truncate">
+              Mobility • Upper Back &amp; Rotation
+            </span>
+<button aria-label="Bookmark Windmill" class="text-on-surface-variant hover:text-primary transition-colors flex-shrink-0">
+<span class="material-symbols-outlined text-[18px]">favorite</span>
+</button>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface truncate mt-0.5">Thoracic Spine Windmill</h2>
+<div class="flex items-center gap-2 mt-1.5 flex-wrap">
+<span class="px-2 py-0.5 bg-surface-container-high rounded-full font-label-sm text-label-sm text-on-surface-variant">
+              Beginner
+            </span>
+<span class="px-2 py-0.5 bg-surface-container-low rounded-full font-label-sm text-label-sm text-on-surface-variant">
+              Bodyweight
+            </span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+          Post-workout recovery or warm-up prime
+        </span>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary-container text-on-secondary-container hover:bg-primary hover:text-on-primary font-label-sm text-label-sm transition-all shadow-sm">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span>Add to routine</span>
+</button>
+</div>
+</article>
+<!-- Exercise 5: Bulgarian Split Squat -->
+<article class="bg-surface-container-lowest rounded-lg p-card-padding shadow-[0_4px_20px_rgba(31,41,35,0.04)] flex flex-col gap-space-sm mb-4">
+<div class="flex gap-space-md items-start">
+<div class="w-20 h-20 rounded-lg bg-surface-container overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Unilateral Bulgarian split squat form by an athlete focusing on leg alignment and stability with elevated rear foot, clean Scandinavian minimalist interior." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSrcAvti0l67C7UViILM_OY0kffS6mIh8t9dPPUJsDBWzHCiVWkxMqOfPGyNk0qFODYyWIYrYH2PiErOov1P3iBx_I8ViwEPY8YRffAtjfOT_QAJ14Np-6UywIm157xVPAi0z9msWApbJjyDCOMiEivP6bsRXUwz9bPK3aT1f3R3OFzReomxP40G9hFBhe571f9c-A23DbGykK2odDsmef12-Jp6eIr0-VaTywz6zW0tFGuXlviLqW"/>
+<div class="absolute bottom-1 right-1 bg-surface-container-lowest/90 px-1.5 py-0.5 rounded-full text-label-sm font-label-sm text-primary">
+            3D
+          </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="text-label-sm font-label-sm text-primary uppercase tracking-wider font-semibold truncate">
+              Strength • Unilateral Leg Power
+            </span>
+<button aria-label="Bookmark Bulgarian Split Squat" class="text-on-surface-variant hover:text-primary transition-colors flex-shrink-0">
+<span class="material-symbols-outlined text-[18px]">favorite</span>
+</button>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface truncate mt-0.5">Bulgarian Split Squat</h2>
+<div class="flex items-center gap-2 mt-1.5 flex-wrap">
+<span class="px-2 py-0.5 bg-error-container text-on-error-container rounded-full font-label-sm text-label-sm">
+              Advanced
+            </span>
+<span class="px-2 py-0.5 bg-surface-container-low rounded-full font-label-sm text-label-sm text-on-surface-variant">
+              Dumbbells + Bench
+            </span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+          3 sets / leg • 8–10 reps
+        </span>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary-container text-on-secondary-container hover:bg-primary hover:text-on-primary font-label-sm text-label-sm transition-all shadow-sm">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span>Add to routine</span>
+</button>
+</div>
+</article>
+</section>
+<!-- Interactive Floating Selection Bar Above Bottom Nav -->
+<aside class="sticky bottom-2 z-40 px-gutter-screen w-full pb-2">
+<div class="max-w-md mx-auto bg-inverse-surface text-inverse-on-surface rounded-full px-space-md py-2.5 shadow-[0_8px_30px_rgba(41,51,44,0.25)] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-primary-fixed flex items-center justify-center">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-fixed">2</span>
+</div>
+<span class="font-label-md text-label-md text-inverse-on-surface">Selected: 2 exercises</span>
+</div>
+<button class="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary text-on-primary font-title-sm text-title-sm shadow-md hover:bg-primary/90 transition-transform active:scale-95">
+<span>Start Quick Session</span>
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+</button>
+</div>
+</aside>
+</div></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/85 backdrop-blur-xl shadow-[0_-4px_24px_rgba(31,41,35,0.05)]" data-active-classes="text-primary font-semibold bg-secondary-container/60"><div class="h-16 px-space-xs flex items-center justify-around max-w-md mx-auto"><a class="flex flex-col items-center justify-center min-w-[56px] h-12 px-space-xs rounded-full text-on-surface-variant hover:text-primary transition-all" data-path="home-dashboard" href="#"><span class="material-symbols-outlined text-[22px]">home</span><span class="font-label-sm text-label-sm mt-0.5">Home</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-12 px-space-xs rounded-full text-on-surface-variant hover:text-primary transition-all" data-path="workouts-library" href="#"><span class="material-symbols-outlined text-[22px]">fitness_center</span><span class="font-label-sm text-label-sm mt-0.5">Workouts</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-12 px-space-xs rounded-full text-on-surface-variant hover:text-primary transition-all" data-path="community-flow" href="#"><span class="material-symbols-outlined text-[22px]">groups</span><span class="font-label-sm text-label-sm mt-0.5">Train</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-12 px-space-xs rounded-full text-on-surface-variant hover:text-primary transition-all" data-path="progress-insights" href="#"><span class="material-symbols-outlined text-[22px]">bar_chart</span><span class="font-label-sm text-label-sm mt-0.5">Progress</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] h-12 px-space-xs rounded-full transition-all text-primary font-semibold bg-secondary-container/60" data-path="profile-settings" href="#"><span class="material-symbols-outlined text-[22px]">apps</span><span class="font-label-sm text-label-sm mt-0.5">More</span></a></div></nav></body></html>

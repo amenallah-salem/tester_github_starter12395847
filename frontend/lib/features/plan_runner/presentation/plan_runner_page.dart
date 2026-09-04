@@ -387,8 +387,13 @@ class _CompleteScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: () => context.go('/progress'),
+              onPressed: () => context.go('/recovery'),
               child: Text(strings.seeProgress),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => context.go('/progress'),
+              icon: const Icon(Icons.insights_outlined),
+              label: const Text('See progress'),
             ),
             TextButton(
               onPressed: () => context.go('/'),

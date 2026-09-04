@@ -18,7 +18,9 @@ class OnboardingPage extends ConsumerStatefulWidget {
 }
 
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
-  int _step = 0; // 0 welcome, 1 goal, 2 experience, 3 weight, 4 muscle, 5 kit, 6 generating
+  int _step =
+      0; // welcome, guide, goal, experience, weight, muscle, kit, generating
+  String? _guide;
   String? _goal;
   String? _experience;
   String? _weight;
@@ -31,11 +33,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   void _finishLater() {
     ref.read(onboardingDoneProvider.notifier).state = true;
+    persistOnboardingDone();
     context.go('/');
   }
 
   void _buildPlan() {
     ref.read(onboardingDoneProvider.notifier).state = true;
+    persistOnboardingDone();
     ref.read(planNotifierProvider.notifier).generatePlan();
     setState(() => _step = 6);
   }
@@ -60,6 +64,16 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         );
       case 1:
         return _ChoiceStep(
+          title: 'Choose your mindful guide',
+          helper: 'A companion for gentle form cues and steady encouragement.',
+          options: const ['Kaori · Machine form', 'Rin · Strength & agility'],
+          selected: _guide,
+          onSelect: (v) => setState(() => _guide = v),
+          onBack: _back,
+          onNext: _next,
+        );
+      case 2:
+        return _ChoiceStep(
           title: strings.goalTitle,
           helper: strings.goalHelper,
           options: strings.goals,
@@ -68,7 +82,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           onBack: _back,
           onNext: _next,
         );
-      case 2:
+      case 3:
         return _ChoiceStep(
           title: strings.experienceTitle,
           options: strings.experiences,
@@ -77,7 +91,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           onBack: _back,
           onNext: _next,
         );
-      case 3:
+      case 4:
         return _ChoiceStep(
           title: strings.weightTitle,
           helper: strings.weightHelper,
@@ -87,7 +101,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           onBack: _back,
           onNext: _next,
         );
-      case 4:
+      case 5:
         return _MultiChoiceStep(
           title: strings.muscleTitle,
           helper: strings.muscleHelper,
@@ -103,7 +117,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           onBack: _back,
           onNext: _next,
         );
-      case 5:
+      case 6:
         return _KitStep(
           strings: strings,
           days: _days,
@@ -132,51 +146,97 @@ class _Welcome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Scaffold(
+    return Scaffold(
       backgroundColor: AppTheme.bg,
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const Spacer(flex: 2),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Train in the Gym — Your Pocket Trainer',
-                style: TextStyle(color: Color(0xFFE8C547), fontSize: 13, letterSpacing: 1.5, fontWeight: FontWeight.w600),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.spa_outlined,
+                        color: AppTheme.primary),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'welora',
+                    style: TextStyle(
+                      color: AppTheme.primary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: onLater,
+                    tooltip: 'Skip onboarding',
+                    icon: const Icon(Icons.person_outline),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                strings.welcomeHeadline,
-                style: Theme.of(context).textTheme.headlineMedium,
+              const SizedBox(height: 36),
+              Center(
+                child: Container(
+                  width: 170,
+                  height: 170,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.surface,
+                    border: Border.all(color: AppTheme.primaryContainer),
+                    boxShadow: AppTheme.cardShadow,
+                  ),
+                  child: const Icon(Icons.self_improvement_outlined,
+                      size: 76, color: AppTheme.primary),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                strings.welcomeSub,
-                style: const TextStyle(color: AppTheme.mut, fontSize: 15),
+              const Spacer(),
+              Center(
+                child: Text(
+                  'Mindful fitness,\nmade personal.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -1.2,
+                      ),
+                ),
               ),
-            ),
-            const Spacer(flex: 3),
-            FilledButton(
-              onPressed: onStart,
-              child: Text(strings.welcomeCta),
-            ),
-            TextButton(
-              onPressed: onLater,
-              child: Text(strings.welcomeLater),
-            ),
-          ],
-        ),
-      ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  strings.welcomeSub,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: AppTheme.onSurfaceVariant,
+                      ),
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onStart,
+                  icon: const Icon(Icons.arrow_forward),
+                  label: Text(strings.welcomeCta),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton(
+                  onPressed: onLater,
+                  child: Text(strings.welcomeLater),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -330,17 +390,18 @@ class _KitStep extends StatelessWidget {
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: onBack),
+        leading:
+            IconButton(icon: const Icon(Icons.arrow_back), onPressed: onBack),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(strings.kitTitle, style: Theme.of(context).textTheme.headlineSmall),
+            Text(strings.kitTitle,
+                style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 24),
-            Text(strings.daysQuestion,
-                style: const TextStyle(fontSize: 15)),
+            Text(strings.daysQuestion, style: const TextStyle(fontSize: 15)),
             Row(
               children: [
                 Expanded(
