@@ -14,7 +14,9 @@ RUN apt-get update && apt-get install -y \
 # Flutter
 ENV FLUTTER_VERSION=3.24.0
 ENV FLUTTER_SDK=/opt/flutter
-ENV PATH=$FLUTTER_SDK/bin:$PATH
+ENV PATH=$FLUTTER_SDK/bin:$PATH FLUTTER_WEB_USE_SKIA=true
+
+ENV DART_VM_OPTIONS="--no-causal-async-stacks"
 
 RUN git clone \
     --branch ${FLUTTER_VERSION} \
@@ -32,11 +34,14 @@ RUN flutter pub get
 
 COPY . .
 
+RUN dart run build_runner build --delete-conflicting-outputs
+
 RUN flutter build web --release
 
 # Runtime
 FROM nginx:alpine
 
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/build/web /usr/share/nginx/html
 
 EXPOSE 80

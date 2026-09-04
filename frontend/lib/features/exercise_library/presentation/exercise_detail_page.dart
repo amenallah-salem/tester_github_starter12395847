@@ -32,7 +32,7 @@ class ExerciseDetailPage extends ConsumerWidget {
         .where((e) => e.name.toLowerCase() == name.toLowerCase())
         .firstOrNull;
 
-    return Scaffold(
+    return mobileWrap(Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -110,6 +110,6 @@ class ExerciseDetailPage extends ConsumerWidget {
           );
         },
       ),
-    );
+    ));
   }
 }

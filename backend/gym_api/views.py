@@ -16,7 +16,25 @@ from .serializers import (
     WorkoutSessionSerializer,
     WorkoutSessionListSerializer,
     ProgressMetricSerializer,
+    RegisterSerializer,
 )
+
+
+class RegisterView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def post(self, request):
+        s = RegisterSerializer(data=request.data)
+        if s.is_valid():
+            user = s.save()
+            Profile.objects.get_or_create(user=user)
+            from rest_framework_simplejwt.tokens import RefreshToken
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'user': {'id': user.id, 'username': user.username, 'email': user.email},
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }, status=status.HTTP_201_CREATED)
+        return Response(s.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):

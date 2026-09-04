@@ -59,6 +59,16 @@ class CoachingStrings {
       "title": {"encouraging": "How often do you train?"},
       "options": {"encouraging": ["New to this", "Now and then", "Pretty regular"]}
     },
+    "weight_question": {
+      "title": {"encouraging": "What is your current weight (approx)?"},
+      "helper": {"encouraging": "Just an estimate so we can calibrate loads."},
+      "options": {"encouraging": ["Under 60kg", "60-75kg", "75-90kg", "Over 90kg"]}
+    },
+    "muscle_question": {
+      "title": {"encouraging": "Which muscle groups do you want to focus on?"},
+      "helper": {"encouraging": "Select all that apply — we will balance your plan around them."},
+      "options": {"encouraging": ["Upper body", "Lower body", "Core / abs", "Full body"]}
+    },
     "schedule_kit": {
       "days_title": {"encouraging": "How many days a week feels right?"},
       "kit_title": {"encouraging": "What will you train with?"},
@@ -170,6 +180,14 @@ class CoachingStrings {
 
   String get experienceTitle => _string('experience_question', 'title');
   List<String> get experiences => _list('experience_question', 'options');
+
+  String get weightTitle => _string('weight_question', 'title');
+  String get weightHelper => _string('weight_question', 'helper');
+  List<String> get weightOptions => _list('weight_question', 'options');
+
+  String get muscleTitle => _string('muscle_question', 'title');
+  String get muscleHelper => _string('muscle_question', 'helper');
+  List<String> get muscleOptions => _list('muscle_question', 'options');
 
   String get kitTitle => _string('schedule_kit', 'kit_title');
   String get daysQuestion => _string('schedule_kit', 'days_title');

@@ -6,6 +6,14 @@ from rest_framework import serializers
 from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric
 
 
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=6)
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password', 'first_name', 'last_name']
+    def create(self, validated):
+        return User.objects.create_user(**validated)
+
 class UserSerializer(serializers.ModelSerializer):
     """Lightweight User serializer for nested representations."""
     class Meta:

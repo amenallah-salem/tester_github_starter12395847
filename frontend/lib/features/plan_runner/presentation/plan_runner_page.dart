@@ -253,9 +253,9 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: AppTheme.card,
+                  color: AppTheme.surfaceContainer,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.line),
+                  border: Border.all(color: AppTheme.outlineVariant),
                 ),
                 child: Center(
                   child: Text(
@@ -360,7 +360,7 @@ class _CompleteScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.emoji_events_outlined,
-                size: 64, color: AppTheme.accent),
+                size: 64, color: AppTheme.secondary),
             const SizedBox(height: 16),
             Text(
               strings.sessionDone,

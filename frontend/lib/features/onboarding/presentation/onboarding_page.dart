@@ -18,9 +18,11 @@ class OnboardingPage extends ConsumerStatefulWidget {
 }
 
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
-  int _step = 0; // 0 welcome, 1 goal, 2 experience, 3 kit, 4 generating
+  int _step = 0; // 0 welcome, 1 goal, 2 experience, 3 weight, 4 muscle, 5 kit, 6 generating
   String? _goal;
   String? _experience;
+  String? _weight;
+  final Set<String> _muscles = {};
   int _days = 3;
   String _kit = 'Both';
 
@@ -35,7 +37,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   void _buildPlan() {
     ref.read(onboardingDoneProvider.notifier).state = true;
     ref.read(planNotifierProvider.notifier).generatePlan();
-    setState(() => _step = 4);
+    setState(() => _step = 6);
   }
 
   @override
@@ -44,7 +46,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
     // When generation completes, leave onboarding for Today.
     ref.listen(planNotifierProvider, (_, next) {
-      if (next is AsyncData && next.value != null && _step == 4) {
+      if (next is AsyncData && next.value != null && _step == 6) {
         context.go('/');
       }
     });
@@ -76,6 +78,32 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           onNext: _next,
         );
       case 3:
+        return _ChoiceStep(
+          title: strings.weightTitle,
+          helper: strings.weightHelper,
+          options: strings.weightOptions,
+          selected: _weight,
+          onSelect: (v) => setState(() => _weight = v),
+          onBack: _back,
+          onNext: _next,
+        );
+      case 4:
+        return _MultiChoiceStep(
+          title: strings.muscleTitle,
+          helper: strings.muscleHelper,
+          options: strings.muscleOptions,
+          selected: _muscles,
+          onToggle: (v) => setState(() {
+            if (_muscles.contains(v)) {
+              _muscles.remove(v);
+            } else {
+              _muscles.add(v);
+            }
+          }),
+          onBack: _back,
+          onNext: _next,
+        );
+      case 5:
         return _KitStep(
           strings: strings,
           days: _days,
@@ -104,7 +132,10 @@ class _Welcome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Scaffold(
       backgroundColor: AppTheme.bg,
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -114,8 +145,8 @@ class _Welcome extends StatelessWidget {
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'tes2 — Train in the Gym',
-                style: TextStyle(color: AppTheme.brand, fontSize: 14),
+                'Train in the Gym — Your Pocket Trainer',
+                style: TextStyle(color: Color(0xFFE8C547), fontSize: 13, letterSpacing: 1.5, fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(height: 12),
@@ -144,6 +175,8 @@ class _Welcome extends StatelessWidget {
               child: Text(strings.welcomeLater),
             ),
           ],
+        ),
+      ),
         ),
       ),
     );
@@ -211,6 +244,67 @@ class _ChoiceStep extends StatelessWidget {
   }
 }
 
+class _MultiChoiceStep extends StatelessWidget {
+  const _MultiChoiceStep({
+    required this.title,
+    this.helper,
+    required this.options,
+    required this.selected,
+    required this.onToggle,
+    required this.onBack,
+    required this.onNext,
+  });
+
+  final String title;
+  final String? helper;
+  final List<String> options;
+  final Set<String> selected;
+  final ValueChanged<String> onToggle;
+  final VoidCallback onBack;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.bg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: onBack,
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.headlineSmall),
+            if (helper != null) ...[
+              const SizedBox(height: 6),
+              Text(helper!, style: const TextStyle(color: AppTheme.mut)),
+            ],
+            const SizedBox(height: 20),
+            for (final opt in options) ...[
+              SelectionChip(
+                label: opt,
+                selected: selected.contains(opt),
+                onTap: () => onToggle(opt),
+              ),
+              const SizedBox(height: 10),
+            ],
+            const Spacer(),
+            FilledButton(
+              onPressed: selected.isEmpty ? null : onNext,
+              child: const Text('Next'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _KitStep extends StatelessWidget {
   const _KitStep({
     required this.strings,
@@ -264,9 +358,9 @@ class _KitStep extends StatelessWidget {
                   height: 44,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppTheme.card,
+                    color: AppTheme.surfaceContainer,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.line),
+                    border: Border.all(color: AppTheme.outlineVariant),
                   ),
                   child: Text('$days', style: const TextStyle(fontSize: 18)),
                 ),

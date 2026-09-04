@@ -60,17 +60,17 @@ class SelectionChip extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.card,
+          color: AppTheme.surfaceContainer,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? AppTheme.brand : AppTheme.line,
+            color: selected ? AppTheme.primary : AppTheme.outlineVariant,
           ),
         ),
         child: Row(
           children: [
             Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
             if (selected)
-              const Icon(Icons.check_circle, color: AppTheme.brand),
+              const Icon(Icons.check_circle, color: AppTheme.primary),
           ],
         ),
       ),
@@ -94,9 +94,9 @@ class MuscleChips extends StatelessWidget {
             (g) => Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.card,
+                color: AppTheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: AppTheme.line),
+                border: Border.all(color: AppTheme.outlineVariant),
               ),
               child: Text(
                 g,
@@ -153,6 +153,14 @@ class EmptyState extends StatelessWidget {
   }
 }
 
+/// Mobile-width responsive wrapper for web (max 420px centered).
+Widget mobileWrap(Widget child) => Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: child,
+      ),
+    );
+
 /// Skeleton placeholder used while history/plan data loads (TES-6 §4).
 class LoadingShimmer extends StatefulWidget {
   const LoadingShimmer({this.height = 64, super.key});
@@ -187,7 +195,7 @@ class _LoadingShimmerState extends State<LoadingShimmer>
         height: widget.height,
         margin: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: AppTheme.card,
+          color: AppTheme.surfaceContainer,
           borderRadius: BorderRadius.circular(12),
         ),
       ),
@@ -208,15 +216,15 @@ class OfflineBanner extends ConsumerWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      color: AppTheme.warn.withOpacity(0.18),
+      color: AppTheme.error.withOpacity(0.18),
       child: Row(
         children: [
-          const Icon(Icons.cloud_off, color: AppTheme.warn, size: 16),
+          const Icon(Icons.cloud_off, color: AppTheme.error, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               strings.offline,
-              style: const TextStyle(color: AppTheme.warn, fontSize: 13),
+              style: const TextStyle(color: AppTheme.error, fontSize: 13),
             ),
           ),
         ],

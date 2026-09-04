@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:gym_app/core/strings/coaching.dart';
 import 'package:gym_app/core/widgets/common.dart';
+import 'package:gym_app/features/progress/presentation/progress_charts.dart';
 import 'package:gym_app/features/progress/domain/workout_session.dart';
 import 'package:gym_app/features/progress/state/workout_sessions.dart';
 
@@ -48,7 +49,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     final sessions = ref.watch(workoutSessionsProvider);
     final visible = _visible(sessions);
 
-    return Scaffold(
+    return mobileWrap(Scaffold(
       appBar: AppBar(title: const Text('Progress')),
       body: _loading
           ? const _ProgressSkeleton()
@@ -95,6 +96,31 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                           setState(() => _range = s.first),
                     ),
                     const SizedBox(height: 12),
+                    const Text('Weekly rhythm',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: RhythmBarChart(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Muscle load',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: MuscleLoadChart(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Recovery',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    const RecoveryIndicator(),
+                    const SizedBox(height: 12),
                     const Text('Personal bests',
                         style: TextStyle(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
@@ -120,7 +146,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                       ),
                   ],
                 ),
-    );
+    ));
   }
 
   void _showSession(BuildContext context, WorkoutSession s) {

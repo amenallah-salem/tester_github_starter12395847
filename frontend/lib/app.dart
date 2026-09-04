@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:gym_app/core/router/app_router.dart';
+import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:gym_app/core/di/injection.dart';
 
@@ -12,12 +13,13 @@ class GymApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(seedProvider); // seed local exercise library on first launch
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
-      title: 'tes2 — Train in the Gym',
+      title: 'Train in the Gym — Your Pocket Trainer',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
+      theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.dark,
+      themeMode: themeMode,
       routerConfig: router,
     );
   }

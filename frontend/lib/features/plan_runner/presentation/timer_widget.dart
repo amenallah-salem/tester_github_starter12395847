@@ -34,8 +34,8 @@ class CountdownDial extends StatelessWidget {
                 child: CircularProgressIndicator(
                   value: fraction,
                   strokeWidth: 12,
-                  backgroundColor: AppTheme.card,
-                  color: AppTheme.accent,
+                  backgroundColor: AppTheme.surfaceContainer,
+                  color: AppTheme.secondary,
                 ),
               ),
               Column(

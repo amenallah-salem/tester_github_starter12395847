@@ -1,9 +1,10 @@
+# Dev override for frontend: hot reload instead of static build
 services:
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: gym-planner-web
-    ports:
-      - "8080:80"
+    ports: ["8080:80"]
+    volumes: ["./frontend:/app"]
     restart: unless-stopped

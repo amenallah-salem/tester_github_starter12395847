@@ -1,11 +1,9 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import 'package:gym_app/core/database/daos/plan_dao.dart';
+import 'database_connection.dart'
+  if (dart.library.io) 'database_connection_native.dart'
+  if (dart.library.html) 'database_connection_web.dart';
 
 part 'app_database.g.dart';
 
@@ -56,7 +54,7 @@ class CachedPlans extends Table {
   daos: [PlanDao],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase() : super(openConnection());
 
   @override
   int get schemaVersion => 2;
@@ -72,12 +70,4 @@ class AppDatabase extends _$AppDatabase {
           }
         },
       );
-}
-
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'gym_app.sqlite'));
-    return NativeDatabase.createInBackground(file);
-  });
 }

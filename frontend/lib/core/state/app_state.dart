@@ -1,4 +1,5 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// True once the user has finished onboarding and a plan exists.
@@ -13,6 +14,9 @@ final connectivityProvider = StreamProvider<List<ConnectivityResult>>((ref) {
   final connectivity = Connectivity();
   return connectivity.onConnectivityChanged;
 });
+
+/// User-controlled theme mode (light / dark). Defaults to system.
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
 
 /// Convenience: true when the device has no network connection.
 final isOfflineProvider = Provider<bool>((ref) {

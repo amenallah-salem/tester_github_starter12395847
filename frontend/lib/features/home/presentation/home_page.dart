@@ -26,7 +26,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final current = _indexFor(location);
-    return Scaffold(
+    return mobileWrap(Scaffold(
       body: Column(
         children: [
           const OfflineBanner(),
@@ -45,7 +45,7 @@ class HomePage extends StatelessWidget {
             )
             .toList(),
       ),
-    );
+    ));
   }
 }
 
