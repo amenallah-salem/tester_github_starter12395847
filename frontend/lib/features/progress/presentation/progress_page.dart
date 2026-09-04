@@ -29,6 +29,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
   @override
   void initState() {
     super.initState();
+    unawaited(ref.read(workoutSessionsProvider.notifier).loadRemote());
     // Brief loading shimmer before cached/empty fallback (TES-6 §4).
     Timer(const Duration(milliseconds: 600), () {
       if (mounted) setState(() => _loading = false);
@@ -42,8 +43,18 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
   }
 
   int get _streak {
-    // Consecutive days with a session ending today. M1: at most 1.
-    return ref.read(workoutSessionsProvider).isEmpty ? 0 : 1;
+    final dates = ref
+        .read(workoutSessionsProvider)
+        .map((s) => DateTime(s.date.year, s.date.month, s.date.day))
+        .toSet();
+    var day = DateTime.now();
+    day = DateTime(day.year, day.month, day.day);
+    var count = 0;
+    while (dates.contains(day)) {
+      count++;
+      day = day.subtract(const Duration(days: 1));
+    }
+    return count;
   }
 
   @override
@@ -185,6 +196,11 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                           Card(
                             child: ListTile(
                               title: Text(metric.exerciseName ?? 'Exercise'),
+                              onTap: metric.exerciseName == null
+                                  ? null
+                                  : () => context.push(
+                                        '/exercise-history/${Uri.encodeComponent(metric.exerciseName!)}',
+                                      ),
                               subtitle: Text(
                                 '${metric.weightKg == null ? 'Bodyweight' : '${metric.weightKg} kg'} · '
                                 '${metric.reps} reps · ${_metricDate(metric.date)}',
@@ -253,7 +269,8 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                               '${s.minutes} min',
                             ),
                             trailing: const Icon(Icons.chevron_right),
-                            onTap: () => _showSession(context, s),
+                            onTap: () => context.push('/session/${s.id ?? ''}',
+                                extra: s),
                           ),
                         ),
                     ],

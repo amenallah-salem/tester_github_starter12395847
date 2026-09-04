@@ -125,14 +125,28 @@ class ProgressMetricSerializer(serializers.ModelSerializer):
 class WorkoutSessionSerializer(serializers.ModelSerializer):
     metrics = ProgressMetricSerializer(many=True, read_only=True)
     user = UserSerializer(read_only=True)
+    duration_seconds = serializers.SerializerMethodField()
+    total_volume_kg = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkoutSession
         fields = [
             'id', 'user', 'plan', 'name',
             'started_at', 'finished_at', 'notes', 'metrics',
+            'duration_seconds', 'total_volume_kg',
         ]
         read_only_fields = ['id', 'started_at']
+
+    def get_duration_seconds(self, obj):
+        if not obj.finished_at:
+            return None
+        return max(0, int((obj.finished_at - obj.started_at).total_seconds()))
+
+    def get_total_volume_kg(self, obj):
+        return float(sum(
+            (metric.weight_kg or 0) * metric.reps
+            for metric in obj.metrics.all()
+        ))
 
     def validate_plan(self, plan):
         if plan is not None and plan.user_id != self.context['request'].user.id:
@@ -143,17 +157,32 @@ class WorkoutSessionSerializer(serializers.ModelSerializer):
 class WorkoutSessionListSerializer(serializers.ModelSerializer):
     metric_count = serializers.IntegerField(source='metrics.count', read_only=True)
     exercise_names = serializers.SerializerMethodField()
+    duration_seconds = serializers.SerializerMethodField()
+    total_volume_kg = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkoutSession
         fields = [
             'id', 'plan', 'name', 'started_at',
             'finished_at', 'metric_count', 'exercise_names',
+            'duration_seconds', 'total_volume_kg',
         ]
         read_only_fields = ['id', 'started_at']
 
     def get_exercise_names(self, obj):
         return list(obj.metrics.values_list('exercise__name', flat=True).distinct())
+
+    def get_duration_seconds(self, obj):
+        end = obj.finished_at
+        if not end:
+            return None
+        return max(0, int((end - obj.started_at).total_seconds()))
+
+    def get_total_volume_kg(self, obj):
+        return float(sum(
+            (metric.weight_kg or 0) * metric.reps
+            for metric in obj.metrics.all()
+        ))
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):

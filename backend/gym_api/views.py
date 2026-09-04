@@ -166,6 +166,7 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
             weight_kg__isnull=False,
         ).aggregate(total=Sum(F('weight_kg') * F('reps')))['total'] or 0
         best_by_exercise = {}
+        volume_by_day = {}
         estimated_one_rep_max = 0
         for metric in metrics:
             weight = float(metric.weight_kg)
@@ -177,10 +178,19 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
                 estimated_one_rep_max,
                 weight * (1 + metric.reps / 30),
             )
+            day = metric.logged_at.date().isoformat()
+            volume_by_day[day] = volume_by_day.get(day, 0) + weight * metric.reps
         return Response({
             'total_volume_kg': float(volume),
             'estimated_one_rep_max_kg': round(estimated_one_rep_max, 2),
             'personal_records': len(best_by_exercise),
+            'volume_by_day': [
+                {'date': day, 'volume_kg': round(value, 2)}
+                for day, value in sorted(volume_by_day.items())
+            ],
+            'trend': 'up' if len(volume_by_day) > 1 and
+            list(volume_by_day.values())[-1] >= list(volume_by_day.values())[0]
+            else 'steady',
         })
 
 

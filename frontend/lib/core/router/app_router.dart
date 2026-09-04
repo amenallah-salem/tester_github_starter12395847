@@ -12,6 +12,8 @@ import 'package:gym_app/features/exercise_library/domain/exercise.dart';
 import 'package:gym_app/core/di/injection.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:gym_app/features/progress/presentation/progress_page.dart';
+import 'package:gym_app/features/progress/presentation/exercise_history_page.dart';
+import 'package:gym_app/features/progress/presentation/session_detail_page.dart';
 import 'package:gym_app/features/you/presentation/you_page.dart';
 import 'package:gym_app/features/auth/presentation/sign_in_page.dart';
 import 'package:gym_app/features/recovery/presentation/recovery_page.dart';
@@ -20,8 +22,18 @@ import 'package:gym_app/features/plan_runner/presentation/workout_setup_page.dar
 import 'package:gym_app/features/biomechanics/presentation/form_vault_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/replay_3d_page.dart';
 import 'package:gym_app/features/coach/presentation/coach_page.dart';
+import 'package:gym_app/features/progress/domain/workout_session.dart';
 import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/state/auth_state.dart';
+
+class _MissingSessionPage extends StatelessWidget {
+  const _MissingSessionPage();
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+        body: Center(child: Text('This workout is not available offline.')),
+      );
+}
 
 /// App navigation — Welora routes.
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -78,6 +90,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ReplayPage3D(),
       ),
       GoRoute(
+        path: '/exercise-history/:name',
+        builder: (context, state) => ExerciseHistoryPage(
+          exerciseName: Uri.decodeComponent(state.pathParameters['name']!),
+        ),
+      ),
+      GoRoute(
+        path: '/session/:id',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is WorkoutSession) {
+            return SessionDetailPage(session: extra);
+          }
+          return const _MissingSessionPage();
+        },
+      ),
+      GoRoute(
         path: '/recovery',
         builder: (context, state) => const RecoveryPage(),
       ),
@@ -104,6 +132,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           !loc.startsWith('/onboarding')) {
         return '/onboarding';
       }
+
       return null;
     },
   );
@@ -123,13 +152,11 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
 
   List<Exercise> _filter(List<Exercise> exercises) {
     return exercises.where((exercise) {
-      final matchesMuscle =
-          _selectedMuscle == null ||
+      final matchesMuscle = _selectedMuscle == null ||
           exercise.muscleGroups.contains(_selectedMuscle) ||
           exercise.muscleGroup == _selectedMuscle;
       final query = _query.trim().toLowerCase();
-      final matchesQuery =
-          query.isEmpty ||
+      final matchesQuery = query.isEmpty ||
           exercise.name.toLowerCase().contains(query) ||
           exercise.equipment.toLowerCase().contains(query);
       return matchesMuscle && matchesQuery;

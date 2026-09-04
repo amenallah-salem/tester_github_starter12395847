@@ -40,6 +40,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   bool _finished = false;
   final List<Map<String, Object?>> _loggedSets = [];
   final _weightController = TextEditingController();
+  late final DateTime _sessionStartedAt;
 
   PlanExercise get _ex => _exercises[_exIndex];
 
@@ -58,6 +59,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     super.initState();
     final plan = ref.read(planNotifierProvider).value ?? samplePlan;
     _exercises = plan.todaySession.exercises;
+    _sessionStartedAt = DateTime.now();
     _enterExercise(announce: true);
     _startTimer();
   }
@@ -203,32 +205,66 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     });
     final plan = ref.read(planNotifierProvider).value ?? samplePlan;
     final totalSets = _exercises.fold(0, (sum, e) => sum + e.sets);
+    final finishedAt = DateTime.now();
+    final durationSeconds =
+        finishedAt.difference(_sessionStartedAt).inSeconds.clamp(0, 86400);
+    final volumeKg = _loggedSets.fold<double>(
+      0,
+      (sum, set) =>
+          sum + ((set['weight'] as double?) ?? 0) * (set['reps'] as int),
+    );
     ref.read(workoutSessionsProvider.notifier).add(WorkoutSession(
-          date: DateTime.now(),
+          date: _sessionStartedAt,
           name: plan.todaySession.dayLabel,
           exerciseCount: _exercises.length,
-          setCount: totalSets,
-          minutes: plan.profile.sessionMinutes,
+          setCount: _loggedSets.length,
+          minutes: (durationSeconds / 60).ceil(),
           exerciseNames: _exercises.map((e) => e.name).toList(),
+          durationSeconds: durationSeconds,
+          volumeKg: volumeKg,
+          finishedAt: finishedAt,
         ));
-    unawaited(_persistWorkout());
+    unawaited(_persistWorkout(finishedAt));
     ref.invalidate(progressMetricsProvider);
   }
 
-  Future<void> _persistWorkout() async {
+  Future<void> _persistWorkout(DateTime finishedAt) async {
     if (ApiClient.I.accessToken == null) return;
-    final session = await ApiClient.I.createWorkout(
-      notes: 'Completed in the workout runner.',
-    );
-    final sessionId = session['id']?.toString();
-    if (sessionId == null) return;
-    for (final set in _loggedSets) {
-      await ApiClient.I.logWorkoutMetric(
+    try {
+      final plan = ref.read(planNotifierProvider).value ?? samplePlan;
+      final session = await ApiClient.I.createWorkout(
+        name: plan.todaySession.dayLabel,
+        notes: 'Completed in the workout runner.',
+      );
+      final sessionId = session['id']?.toString();
+      if (sessionId == null) return;
+      for (final set in _loggedSets) {
+        await ApiClient.I.logWorkoutMetric(
+          sessionId: sessionId,
+          exerciseName: set['exercise']! as String,
+          setNumber: set['set']! as int,
+          reps: set['reps']! as int,
+          weightKg: set['weight'] as double?,
+        );
+      }
+      await ApiClient.I.finishWorkout(
         sessionId: sessionId,
-        exerciseName: set['exercise']! as String,
-        setNumber: set['set']! as int,
-        reps: set['reps']! as int,
-        weightKg: set['weight'] as double?,
+        finishedAt: finishedAt,
+      );
+    } on ApiException {
+      await ApiClient.I.queueWorkout(
+        name: (ref.read(planNotifierProvider).value ?? samplePlan)
+            .todaySession
+            .dayLabel,
+        notes: 'Completed offline in the workout runner.',
+        metrics: _loggedSets
+            .map((set) => {
+                  'exercise': set['exercise'],
+                  'set': set['set'],
+                  'reps': set['reps'],
+                  'weight': set['weight'],
+                })
+            .toList(),
       );
     }
   }
@@ -253,9 +289,8 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
         strings: strings,
         exerciseCount: _exercises.length,
         setCount: _totalSets,
-        minutes: (ref.watch(planNotifierProvider).value ?? samplePlan)
-            .profile
-            .sessionMinutes,
+        minutes: ((DateTime.now().difference(_sessionStartedAt).inSeconds) / 60)
+            .ceil(),
       );
     }
 

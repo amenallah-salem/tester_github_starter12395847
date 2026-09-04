@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/plan.dart';
 import '../models/progress_metric.dart';
@@ -165,17 +166,35 @@ class ApiClient {
     return _jsonObject(response, 'progress summary');
   }
 
-  Future<Map<String, dynamic>> createWorkout({required String notes}) async {
+  Future<Map<String, dynamic>> createWorkout({
+    required String notes,
+    String name = 'Workout',
+  }) async {
     final response = await _send(
       () => http.post(
         _uri('/sessions/'),
         headers: _headers(json: true),
-        body: jsonEncode({'name': 'Workout', 'notes': notes}),
+        body: jsonEncode({'name': name, 'notes': notes}),
       ),
       method: 'POST',
       path: '/sessions/',
     );
     return _jsonObject(response, 'workout creation');
+  }
+
+  Future<void> finishWorkout({
+    required String sessionId,
+    required DateTime finishedAt,
+  }) async {
+    await _send(
+      () => http.patch(
+        _uri('/sessions/$sessionId/'),
+        headers: _headers(json: true),
+        body: jsonEncode({'finished_at': finishedAt.toUtc().toIso8601String()}),
+      ),
+      method: 'PATCH',
+      path: '/sessions/$sessionId/',
+    );
   }
 
   Future<void> logWorkoutMetric({
@@ -184,21 +203,111 @@ class ApiClient {
     required int setNumber,
     required int reps,
     double? weightKg,
+    bool queueOnFailure = true,
   }) async {
-    await _send(
-      () => http.post(
-        _uri('/sessions/$sessionId/log-metric/'),
-        headers: _headers(json: true),
-        body: jsonEncode({
-          'exercise_name': exerciseName,
-          'set_number': setNumber,
-          'reps': reps,
-          'weight_kg': weightKg,
-        }),
-      ),
-      method: 'POST',
-      path: '/sessions/$sessionId/log-metric/',
-    );
+    final payload = {
+      'exercise_name': exerciseName,
+      'set_number': setNumber,
+      'reps': reps,
+      'weight_kg': weightKg,
+    };
+    try {
+      await _send(
+        () => http.post(
+          _uri('/sessions/$sessionId/log-metric/'),
+          headers: _headers(json: true),
+          body: jsonEncode(payload),
+        ),
+        method: 'POST',
+        path: '/sessions/$sessionId/log-metric/',
+      );
+    } on ApiException catch (error) {
+      if (queueOnFailure && error.statusCode == null) {
+        await _enqueue({'sessionId': sessionId, ...payload});
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> queueWorkout({
+    required String name,
+    required String notes,
+    required List<Map<String, dynamic>> metrics,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final queued = _readQueue(prefs, 'pending_workouts');
+    queued.add({'name': name, 'notes': notes, 'metrics': metrics});
+    await prefs.setString('pending_workouts', jsonEncode(queued));
+  }
+
+  Future<void> _enqueue(Map<String, dynamic> metric) async {
+    final prefs = await SharedPreferences.getInstance();
+    final queued = _readQueue(prefs, 'pending_metrics')..add(metric);
+    await prefs.setString('pending_metrics', jsonEncode(queued));
+  }
+
+  /// Retries sessions captured while offline. Failed items stay queued.
+  Future<int> flushOfflineQueue() async {
+    if (accessToken == null) return 0;
+    final prefs = await SharedPreferences.getInstance();
+    final workouts = _readQueue(prefs, 'pending_workouts');
+    var flushed = 0;
+    final remaining = <Map<String, dynamic>>[];
+    for (final item in workouts) {
+      try {
+        final session = await createWorkout(
+          notes: item['notes'] as String? ?? 'Completed workout.',
+        );
+        final id = session['id']?.toString();
+        if (id == null) throw const FormatException('Missing session id');
+        for (final metric in (item['metrics'] as List? ?? const [])) {
+          await logWorkoutMetric(
+            sessionId: id,
+            exerciseName: metric['exercise'] as String,
+            setNumber: (metric['set'] as num).toInt(),
+            reps: (metric['reps'] as num).toInt(),
+            weightKg: (metric['weight'] as num?)?.toDouble(),
+            queueOnFailure: false,
+          );
+        }
+        flushed++;
+      } catch (_) {
+        remaining.add(item);
+      }
+    }
+    await prefs.setString('pending_workouts', jsonEncode(remaining));
+    final metrics = _readQueue(prefs, 'pending_metrics');
+    final pendingMetrics = <Map<String, dynamic>>[];
+    for (final metric in metrics) {
+      try {
+        await logWorkoutMetric(
+          sessionId: metric['sessionId'] as String,
+          exerciseName: metric['exercise_name'] as String,
+          setNumber: (metric['set_number'] as num).toInt(),
+          reps: (metric['reps'] as num).toInt(),
+          weightKg: (metric['weight_kg'] as num?)?.toDouble(),
+          queueOnFailure: false,
+        );
+        flushed++;
+      } catch (_) {
+        pendingMetrics.add(metric);
+      }
+    }
+    await prefs.setString('pending_metrics', jsonEncode(pendingMetrics));
+    return flushed;
+  }
+
+  List<Map<String, dynamic>> _readQueue(SharedPreferences prefs, String key) {
+    final raw = prefs.getString(key);
+    if (raw == null) return <Map<String, dynamic>>[];
+    try {
+      return (jsonDecode(raw) as List)
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+    } catch (_) {
+      return <Map<String, dynamic>>[];
+    }
   }
 
   Future<void> deleteProgressMetric(String metricId) async {

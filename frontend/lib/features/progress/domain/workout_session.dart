@@ -1,6 +1,4 @@
-/// A completed training session, recorded by the Plan Runner.
-/// Milestone 1 keeps these in memory (persistence lands in a later issue);
-/// they drive the Progress tab's streak, volume, and personal bests.
+/// A training session recorded locally or returned by the API.
 class WorkoutSession {
   const WorkoutSession({
     required this.date,
@@ -9,6 +7,10 @@ class WorkoutSession {
     required this.setCount,
     required this.minutes,
     this.exerciseNames = const [],
+    this.durationSeconds,
+    this.volumeKg = 0,
+    this.id,
+    this.finishedAt,
   });
 
   final DateTime date;
@@ -19,4 +21,39 @@ class WorkoutSession {
 
   /// Names of exercises performed, used for personal-best lines.
   final List<String> exerciseNames;
+  final int? durationSeconds;
+  final double volumeKg;
+  final String? id;
+  final DateTime? finishedAt;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'date': date.toIso8601String(),
+        'name': name,
+        'exerciseCount': exerciseCount,
+        'setCount': setCount,
+        'minutes': minutes,
+        'exerciseNames': exerciseNames,
+        'durationSeconds': durationSeconds,
+        'volumeKg': volumeKg,
+        'finishedAt': finishedAt?.toIso8601String(),
+      };
+
+  factory WorkoutSession.fromJson(Map<String, dynamic> json) {
+    final date = DateTime.tryParse(json['date'] as String? ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    return WorkoutSession(
+      id: json['id'] as String?,
+      date: date,
+      name: json['name'] as String? ?? 'Workout',
+      exerciseCount: (json['exerciseCount'] as num?)?.toInt() ?? 0,
+      setCount: (json['setCount'] as num?)?.toInt() ?? 0,
+      minutes: (json['minutes'] as num?)?.toInt() ?? 0,
+      exerciseNames:
+          (json['exerciseNames'] as List? ?? const []).cast<String>(),
+      durationSeconds: (json['durationSeconds'] as num?)?.toInt(),
+      volumeKg: (json['volumeKg'] as num?)?.toDouble() ?? 0,
+      finishedAt: DateTime.tryParse(json['finishedAt'] as String? ?? ''),
+    );
+  }
 }
