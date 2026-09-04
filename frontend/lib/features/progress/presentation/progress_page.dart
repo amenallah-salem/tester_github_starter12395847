@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,104 +50,181 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     final sessions = ref.watch(workoutSessionsProvider);
     final visible = _visible(sessions);
 
-    return mobileWrap(Scaffold(
-      appBar: AppBar(title: const Text('Progress')),
-      body: _loading
-          ? const _ProgressSkeleton()
-          : sessions.isEmpty
-              ? EmptyState(
-                  message: strings.progressEmpty,
-                  icon: Icons.show_chart_outlined,
-                  ctaLabel: strings.startTodaysPlan,
-                  onCta: () => context.go('/'),
-                )
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _SummaryCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _streak == 0
-                                ? strings.zeroStreak
-                                : strings.streak(_streak),
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w700),
+    return mobileWrap(
+      Scaffold(
+        appBar: AppBar(
+          title: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'WELORA MINDFUL',
+                style: TextStyle(fontSize: 10, letterSpacing: 1),
+              ),
+              Text('Progress'),
+            ],
+          ),
+          actions: [
+            IconButton(
+              tooltip: 'Notifications',
+              onPressed: () {},
+              icon: const Icon(Icons.notifications_none),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: AppTheme.primaryContainer,
+                child: Icon(Icons.person_outline, color: AppTheme.primary),
+              ),
+            ),
+          ],
+        ),
+        body: _loading
+            ? const _ProgressSkeleton()
+            : sessions.isEmpty
+            ? EmptyState(
+                message: strings.progressEmpty,
+                icon: Icons.show_chart_outlined,
+                ctaLabel: strings.startTodaysPlan,
+                onCta: () => context.go('/'),
+              )
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Your rhythm & progress',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'This ${_range == 'week' ? 'week' : 'month'}: '
-                            '${_totalWorkouts(visible)} workouts · '
-                            '${_totalMinutes(visible)} min · '
-                            '${_totalSets(visible)} sets',
-                            style: const TextStyle(color: AppTheme.mut),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'week', label: Text('Week')),
-                        ButtonSegment(value: 'month', label: Text('Month')),
-                      ],
-                      selected: {_range},
-                      onSelectionChanged: (s) =>
-                          setState(() => _range = s.first),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('Weekly rhythm',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: RhythmBarChart(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('Muscle load',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: MuscleLoadChart(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('Recovery',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    const RecoveryIndicator(),
-                    const SizedBox(height: 12),
-                    const Text('Personal bests',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    for (final name in _personalBests(visible))
-                      _SummaryCard(
-                        child: Text(strings.personalBest(name, 'first session!')),
-                      ),
-                    const SizedBox(height: 12),
-                    const Text('Sessions',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    for (final s in visible)
-                      Card(
-                        child: ListTile(
-                          title: Text(s.name),
-                          subtitle: Text(
-                            '${_fmtDate(s.date)} · ${s.setCount} sets · '
-                            '${s.minutes} min',
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => _showSession(context, s),
                         ),
                       ),
-                  ],
-                ),
-    ));
+                      Chip(
+                        avatar: const Icon(Icons.eco_outlined, size: 16),
+                        label: Text('${visible.length}/4 consistent'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _SummaryCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _streak == 0
+                              ? strings.zeroStreak
+                              : strings.streak(_streak),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'This ${_range == 'week' ? 'week' : 'month'}: '
+                          '${_totalWorkouts(visible)} workouts · '
+                          '${_totalMinutes(visible)} min · '
+                          '${_totalSets(visible)} sets',
+                          style: const TextStyle(color: AppTheme.mut),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Row(
+                    children: [
+                      Expanded(
+                        child: _InsightCard(
+                          icon: Icons.timer_outlined,
+                          value: '130 min',
+                          label: 'Total movement',
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _InsightCard(
+                          icon: Icons.spa_outlined,
+                          value: '94%',
+                          label: 'Form precision',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'week', label: Text('Week')),
+                      ButtonSegment(value: 'month', label: Text('Month')),
+                    ],
+                    selected: {_range},
+                    onSelectionChanged: (s) => setState(() => _range = s.first),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Weekly rhythm',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: RhythmBarChart(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Muscle load',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: MuscleLoadChart(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Recovery',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  const RecoveryIndicator(),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Personal bests',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  for (final name in _personalBests(visible))
+                    _SummaryCard(
+                      child: Text(strings.personalBest(name, 'first session!')),
+                    ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Sessions',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  for (final s in visible)
+                    Card(
+                      child: ListTile(
+                        title: Text(s.name),
+                        subtitle: Text(
+                          '${_fmtDate(s.date)} · ${s.setCount} sets · '
+                          '${s.minutes} min',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _showSession(context, s),
+                      ),
+                    ),
+                ],
+              ),
+      ),
+    );
   }
 
   void _showSession(BuildContext context, WorkoutSession s) {
@@ -177,8 +255,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
   List<String> _personalBests(List<WorkoutSession> list) =>
       list.expand((s) => s.exerciseNames).toSet().toList();
 
-  static String _fmtDate(DateTime d) =>
-      '${_wd(d.weekday)} ${d.day}/${d.month}';
+  static String _fmtDate(DateTime d) => '${_wd(d.weekday)} ${d.day}/${d.month}';
   static String _wd(int d) =>
       const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1];
 }
@@ -188,23 +265,63 @@ class _SummaryCard extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => Card(
-        child: Padding(padding: const EdgeInsets.all(16), child: child),
-      );
+    child: Padding(padding: const EdgeInsets.all(16), child: child),
+  );
+}
+
+class _InsightCard extends StatelessWidget {
+  const _InsightCard({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: AppTheme.primaryContainer,
+              child: Icon(icon, size: 17, color: AppTheme.primary),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            Text(
+              label,
+              style: const TextStyle(color: AppTheme.mut, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _ProgressSkeleton extends StatelessWidget {
   const _ProgressSkeleton();
   @override
   Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(16),
-        children: const [
-          LoadingShimmer(height: 72),
-          SizedBox(height: 12),
-          LoadingShimmer(height: 48),
-          SizedBox(height: 12),
-          LoadingShimmer(height: 56),
-          SizedBox(height: 12),
-          LoadingShimmer(height: 56),
-        ],
-      );
+    padding: const EdgeInsets.all(16),
+    children: const [
+      LoadingShimmer(height: 72),
+      SizedBox(height: 12),
+      LoadingShimmer(height: 48),
+      SizedBox(height: 12),
+      LoadingShimmer(height: 56),
+      SizedBox(height: 12),
+      LoadingShimmer(height: 56),
+    ],
+  );
 }

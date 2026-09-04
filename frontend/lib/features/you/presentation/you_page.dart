@@ -36,9 +36,27 @@ class _YouPageState extends ConsumerState<YouPage> {
     final plan = ref.watch(planNotifierProvider).value ?? samplePlan;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('You')),
+      appBar: AppBar(
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'WELORA MINDFUL',
+              style: TextStyle(fontSize: 10, letterSpacing: 1),
+            ),
+            Text('Kaori'),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Coach',
+            onPressed: () => context.go('/coach'),
+            icon: const Icon(Icons.chat_bubble_outline),
+          ),
+        ],
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
         children: [
           // ── Identity ──
           Row(
@@ -65,6 +83,50 @@ class _YouPageState extends ConsumerState<YouPage> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 20),
+          Card(
+            color: AppTheme.surfaceContainerLow,
+            child: Padding(
+              padding: const EdgeInsets.all(AppTheme.cardPadding),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 30,
+                    backgroundColor: AppTheme.primaryContainer,
+                    child: Icon(
+                      Icons.spa_outlined,
+                      size: 30,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Kaori',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Machine form specialist · Online',
+                          style: TextStyle(color: AppTheme.mut),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => context.go('/coach'),
+                    icon: const Icon(Icons.call_outlined),
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           _SectionCard(
@@ -182,8 +244,8 @@ class _YouPageState extends ConsumerState<YouPage> {
                   themeMode == ThemeMode.light
                       ? 'Bright cream with forest-green accents.'
                       : themeMode == ThemeMode.dark
-                          ? 'Deep forest, easy on the eyes at night.'
-                          : 'Matches your device setting.',
+                      ? 'Deep forest, easy on the eyes at night.'
+                      : 'Matches your device setting.',
                   style: const TextStyle(color: AppTheme.mut, fontSize: 13),
                 ),
               ],
@@ -324,9 +386,9 @@ class _YouPageState extends ConsumerState<YouPage> {
 }
 
 ShapeBorder _cardShape() => RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
-      side: const BorderSide(color: AppTheme.outlineVariant),
-    );
+  borderRadius: BorderRadius.circular(20),
+  side: const BorderSide(color: AppTheme.outlineVariant),
+);
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.title, required this.child});

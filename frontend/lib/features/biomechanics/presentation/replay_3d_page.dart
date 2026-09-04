@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
@@ -15,6 +17,26 @@ class ReplayPage3D extends ConsumerStatefulWidget {
 class _ReplayPage3DState extends ConsumerState<ReplayPage3D> {
   int _frame = 0;
   bool _playing = false;
+  Timer? _timer;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _togglePlayback(int frameCount) {
+    if (_playing) {
+      _timer?.cancel();
+      setState(() => _playing = false);
+      return;
+    }
+    setState(() => _playing = true);
+    _timer = Timer.periodic(const Duration(milliseconds: 450), (_) {
+      if (!mounted) return;
+      setState(() => _frame = (_frame + 1) % frameCount);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +59,7 @@ class _ReplayPage3DState extends ConsumerState<ReplayPage3D> {
           // 3D viewport placeholder
           Expanded(
             child: Container(
-              color: const Color(0xFF141E18),
+              color: AppTheme.ink,
               child: Stack(
                 children: [
                   Center(
@@ -47,13 +69,13 @@ class _ReplayPage3DState extends ConsumerState<ReplayPage3D> {
                         const Icon(
                           Icons.accessibility_new,
                           size: 120,
-                          color: Color(0xFFE8C547),
+                          color: AppTheme.primaryContainer,
                         ),
                         const SizedBox(height: 12),
                         Text(
                           '3D replay · frame ${_frame + 1} / ${replay.frames.length}',
                           style: const TextStyle(
-                            color: Color(0xFFE8C547),
+                            color: AppTheme.primaryContainer,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -81,8 +103,7 @@ class _ReplayPage3DState extends ConsumerState<ReplayPage3D> {
                           min: 0,
                           max: (replay.frames.length - 1).toDouble(),
                           divisions: replay.frames.length - 1,
-                          onChanged: (v) =>
-                              setState(() => _frame = v.round()),
+                          onChanged: (v) => setState(() => _frame = v.round()),
                         ),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -92,11 +113,11 @@ class _ReplayPage3DState extends ConsumerState<ReplayPage3D> {
                                 _playing
                                     ? Icons.pause_circle
                                     : Icons.play_circle,
-                                color: const Color(0xFFE8C547),
+                                color: AppTheme.primaryContainer,
                                 size: 36,
                               ),
                               onPressed: () =>
-                                  setState(() => _playing = !_playing),
+                                  _togglePlayback(replay.frames.length),
                             ),
                           ],
                         ),
@@ -139,7 +160,9 @@ class _ReplayPage3DState extends ConsumerState<ReplayPage3D> {
                             value: (j.angle / 180).clamp(0.0, 1.0),
                             backgroundColor: AppTheme.surfaceContainer,
                             valueColor: AlwaysStoppedAnimation(
-                              ok ? const Color(0xFF446651) : const Color(0xFFE8C547),
+                              ok
+                                  ? const Color(0xFF446651)
+                                  : const Color(0xFFE8C547),
                             ),
                           ),
                         ),
