@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/strings/coaching.dart';
 import 'package:gym_app/features/plan/data/sample_plan.dart';
+import 'package:gym_app/features/plan/domain/plan_contract.dart';
 import 'package:gym_app/features/plan/state/plan_notifier.dart';
 import 'package:gym_app/services/api_client.dart';
 import 'package:go_router/go_router.dart';
@@ -36,9 +37,27 @@ class _YouPageState extends ConsumerState<YouPage> {
     final plan = ref.watch(planNotifierProvider).value ?? samplePlan;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('You')),
+      appBar: AppBar(
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'WELORA MINDFUL',
+              style: TextStyle(fontSize: 10, letterSpacing: 1),
+            ),
+            Text('Kaori'),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Coach',
+            onPressed: () => context.go('/coach'),
+            icon: const Icon(Icons.chat_bubble_outline),
+          ),
+        ],
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
         children: [
           // ── Identity ──
           Row(
@@ -65,6 +84,50 @@ class _YouPageState extends ConsumerState<YouPage> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 20),
+          Card(
+            color: AppTheme.surfaceContainerLow,
+            child: Padding(
+              padding: const EdgeInsets.all(AppTheme.cardPadding),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 30,
+                    backgroundColor: AppTheme.primaryContainer,
+                    child: Icon(
+                      Icons.spa_outlined,
+                      size: 30,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Kaori',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Machine form specialist · Online',
+                          style: TextStyle(color: AppTheme.mut),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => context.go('/coach'),
+                    icon: const Icon(Icons.call_outlined),
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           _SectionCard(
@@ -105,13 +168,14 @@ class _YouPageState extends ConsumerState<YouPage> {
           ),
           const SizedBox(height: 12),
           FilledButton.tonalIcon(
-            onPressed: () {
+            onPressed: () async {
               ref.read(accessTokenProvider.notifier).state = null;
               ref.read(refreshTokenProvider.notifier).state = null;
               ApiClient.I.accessToken = null;
+              ApiClient.I.refreshToken = null;
               ref.read(onboardingDoneProvider.notifier).state = false;
-              clearPersistedAuth();
-              clearPersistedOnboarding();
+              await clearPersistedAuth();
+              await clearPersistedOnboarding();
               context.go('/sign-in');
             },
             icon: const Icon(Icons.logout),
@@ -132,7 +196,7 @@ class _YouPageState extends ConsumerState<YouPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    plan.profile.goal.name,
+                    enumName(plan.profile.goal),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -140,7 +204,7 @@ class _YouPageState extends ConsumerState<YouPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${plan.profile.daysPerWeek}-day plan · ${plan.weeklySplit.name}',
+                    '${plan.profile.daysPerWeek}-day plan · ${enumName(plan.weeklySplit)}',
                     style: const TextStyle(color: AppTheme.mut, fontSize: 13),
                   ),
                 ],
@@ -182,8 +246,8 @@ class _YouPageState extends ConsumerState<YouPage> {
                   themeMode == ThemeMode.light
                       ? 'Bright cream with forest-green accents.'
                       : themeMode == ThemeMode.dark
-                          ? 'Deep forest, easy on the eyes at night.'
-                          : 'Matches your device setting.',
+                      ? 'Deep forest, easy on the eyes at night.'
+                      : 'Matches your device setting.',
                   style: const TextStyle(color: AppTheme.mut, fontSize: 13),
                 ),
               ],
@@ -324,9 +388,9 @@ class _YouPageState extends ConsumerState<YouPage> {
 }
 
 ShapeBorder _cardShape() => RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
-      side: const BorderSide(color: AppTheme.outlineVariant),
-    );
+  borderRadius: BorderRadius.circular(20),
+  side: const BorderSide(color: AppTheme.outlineVariant),
+);
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.title, required this.child});

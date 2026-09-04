@@ -22,6 +22,7 @@ final authBootstrapProvider = FutureProvider<void>((ref) async {
   }
   if (refresh != null) {
     ref.read(refreshTokenProvider.notifier).state = refresh;
+    ApiClient.I.refreshToken = refresh;
   }
   if (username != null) {
     ref.read(currentUsernameProvider.notifier).state = username;

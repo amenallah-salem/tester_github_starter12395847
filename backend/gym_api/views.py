@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.db.models import F, Sum
 
 from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
 from .serializers import (
@@ -116,6 +117,32 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    @action(detail=True, methods=['post'], url_path='log-metric')
+    def log_metric(self, request, pk=None):
+        session = self.get_object()
+        exercise_name = str(request.data.get('exercise_name', '')).strip()
+        if not exercise_name:
+            return Response({'exercise_name': 'This field is required.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        exercise, _ = Exercise.objects.get_or_create(
+            user=request.user,
+            name=exercise_name,
+            plan=session.plan,
+            defaults={'description': 'Logged from a completed workout.'},
+        )
+        payload = {
+            'session': session.id,
+            'exercise': exercise.id,
+            'set_number': request.data.get('set_number', 1),
+            'reps': request.data.get('reps', 0),
+            'weight_kg': request.data.get('weight_kg'),
+            'duration_seconds': request.data.get('duration_seconds'),
+        }
+        serializer = ProgressMetricSerializer(data=payload, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
 class ProgressMetricViewSet(viewsets.ModelViewSet):
     """ViewSet for progress metrics."""
@@ -129,6 +156,42 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save()
+
+    @action(detail=False, methods=['get'], url_path='summary')
+    def summary(self, request):
+        """Return derived lifting insights for the authenticated user."""
+        metrics = list(self.get_queryset().filter(weight_kg__isnull=False))
+        volume = ProgressMetric.objects.filter(
+            session__user=request.user,
+            weight_kg__isnull=False,
+        ).aggregate(total=Sum(F('weight_kg') * F('reps')))['total'] or 0
+        best_by_exercise = {}
+        volume_by_day = {}
+        estimated_one_rep_max = 0
+        for metric in metrics:
+            weight = float(metric.weight_kg)
+            best_by_exercise[metric.exercise_id] = max(
+                best_by_exercise.get(metric.exercise_id, 0),
+                weight,
+            )
+            estimated_one_rep_max = max(
+                estimated_one_rep_max,
+                weight * (1 + metric.reps / 30),
+            )
+            day = metric.logged_at.date().isoformat()
+            volume_by_day[day] = volume_by_day.get(day, 0) + weight * metric.reps
+        return Response({
+            'total_volume_kg': float(volume),
+            'estimated_one_rep_max_kg': round(estimated_one_rep_max, 2),
+            'personal_records': len(best_by_exercise),
+            'volume_by_day': [
+                {'date': day, 'volume_kg': round(value, 2)}
+                for day, value in sorted(volume_by_day.items())
+            ],
+            'trend': 'up' if len(volume_by_day) > 1 and
+            list(volume_by_day.values())[-1] >= list(volume_by_day.values())[0]
+            else 'steady',
+        })
 
 
 class SubscriptionViewSet(viewsets.ModelViewSet):

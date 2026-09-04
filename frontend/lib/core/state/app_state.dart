@@ -33,7 +33,7 @@ final connectivityProvider = StreamProvider<List<ConnectivityResult>>((ref) {
 });
 
 /// User-controlled theme mode (light / dark). Defaults to system.
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
 
 /// Convenience: true when the device has no network connection.
 final isOfflineProvider = Provider<bool>((ref) {

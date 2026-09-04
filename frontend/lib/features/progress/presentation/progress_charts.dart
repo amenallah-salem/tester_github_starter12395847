@@ -4,7 +4,8 @@ import 'package:gym_app/core/theme/app_theme.dart';
 /// Rhythm bar chart (Stitch: weekly_progress_rhythm_analytics)
 /// Renders 7 vertical bars for M–S with intensity gradient.
 class RhythmBarChart extends StatelessWidget {
-  const RhythmBarChart({super.key, this.values = const [0.4, 0.7, 0.0, 0.6, 0.0, 0.9, 0.3]});
+  const RhythmBarChart(
+      {super.key, this.values = const [0.4, 0.7, 0.0, 0.6, 0.0, 0.9, 0.3]});
 
   final List<double> values; // 0..1 per day, Mon..Sun
 
@@ -158,8 +159,8 @@ class RecoveryIndicator extends StatelessWidget {
                     style: TextStyle(fontSize: 13, color: AppTheme.mut)),
                 SizedBox(height: 2),
                 Text('Ready for full session',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700)),
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
               ],
             ),
           ),

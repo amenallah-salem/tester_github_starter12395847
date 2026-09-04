@@ -12,15 +12,28 @@ import 'package:gym_app/features/exercise_library/domain/exercise.dart';
 import 'package:gym_app/core/di/injection.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:gym_app/features/progress/presentation/progress_page.dart';
+import 'package:gym_app/features/progress/presentation/exercise_history_page.dart';
+import 'package:gym_app/features/progress/presentation/session_detail_page.dart';
 import 'package:gym_app/features/you/presentation/you_page.dart';
 import 'package:gym_app/features/auth/presentation/sign_in_page.dart';
 import 'package:gym_app/features/recovery/presentation/recovery_page.dart';
+import 'package:gym_app/features/recovery/presentation/breathwork_page.dart';
 import 'package:gym_app/features/plan_runner/presentation/workout_setup_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/form_vault_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/replay_3d_page.dart';
 import 'package:gym_app/features/coach/presentation/coach_page.dart';
+import 'package:gym_app/features/progress/domain/workout_session.dart';
 import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/state/auth_state.dart';
+
+class _MissingSessionPage extends StatelessWidget {
+  const _MissingSessionPage();
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+        body: Center(child: Text('This workout is not available offline.')),
+      );
+}
 
 /// App navigation — Welora routes.
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -42,10 +55,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) =>
             HomePage(location: state.matchedLocation, child: child),
         routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => const PlanPage(),
-          ),
+          GoRoute(path: '/', builder: (context, state) => const PlanPage()),
           GoRoute(
             path: '/progress',
             builder: (context, state) => const ProgressPage(),
@@ -54,10 +64,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/coach',
             builder: (context, state) => const CoachPage(),
           ),
-          GoRoute(
-            path: '/you',
-            builder: (context, state) => const YouPage(),
-          ),
+          GoRoute(path: '/you', builder: (context, state) => const YouPage()),
         ],
       ),
       GoRoute(
@@ -66,9 +73,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/exercise/:id',
-        builder: (context, state) => ExerciseDetailPage(
-          exerciseId: state.pathParameters['id']!,
-        ),
+        builder: (context, state) =>
+            ExerciseDetailPage(exerciseId: state.pathParameters['id']!),
       ),
       // Welora new routes
       GoRoute(
@@ -84,8 +90,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ReplayPage3D(),
       ),
       GoRoute(
+        path: '/exercise-history/:name',
+        builder: (context, state) => ExerciseHistoryPage(
+          exerciseName: Uri.decodeComponent(state.pathParameters['name']!),
+        ),
+      ),
+      GoRoute(
+        path: '/session/:id',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is WorkoutSession) {
+            return SessionDetailPage(session: extra);
+          }
+          return const _MissingSessionPage();
+        },
+      ),
+      GoRoute(
         path: '/recovery',
         builder: (context, state) => const RecoveryPage(),
+      ),
+      GoRoute(
+        path: '/breathwork',
+        builder: (context, state) => const BreathworkPage(),
       ),
       GoRoute(
         path: '/setup',
@@ -106,6 +132,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           !loc.startsWith('/onboarding')) {
         return '/onboarding';
       }
+
       return null;
     },
   );
@@ -175,7 +202,9 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
               else if (visible.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(32),
-                  child: Center(child: Text('No movements match your filters.')),
+                  child: Center(
+                    child: Text('No movements match your filters.'),
+                  ),
                 )
               else
                 for (final exercise in visible)
@@ -185,11 +214,15 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
                       contentPadding: const EdgeInsets.all(12),
                       leading: CircleAvatar(
                         backgroundColor: AppTheme.primaryContainer,
-                        child: const Icon(Icons.directions_run,
-                            color: AppTheme.primary),
+                        child: const Icon(
+                          Icons.directions_run,
+                          color: AppTheme.primary,
+                        ),
                       ),
-                      title: Text(exercise.name,
-                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      title: Text(
+                        exercise.name,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                       subtitle: Text(
                         '${exercise.muscleGroup} · ${exercise.equipment}',
                       ),

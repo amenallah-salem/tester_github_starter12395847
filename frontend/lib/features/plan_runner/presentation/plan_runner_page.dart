@@ -38,6 +38,9 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   Timer? _timer;
   String _coach = '';
   bool _finished = false;
+  final List<Map<String, Object?>> _loggedSets = [];
+  final _weightController = TextEditingController();
+  late final DateTime _sessionStartedAt;
 
   PlanExercise get _ex => _exercises[_exIndex];
 
@@ -56,6 +59,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     super.initState();
     final plan = ref.read(planNotifierProvider).value ?? samplePlan;
     _exercises = plan.todaySession.exercises;
+    _sessionStartedAt = DateTime.now();
     _enterExercise(announce: true);
     _startTimer();
   }
@@ -63,6 +67,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _weightController.dispose();
     super.dispose();
   }
 
@@ -71,6 +76,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     _phase = _Phase.work;
     _workRemaining = _workSeconds(_ex);
     _repsAdj = _parseReps(_ex.reps);
+    _weightController.clear();
     if (announce) {
       _coach = ref.read(coachingStringsProvider).startCue(_ex.name, _setIndex);
     }
@@ -129,6 +135,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       _phase = _Phase.work;
       _workRemaining = _workSeconds(_ex);
       _repsAdj = _parseReps(_ex.reps);
+      _weightController.clear();
       final s = ref.read(coachingStringsProvider);
       _coach = _setIndex == _ex.sets - 1
           ? s.lastSetCue
@@ -143,13 +150,24 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
 
   void _doneSet() {
     if (_finished) return;
-    if (_phase == _Phase.work) {
-      _enterRest();
-    } else {
-      _enterNextSetOrExercise();
-    }
+    final completedSet = _setIndex + 1;
+    final weight = double.tryParse(_weightController.text.trim());
+    if (weight != null && weight < 0) return;
+    _loggedSets.add({
+      'exercise': _ex.name,
+      'set': completedSet,
+      'reps': _repsAdj,
+      'weight': weight,
+    });
+    setState(() {
+      if (_phase == _Phase.work) {
+        _enterRest();
+      } else {
+        _enterNextSetOrExercise();
+      }
+    });
     final s = ref.read(coachingStringsProvider);
-    _coach = s.setDoneCue(_setIndex + 1, _setIndex);
+    _coach = s.setDoneCue(completedSet, _setIndex);
   }
 
   Future<void> _skip() async {
@@ -186,18 +204,68 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       _phase = _Phase.finished;
     });
     final plan = ref.read(planNotifierProvider).value ?? samplePlan;
-    final totalSets = _exercises.fold(0, (sum, e) => sum + e.sets);
+    final finishedAt = DateTime.now();
+    final durationSeconds =
+        finishedAt.difference(_sessionStartedAt).inSeconds.clamp(0, 86400);
+    final volumeKg = _loggedSets.fold<double>(
+      0,
+      (sum, set) =>
+          sum + ((set['weight'] as double?) ?? 0) * (set['reps'] as int),
+    );
     ref.read(workoutSessionsProvider.notifier).add(WorkoutSession(
-          date: DateTime.now(),
+          date: _sessionStartedAt,
           name: plan.todaySession.dayLabel,
           exerciseCount: _exercises.length,
-          setCount: totalSets,
-          minutes: plan.profile.sessionMinutes,
+          setCount: _loggedSets.length,
+          minutes: (durationSeconds / 60).ceil(),
           exerciseNames: _exercises.map((e) => e.name).toList(),
+          durationSeconds: durationSeconds,
+          volumeKg: volumeKg,
+          finishedAt: finishedAt,
         ));
-    unawaited(
-      ApiClient.I.createWorkout(notes: 'Completed in the workout runner.'),
-    );
+    unawaited(_persistWorkout(finishedAt));
+    ref.invalidate(progressMetricsProvider);
+  }
+
+  Future<void> _persistWorkout(DateTime finishedAt) async {
+    if (ApiClient.I.accessToken == null) return;
+    try {
+      final plan = ref.read(planNotifierProvider).value ?? samplePlan;
+      final session = await ApiClient.I.createWorkout(
+        name: plan.todaySession.dayLabel,
+        notes: 'Completed in the workout runner.',
+      );
+      final sessionId = session['id']?.toString();
+      if (sessionId == null) return;
+      for (final set in _loggedSets) {
+        await ApiClient.I.logWorkoutMetric(
+          sessionId: sessionId,
+          exerciseName: set['exercise']! as String,
+          setNumber: set['set']! as int,
+          reps: set['reps']! as int,
+          weightKg: set['weight'] as double?,
+        );
+      }
+      await ApiClient.I.finishWorkout(
+        sessionId: sessionId,
+        finishedAt: finishedAt,
+      );
+    } on ApiException {
+      await ApiClient.I.queueWorkout(
+        name: (ref.read(planNotifierProvider).value ?? samplePlan)
+            .todaySession
+            .dayLabel,
+        notes: 'Completed offline in the workout runner.',
+        metrics: _loggedSets
+            .map((set) => {
+                  'exercise': set['exercise'],
+                  'set': set['set'],
+                  'reps': set['reps'],
+                  'weight': set['weight'],
+                })
+            .toList(),
+      );
+    }
   }
 
   int get _totalSets => _exercises.fold(0, (sum, e) => sum + e.sets);
@@ -220,9 +288,8 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
         strings: strings,
         exerciseCount: _exercises.length,
         setCount: _totalSets,
-        minutes: (ref.watch(planNotifierProvider).value ?? samplePlan)
-            .profile
-            .sessionMinutes,
+        minutes: ((DateTime.now().difference(_sessionStartedAt).inSeconds) / 60)
+            .ceil(),
       );
     }
 
@@ -316,6 +383,17 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
               'Logged reps: $_repsAdj / ${_ex.reps}',
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppTheme.mut),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _weightController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Weight (kg)',
+                hintText: 'Optional',
+                prefixIcon: Icon(Icons.fitness_center_outlined),
+              ),
             ),
             const SizedBox(height: 10),
             FilledButton.icon(

@@ -71,6 +71,21 @@ class APITests(APITestCase):
         })
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
+    def test_metric_summary_is_scoped_and_derived(self):
+        session = WorkoutSession.objects.create(user=self.user, name='Strength')
+        exercise = Exercise.objects.create(user=self.user, name='Squat')
+        ProgressMetric.objects.create(
+            session=session, exercise=exercise, reps=10, weight_kg=60
+        )
+        ProgressMetric.objects.create(
+            session=session, exercise=exercise, reps=5, weight_kg=80
+        )
+        resp = self.client.get('/api/metrics/summary/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['total_volume_kg'], 1000.0)
+        self.assertEqual(resp.data['estimated_one_rep_max_kg'], 93.33)
+        self.assertEqual(resp.data['personal_records'], 1)
+
     def test_related_objects_must_belong_to_current_user(self):
         other_plan = Plan.objects.create(user=self.other_user, name='Private plan')
         resp = self.client.post('/api/exercises/', {'name': 'Leaked', 'plan': str(other_plan.id)})
@@ -98,3 +113,14 @@ class APITests(APITestCase):
         self.client.force_authenticate(user=None)
         resp = self.client.get('/api/plans/')
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_registration_returns_field_specific_validation_errors(self):
+        resp = self.client.post('/api/auth/register/', {
+            'username': 'apiuser',
+            'email': 'not-an-email',
+            'password': '123',
+        })
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', resp.data)
+        self.assertIn('email', resp.data)
+        self.assertIn('password', resp.data)
