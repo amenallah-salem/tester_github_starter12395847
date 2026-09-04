@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.db.models import F, Sum
 
 from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
 from .serializers import (
@@ -155,6 +156,32 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save()
+
+    @action(detail=False, methods=['get'], url_path='summary')
+    def summary(self, request):
+        """Return derived lifting insights for the authenticated user."""
+        metrics = list(self.get_queryset().filter(weight_kg__isnull=False))
+        volume = ProgressMetric.objects.filter(
+            session__user=request.user,
+            weight_kg__isnull=False,
+        ).aggregate(total=Sum(F('weight_kg') * F('reps')))['total'] or 0
+        best_by_exercise = {}
+        estimated_one_rep_max = 0
+        for metric in metrics:
+            weight = float(metric.weight_kg)
+            best_by_exercise[metric.exercise_id] = max(
+                best_by_exercise.get(metric.exercise_id, 0),
+                weight,
+            )
+            estimated_one_rep_max = max(
+                estimated_one_rep_max,
+                weight * (1 + metric.reps / 30),
+            )
+        return Response({
+            'total_volume_kg': float(volume),
+            'estimated_one_rep_max_kg': round(estimated_one_rep_max, 2),
+            'personal_records': len(best_by_exercise),
+        })
 
 
 class SubscriptionViewSet(viewsets.ModelViewSet):

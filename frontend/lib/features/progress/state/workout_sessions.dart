@@ -38,7 +38,14 @@ final workoutSessionsProvider =
   WorkoutSessions.new,
 );
 
-final progressMetricsProvider = FutureProvider<List<ProgressMetric>>((ref) async {
+final progressMetricsProvider =
+    FutureProvider<List<ProgressMetric>>((ref) async {
   if (ApiClient.I.accessToken == null) return const [];
   return ApiClient.I.fetchProgress();
+});
+
+final progressSummaryProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
+  if (ApiClient.I.accessToken == null) return const {};
+  return ApiClient.I.fetchProgressSummary();
 });

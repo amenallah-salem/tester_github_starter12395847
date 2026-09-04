@@ -51,6 +51,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     final strings = ref.watch(coachingStringsProvider);
     final sessions = ref.watch(workoutSessionsProvider);
     final metrics = ref.watch(progressMetricsProvider).value ?? const [];
+    final summary = ref.watch(progressSummaryProvider).value ?? const {};
     final visible = _visible(sessions);
 
     return mobileWrap(
@@ -85,176 +86,178 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
         body: _loading
             ? const _ProgressSkeleton()
             : sessions.isEmpty
-            ? EmptyState(
-                message: strings.progressEmpty,
-                icon: Icons.show_chart_outlined,
-                ctaLabel: strings.startTodaysPlan,
-                onCta: () => context.go('/'),
-              )
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-                children: [
-                  Row(
+                ? EmptyState(
+                    message: strings.progressEmpty,
+                    icon: Icons.show_chart_outlined,
+                    ctaLabel: strings.startTodaysPlan,
+                    onCta: () => context.go('/'),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                     children: [
-                      const Expanded(
-                        child: Text(
-                          'Your rhythm & progress',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Your rhythm & progress',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
+                          Chip(
+                            avatar: const Icon(Icons.eco_outlined, size: 16),
+                            label: Text('${visible.length}/4 consistent'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _SummaryCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _streak == 0
+                                  ? strings.zeroStreak
+                                  : strings.streak(_streak),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'This ${_range == 'week' ? 'week' : 'month'}: '
+                              '${_totalWorkouts(visible)} workouts · '
+                              '${_totalMinutes(visible)} min · '
+                              '${_totalSets(visible)} sets',
+                              style: const TextStyle(color: AppTheme.mut),
+                            ),
+                          ],
                         ),
                       ),
-                      Chip(
-                        avatar: const Icon(Icons.eco_outlined, size: 16),
-                        label: Text('${visible.length}/4 consistent'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  _SummaryCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _streak == 0
-                              ? strings.zeroStreak
-                              : strings.streak(_streak),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _InsightCard(
+                              icon: Icons.timer_outlined,
+                              value: _formatKg(summary['total_volume_kg']),
+                              label: 'Lift volume',
+                            ),
                           ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _InsightCard(
+                              icon: Icons.emoji_events_outlined,
+                              value: '${summary['personal_records'] ?? 0}',
+                              label: 'Personal records',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(value: 'week', label: Text('Week')),
+                          ButtonSegment(value: 'month', label: Text('Month')),
+                        ],
+                        selected: {_range},
+                        onSelectionChanged: (s) =>
+                            setState(() => _range = s.first),
+                      ),
+                      const SizedBox(height: 12),
+                      if (metrics.isNotEmpty) ...[
+                        const Text(
+                          'Lift progress',
+                          style: TextStyle(fontWeight: FontWeight.w700),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'This ${_range == 'week' ? 'week' : 'month'}: '
-                          '${_totalWorkouts(visible)} workouts · '
-                          '${_totalMinutes(visible)} min · '
-                          '${_totalSets(visible)} sets',
-                          style: const TextStyle(color: AppTheme.mut),
+                        const SizedBox(height: 8),
+                        _LiftProgressCard(metrics: metrics),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Logged sets',
+                          style: TextStyle(fontWeight: FontWeight.w700),
                         ),
+                        const SizedBox(height: 8),
+                        for (final metric in metrics)
+                          Card(
+                            child: ListTile(
+                              title: Text(metric.exerciseName ?? 'Exercise'),
+                              subtitle: Text(
+                                '${metric.weightKg == null ? 'Bodyweight' : '${metric.weightKg} kg'} · '
+                                '${metric.reps} reps · ${_metricDate(metric.date)}',
+                              ),
+                              trailing: IconButton(
+                                tooltip: 'Delete logged set',
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () => _deleteMetric(metric),
+                              ),
+                            ),
+                          ),
                       ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Row(
-                    children: [
-                      Expanded(
-                        child: _InsightCard(
-                          icon: Icons.timer_outlined,
-                          value: '130 min',
-                          label: 'Total movement',
+                      const Text(
+                        'Weekly rhythm',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: RhythmBarChart(),
                         ),
                       ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: _InsightCard(
-                          icon: Icons.spa_outlined,
-                          value: '94%',
-                          label: 'Form precision',
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Muscle load',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: MuscleLoadChart(),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Recovery',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      const RecoveryIndicator(),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Personal bests',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      for (final name in _personalBests(visible))
+                        _SummaryCard(
+                          child: Text(
+                              strings.personalBest(name, 'first session!')),
+                        ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Sessions',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      for (final s in visible)
+                        Card(
+                          child: ListTile(
+                            title: Text(s.name),
+                            subtitle: Text(
+                              '${_fmtDate(s.date)} · ${s.setCount} sets · '
+                              '${s.minutes} min',
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => _showSession(context, s),
+                          ),
+                        ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'week', label: Text('Week')),
-                      ButtonSegment(value: 'month', label: Text('Month')),
-                    ],
-                    selected: {_range},
-                    onSelectionChanged: (s) => setState(() => _range = s.first),
-                  ),
-                  const SizedBox(height: 12),
-                  if (metrics.isNotEmpty) ...[
-                   const Text(
-                     'Lift progress',
-                     style: TextStyle(fontWeight: FontWeight.w700),
-                   ),
-                   const SizedBox(height: 8),
-                   _LiftProgressCard(metrics: metrics),
-                   const SizedBox(height: 12),
-                   const Text(
-                     'Logged sets',
-                     style: TextStyle(fontWeight: FontWeight.w700),
-                   ),
-                   const SizedBox(height: 8),
-                   for (final metric in metrics)
-                     Card(
-                       child: ListTile(
-                         title: Text(metric.exerciseName ?? 'Exercise'),
-                         subtitle: Text(
-                           '${metric.weightKg == null ? 'Bodyweight' : '${metric.weightKg} kg'} · '
-                           '${metric.reps} reps · ${_metricDate(metric.date)}',
-                         ),
-                         trailing: IconButton(
-                           tooltip: 'Delete logged set',
-                           icon: const Icon(Icons.delete_outline),
-                           onPressed: () => _deleteMetric(metric),
-                         ),
-                       ),
-                     ),
-                  ],
-                  const Text(
-                    'Weekly rhythm',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: RhythmBarChart(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Muscle load',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: MuscleLoadChart(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Recovery',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  const RecoveryIndicator(),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Personal bests',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  for (final name in _personalBests(visible))
-                    _SummaryCard(
-                      child: Text(strings.personalBest(name, 'first session!')),
-                    ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Sessions',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  for (final s in visible)
-                    Card(
-                      child: ListTile(
-                        title: Text(s.name),
-                        subtitle: Text(
-                          '${_fmtDate(s.date)} · ${s.setCount} sets · '
-                          '${s.minutes} min',
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _showSession(context, s),
-                      ),
-                    ),
-                ],
-              ),
       ),
     );
   }
@@ -284,7 +287,8 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete logged set?'),
-        content: const Text('This set will be removed from your progress history.'),
+        content:
+            const Text('This set will be removed from your progress history.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -317,6 +321,14 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     final date = DateTime.tryParse(value);
     return date == null ? 'recently' : _fmtDate(date.toLocal());
   }
+
+  static String _formatKg(dynamic value) {
+    final kg = (value as num?)?.toDouble() ?? 0;
+    final formatted = kg.truncateToDouble() == kg
+        ? kg.toStringAsFixed(0)
+        : kg.toStringAsFixed(1);
+    return '$formatted kg';
+  }
 }
 
 class _LiftProgressCard extends StatelessWidget {
@@ -326,7 +338,9 @@ class _LiftProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final grouped = <String, List<ProgressMetric>>{};
     for (final metric in metrics) {
-      grouped.putIfAbsent(metric.exerciseName ?? 'Exercise', () => []).add(metric);
+      grouped
+          .putIfAbsent(metric.exerciseName ?? 'Exercise', () => [])
+          .add(metric);
     }
     return Card(
       child: Padding(
@@ -348,9 +362,11 @@ class _LiftRow extends StatelessWidget {
   final List<ProgressMetric> metrics;
   @override
   Widget build(BuildContext context) {
-    final weighted = metrics.where((metric) => metric.weightKg != null).toList();
+    final weighted =
+        metrics.where((metric) => metric.weightKg != null).toList();
     final latest = weighted.isEmpty ? null : weighted.last.weightKg!;
-    final previous = weighted.length < 2 ? null : weighted[weighted.length - 2].weightKg;
+    final previous =
+        weighted.length < 2 ? null : weighted[weighted.length - 2].weightKg;
     final delta = latest != null && previous != null ? latest - previous : null;
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -373,8 +389,8 @@ class _SummaryCard extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => Card(
-    child: Padding(padding: const EdgeInsets.all(16), child: child),
-  );
+        child: Padding(padding: const EdgeInsets.all(16), child: child),
+      );
 }
 
 class _InsightCard extends StatelessWidget {
@@ -421,15 +437,15 @@ class _ProgressSkeleton extends StatelessWidget {
   const _ProgressSkeleton();
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(16),
-    children: const [
-      LoadingShimmer(height: 72),
-      SizedBox(height: 12),
-      LoadingShimmer(height: 48),
-      SizedBox(height: 12),
-      LoadingShimmer(height: 56),
-      SizedBox(height: 12),
-      LoadingShimmer(height: 56),
-    ],
-  );
+        padding: const EdgeInsets.all(16),
+        children: const [
+          LoadingShimmer(height: 72),
+          SizedBox(height: 12),
+          LoadingShimmer(height: 48),
+          SizedBox(height: 12),
+          LoadingShimmer(height: 56),
+          SizedBox(height: 12),
+          LoadingShimmer(height: 56),
+        ],
+      );
 }

@@ -69,7 +69,6 @@ class ApiClient {
         cause: error.message,
       );
     }
-
   }
 
   Future<bool> _refreshAccessToken() async {
@@ -155,6 +154,15 @@ class ApiClient {
         .cast<Map<String, dynamic>>()
         .map(ProgressMetric.fromJson)
         .toList();
+  }
+
+  Future<Map<String, dynamic>> fetchProgressSummary() async {
+    final response = await _send(
+      () => http.get(_uri('/metrics/summary/'), headers: _headers()),
+      method: 'GET',
+      path: '/metrics/summary/',
+    );
+    return _jsonObject(response, 'progress summary');
   }
 
   Future<Map<String, dynamic>> createWorkout({required String notes}) async {
