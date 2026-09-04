@@ -204,7 +204,6 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       _phase = _Phase.finished;
     });
     final plan = ref.read(planNotifierProvider).value ?? samplePlan;
-    final totalSets = _exercises.fold(0, (sum, e) => sum + e.sets);
     final finishedAt = DateTime.now();
     final durationSeconds =
         finishedAt.difference(_sessionStartedAt).inSeconds.clamp(0, 86400);
