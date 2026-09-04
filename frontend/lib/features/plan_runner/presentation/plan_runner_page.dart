@@ -74,6 +74,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     _phase = _Phase.work;
     _workRemaining = _workSeconds(_ex);
     _repsAdj = _parseReps(_ex.reps);
+    _weightController.clear();
     if (announce) {
       _coach = ref.read(coachingStringsProvider).startCue(_ex.name, _setIndex);
     }
@@ -132,6 +133,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       _phase = _Phase.work;
       _workRemaining = _workSeconds(_ex);
       _repsAdj = _parseReps(_ex.reps);
+      _weightController.clear();
       final s = ref.read(coachingStringsProvider);
       _coach = _setIndex == _ex.sets - 1
           ? s.lastSetCue
@@ -148,19 +150,22 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     if (_finished) return;
     final completedSet = _setIndex + 1;
     final weight = double.tryParse(_weightController.text.trim());
+    if (weight != null && weight < 0) return;
     _loggedSets.add({
       'exercise': _ex.name,
       'set': completedSet,
       'reps': _repsAdj,
       'weight': weight,
     });
-    if (_phase == _Phase.work) {
-      _enterRest();
-    } else {
-      _enterNextSetOrExercise();
-    }
+    setState(() {
+      if (_phase == _Phase.work) {
+        _enterRest();
+      } else {
+        _enterNextSetOrExercise();
+      }
+    });
     final s = ref.read(coachingStringsProvider);
-    _coach = s.setDoneCue(_setIndex + 1, _setIndex);
+    _coach = s.setDoneCue(completedSet, _setIndex);
   }
 
   Future<void> _skip() async {
