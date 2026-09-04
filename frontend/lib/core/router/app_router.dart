@@ -20,6 +20,8 @@ import 'package:gym_app/core/state/auth_state.dart';
 
 /// App navigation — Welora routes.
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final authReady = ref.watch(authBootstrapProvider);
+  final onboardingReady = ref.watch(onboardingBootstrapProvider);
   final accessToken = ref.watch(accessTokenProvider);
   return GoRouter(
     initialLocation: '/sign-in',
@@ -84,6 +86,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
     redirect: (context, state) {
       final loc = state.matchedLocation;
+      if (authReady.isLoading || onboardingReady.isLoading) return null;
       final done = ref.read(onboardingDoneProvider);
       if (accessToken == null && loc != '/sign-in') return '/sign-in';
       if (accessToken != null && loc == '/sign-in')

@@ -18,7 +18,8 @@ class OnboardingPage extends ConsumerStatefulWidget {
 }
 
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
-  int _step = 0; // 0 welcome, 1 goal, 2 experience, 3 weight, 4 muscle, 5 kit, 6 generating
+  int _step =
+      0; // 0 welcome, 1 goal, 2 experience, 3 weight, 4 muscle, 5 kit, 6 generating
   String? _goal;
   String? _experience;
   String? _weight;
@@ -31,11 +32,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   void _finishLater() {
     ref.read(onboardingDoneProvider.notifier).state = true;
+    persistOnboardingDone();
     context.go('/');
   }
 
   void _buildPlan() {
     ref.read(onboardingDoneProvider.notifier).state = true;
+    persistOnboardingDone();
     ref.read(planNotifierProvider.notifier).generatePlan();
     setState(() => _step = 6);
   }
@@ -136,47 +139,51 @@ class _Welcome extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Scaffold(
-      backgroundColor: AppTheme.bg,
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const Spacer(flex: 2),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Train in the Gym — Your Pocket Trainer',
-                style: TextStyle(color: Color(0xFFE8C547), fontSize: 13, letterSpacing: 1.5, fontWeight: FontWeight.w600),
-              ),
+          backgroundColor: AppTheme.bg,
+          body: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                const Spacer(flex: 2),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Train in the Gym — Your Pocket Trainer',
+                    style: TextStyle(
+                        color: Color(0xFFE8C547),
+                        fontSize: 13,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    strings.welcomeHeadline,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    strings.welcomeSub,
+                    style: const TextStyle(color: AppTheme.mut, fontSize: 15),
+                  ),
+                ),
+                const Spacer(flex: 3),
+                FilledButton(
+                  onPressed: onStart,
+                  child: Text(strings.welcomeCta),
+                ),
+                TextButton(
+                  onPressed: onLater,
+                  child: Text(strings.welcomeLater),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                strings.welcomeHeadline,
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                strings.welcomeSub,
-                style: const TextStyle(color: AppTheme.mut, fontSize: 15),
-              ),
-            ),
-            const Spacer(flex: 3),
-            FilledButton(
-              onPressed: onStart,
-              child: Text(strings.welcomeCta),
-            ),
-            TextButton(
-              onPressed: onLater,
-              child: Text(strings.welcomeLater),
-            ),
-          ],
-        ),
-      ),
+          ),
         ),
       ),
     );
@@ -330,17 +337,18 @@ class _KitStep extends StatelessWidget {
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: onBack),
+        leading:
+            IconButton(icon: const Icon(Icons.arrow_back), onPressed: onBack),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(strings.kitTitle, style: Theme.of(context).textTheme.headlineSmall),
+            Text(strings.kitTitle,
+                style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 24),
-            Text(strings.daysQuestion,
-                style: const TextStyle(fontSize: 15)),
+            Text(strings.daysQuestion, style: const TextStyle(fontSize: 15)),
             Row(
               children: [
                 Expanded(

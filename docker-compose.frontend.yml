@@ -4,7 +4,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: gym-planner-web
     ports: ["8080:80"]
     volumes: ["./frontend:/app"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped

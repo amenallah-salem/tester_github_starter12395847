@@ -59,6 +59,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       final user = result['user'];
       ref.read(currentUsernameProvider.notifier).state =
           user is Map ? user['username'] as String : _username.text.trim();
+      await persistAuth(
+        access: result['access'] as String,
+        refresh: result['refresh'] as String?,
+        username: ref.read(currentUsernameProvider) ?? _username.text.trim(),
+      );
       if (mounted) context.go('/');
     } catch (e) {
       setState(() => _error = e.toString());

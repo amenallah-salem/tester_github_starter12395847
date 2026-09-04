@@ -6,9 +6,9 @@ import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/strings/coaching.dart';
 import 'package:gym_app/features/plan/data/sample_plan.dart';
 import 'package:gym_app/features/plan/state/plan_notifier.dart';
-import 'package:gym_app/core/state/auth_state.dart';
 import 'package:gym_app/services/api_client.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gym_app/core/state/auth_state.dart';
 
 /// Welora profile + settings tab. Enhanced per Stitch:
 /// - welora_profile_rhythm (name, goal, rhythm)
@@ -110,6 +110,8 @@ class _YouPageState extends ConsumerState<YouPage> {
               ref.read(refreshTokenProvider.notifier).state = null;
               ApiClient.I.accessToken = null;
               ref.read(onboardingDoneProvider.notifier).state = false;
+              clearPersistedAuth();
+              clearPersistedOnboarding();
               context.go('/sign-in');
             },
             icon: const Icon(Icons.logout),
@@ -180,8 +182,8 @@ class _YouPageState extends ConsumerState<YouPage> {
                   themeMode == ThemeMode.light
                       ? 'Bright cream with forest-green accents.'
                       : themeMode == ThemeMode.dark
-                      ? 'Deep forest, easy on the eyes at night.'
-                      : 'Matches your device setting.',
+                          ? 'Deep forest, easy on the eyes at night.'
+                          : 'Matches your device setting.',
                   style: const TextStyle(color: AppTheme.mut, fontSize: 13),
                 ),
               ],
@@ -322,9 +324,9 @@ class _YouPageState extends ConsumerState<YouPage> {
 }
 
 ShapeBorder _cardShape() => RoundedRectangleBorder(
-  borderRadius: BorderRadius.circular(20),
-  side: const BorderSide(color: AppTheme.outlineVariant),
-);
+      borderRadius: BorderRadius.circular(20),
+      side: const BorderSide(color: AppTheme.outlineVariant),
+    );
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.title, required this.child});
