@@ -193,6 +193,17 @@ class ApiClient {
     );
   }
 
+  Future<void> deleteProgressMetric(String metricId) async {
+    await _send(
+      () => http.delete(
+        _uri('/metrics/$metricId/'),
+        headers: _headers(),
+      ),
+      method: 'DELETE',
+      path: '/metrics/$metricId/',
+    );
+  }
+
   Future<List<Map<String, dynamic>>> fetchSessions() async {
     final response = await _send(
       () => http.get(_uri('/sessions/'), headers: _headers()),

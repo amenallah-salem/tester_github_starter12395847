@@ -11,6 +11,7 @@ import 'package:gym_app/features/progress/presentation/progress_charts.dart';
 import 'package:gym_app/features/progress/domain/workout_session.dart';
 import 'package:gym_app/features/progress/state/workout_sessions.dart';
 import 'package:gym_app/models/progress_metric.dart';
+import 'package:gym_app/services/api_client.dart';
 
 /// History & progress (Progress tab). Renders first-run empty, loading
 /// shimmer, and the populated stats view (TES-6 §3.5 and §4).
@@ -173,6 +174,26 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                    const SizedBox(height: 8),
                    _LiftProgressCard(metrics: metrics),
                    const SizedBox(height: 12),
+                   const Text(
+                     'Logged sets',
+                     style: TextStyle(fontWeight: FontWeight.w700),
+                   ),
+                   const SizedBox(height: 8),
+                   for (final metric in metrics)
+                     Card(
+                       child: ListTile(
+                         title: Text(metric.exerciseName ?? 'Exercise'),
+                         subtitle: Text(
+                           '${metric.weightKg == null ? 'Bodyweight' : '${metric.weightKg} kg'} · '
+                           '${metric.reps} reps · ${_metricDate(metric.date)}',
+                         ),
+                         trailing: IconButton(
+                           tooltip: 'Delete logged set',
+                           icon: const Icon(Icons.delete_outline),
+                           onPressed: () => _deleteMetric(metric),
+                         ),
+                       ),
+                     ),
                   ],
                   const Text(
                     'Weekly rhythm',
@@ -258,6 +279,29 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     );
   }
 
+  Future<void> _deleteMetric(ProgressMetric metric) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete logged set?'),
+        content: const Text('This set will be removed from your progress history.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ApiClient.I.deleteProgressMetric(metric.id);
+    if (mounted) ref.invalidate(progressMetricsProvider);
+  }
+
   int _totalWorkouts(List<WorkoutSession> list) => list.length;
   int _totalSets(List<WorkoutSession> list) =>
       list.fold(0, (s, e) => s + e.setCount);
@@ -269,6 +313,10 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
   static String _fmtDate(DateTime d) => '${_wd(d.weekday)} ${d.day}/${d.month}';
   static String _wd(int d) =>
       const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1];
+  static String _metricDate(String value) {
+    final date = DateTime.tryParse(value);
+    return date == null ? 'recently' : _fmtDate(date.toLocal());
+  }
 }
 
 class _LiftProgressCard extends StatelessWidget {
