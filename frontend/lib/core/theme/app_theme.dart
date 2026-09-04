@@ -44,6 +44,25 @@ class AppTheme {
   static const radiusLg = 32.0;
   static const radiusXl = 48.0;
   static const radiusPill = 999.0;
+  static const screenGutter = 20.0;
+  static const cardPadding = 20.0;
+  static const gap = 12.0;
+
+  static const cardShadow = [
+    BoxShadow(
+      color: Color(0x0A1F2923),
+      blurRadius: 20,
+      offset: Offset(0, 6),
+    ),
+  ];
+
+  static const primaryShadow = [
+    BoxShadow(
+      color: Color(0x294A6B53),
+      blurRadius: 16,
+      offset: Offset(0, 6),
+    ),
+  ];
 
   static final _inputBorder = OutlineInputBorder(
     borderRadius: BorderRadius.circular(28),

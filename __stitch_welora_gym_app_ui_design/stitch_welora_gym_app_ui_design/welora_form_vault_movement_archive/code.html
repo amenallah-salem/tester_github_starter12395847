@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><title>Welora - Mindful Gym &amp; AI Coach</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-tertiary-fixed-variant": "#743419", "secondary-fixed": "#c6ebd1", "inverse-primary": "#abcfb2", "on-primary-fixed": "#01210f", "surface-container-high": "#e0ebe2", "surface-container-lowest": "#ffffff", "tertiary": "#7a391d", "tertiary-fixed-dim": "#ffb599", "on-primary-fixed-variant": "#2e4e37", "on-error-container": "#93000a", "on-surface-variant": "#424842", "surface-container-highest": "#dae5dc", "on-secondary-fixed-variant": "#2d4d3a", "surface-container-low": "#ebf7ed", "on-tertiary-container": "#ffd9cc", "background": "#f1fcf3", "on-secondary": "#ffffff", "on-tertiary-fixed": "#370e00", "secondary-fixed-dim": "#abcfb6", "on-primary-container": "#c5eacc", "secondary-container": "#c3e9cf", "outline-variant": "#c2c8c0", "inverse-on-surface": "#e8f4ea", "surface": "#f1fcf3", "surface-tint": "#45664e", "on-tertiary": "#ffffff", "surface-container": "#e5f1e7", "on-secondary-fixed": "#002111", "primary": "#32533c", "surface-variant": "#dae5dc", "error": "#ba1a1a", "inverse-surface": "#29332c", "surface-bright": "#f1fcf3", "secondary": "#446651", "on-primary": "#ffffff", "surface-dim": "#d1ddd4", "primary-fixed-dim": "#abcfb2", "on-surface": "#141e18", "primary-container": "#4a6b53", "error-container": "#ffdad6", "on-error": "#ffffff", "primary-fixed": "#c7ecce", "tertiary-fixed": "#ffdbce", "tertiary-container": "#985032", "on-secondary-container": "#496a55", "outline": "#727972", "on-background": "#141e18" }, borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, spacing: { "space-lg": "1.25rem", "space-2xl": "2rem", "space-xs": "0.5rem", "space-xl": "1.5rem", "space-2xs": "0.25rem", "space-3xl": "2.5rem", "space-sm": "0.75rem", "gutter-screen": "1.25rem", "space-md": "1rem", "bottom-bar-height": "4.5rem", "card-padding": "1.25rem", "gap-compact": "0.625rem" }, fontFamily: { "display": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "title-sm": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "metric-display": ["Plus Jakarta Sans"], "title-md": ["Plus Jakarta Sans"] }, fontSize: { "display": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "headline-md": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "label-md": ["13px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "500" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "500" }], "title-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "metric-display": ["24px", { "lineHeight": "28px", "fontWeight": "700" }], "title-md": ["16px", { "lineHeight": "22px", "fontWeight": "600" }] } } } };</script><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#f1fcf3;color:#141e18;font-family:'Plus Jakarta Sans',sans-serif;-webkit-tap-highlight-color:transparent;}body{overscroll-behavior-y:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style></head><body class="min-h-full bg-surface text-on-surface font-body-md text-body-md antialiased flex flex-col"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.03)]"><div class="h-16 px-gutter-screen flex items-center justify-between"><div class="flex items-center gap-space-xs"><div class="w-9 h-9 rounded-full bg-surface-container-low flex items-center justify-center text-primary"><span class="material-symbols-outlined text-[20px]">spa</span></div><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant tracking-wider uppercase">WELORA STUDIO</span><span class="font-headline-sm text-headline-sm text-on-surface">Progress</span></div></div><div class="flex items-center gap-space-sm"><div class="flex items-center gap-space-2xs py-1 px-2.5 rounded-full bg-surface-container-low shadow-[0_2px_8px_rgba(45,74,54,0.05)]"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span><span class="font-label-sm text-label-sm text-primary font-medium">Kaori AI</span></div><div class="relative flex items-center justify-center"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1VWjxMlR244fgOFMx-6XWCD9iw4qhB6Vy4kK7dGgEc4quNWbp1J1TmLZ-E_j3n0wGyvJOjwfiDDg-tiE48i9UHja220ONghHX47o41vuI1JQWm70WML80gadLmV6dnV1CCDzrkca66_9d_PcD-urwQV3UYWBknF232Esp_Mf9SjApZwTS475QWryCsG3m_kOGctYl_atSfTwWvO33OKqfn2H-jBQvBsghdkFjTutgTs-ewAdBxtNHjoju3cT7ylJVQaAVpRiY76"/><span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-surface"></span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-28 bg-surface"><div class="flex flex-col w-full">
+<div class="px-gutter-screen space-y-space-xl">
+<!-- Top Vault Header & Context -->
+<section class="flex flex-col gap-space-2xs">
+<div class="flex items-center justify-between">
+<div class="inline-flex items-center gap-space-2xs py-1 px-3 rounded-full bg-surface-container-low text-primary text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">lock_reset</span>
+          Verified Motor Library
+        </div>
+<div class="flex items-center gap-space-xs text-on-surface-variant text-label-sm font-label-sm">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+          Cloud Synced · Kaori v2.4
+        </div>
+</div>
+<h1 class="text-headline-lg font-headline-lg text-on-surface tracking-tight">Form Vault</h1>
+<p class="text-body-md font-body-md text-on-surface-variant">
+        Biomechanical video captures &amp; 3D vector replays verified by Kaori AI.
+      </p>
+</section>
+<!-- Search & Filter Controls -->
+<section class="flex flex-col gap-space-sm">
+<div class="relative flex items-center w-full">
+<span class="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px]">search</span>
+<input class="w-full bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/70 text-body-md font-body-md py-3 pl-11 pr-4 rounded-xl shadow-[0_2px_12px_rgba(45,74,54,0.04)] focus:outline-none" placeholder="Search movement, metric, or date..." type="text"/>
+<button aria-label="Filter options" class="absolute right-2.5 p-1.5 rounded-lg bg-surface-container-low text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+</button>
+</div>
+<!-- Scrollable Filter Chips + Compare Mode Toggle -->
+<div class="flex items-center justify-between gap-space-sm pt-1">
+<div class="flex items-center gap-space-xs overflow-x-auto pb-1 no-scrollbar flex-1">
+<button class="px-3.5 py-1.5 rounded-full bg-primary text-on-primary font-label-md text-label-md whitespace-nowrap shadow-sm">
+            All Movements (14)
+          </button>
+<button class="px-3.5 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-md text-label-md whitespace-nowrap hover:bg-surface-container transition-colors">
+            Smith Squat (6)
+          </button>
+<button class="px-3.5 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-md text-label-md whitespace-nowrap hover:bg-surface-container transition-colors">
+            Romanian Deadlift (4)
+          </button>
+<button class="px-3.5 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-md text-label-md whitespace-nowrap hover:bg-surface-container transition-colors">
+            Incline Press (4)
+          </button>
+</div>
+<!-- Compare Mode Pill Switch -->
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container text-on-surface text-label-sm font-label-sm shadow-[0_1px_4px_rgba(0,0,0,0.03)] transition-all flex-shrink-0" id="compare-toggle-btn" onclick="toggleCompareMode()">
+<span class="material-symbols-outlined text-[16px] text-primary">splitscreen</span>
+<span>Compare</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant" id="compare-indicator"></span>
+</button>
+</div>
+</section>
+<!-- Pinned Milestone Showcase: Comparative Kinematic Diff -->
+<section class="bg-surface-container-lowest rounded-2xl p-card-padding shadow-[0_8px_24px_rgba(31,41,35,0.05)] relative overflow-hidden">
+<div class="absolute -right-12 -top-12 w-36 h-36 rounded-full bg-secondary-fixed/40 blur-2xl pointer-events-none"></div>
+<!-- Card Top Badge -->
+<div class="flex items-center justify-between pb-space-sm">
+<div class="flex items-center gap-space-2xs">
+<span class="material-symbols-outlined text-primary text-[18px]">verified</span>
+<span class="text-label-sm font-label-sm text-primary tracking-wide uppercase">Progression Highlight</span>
+</div>
+<span class="text-label-sm font-label-sm text-on-surface-variant font-medium">Kinematic Delta</span>
+</div>
+<h2 class="text-title-md font-title-md text-on-surface">Smith Squat Depth &amp; Spine Neutrality</h2>
+<p class="text-body-sm font-body-sm text-on-surface-variant mt-0.5">Automated side-by-side skeletal telemetry analysis</p>
+<!-- Comparative Side-by-Side Panels -->
+<div class="grid grid-cols-2 gap-space-xs mt-space-md">
+<!-- Past State -->
+<div class="bg-surface-container-low/70 rounded-xl p-3 flex flex-col justify-between">
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Sep 28 · 70kg</span>
+<span class="text-label-sm font-label-sm px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant">Past</span>
+</div>
+<div class="text-metric-display font-metric-display text-on-surface mt-1">84°</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant">Depth (High)</div>
+</div>
+<div class="pt-2 mt-2 space-y-1">
+<div class="text-label-sm font-label-sm text-on-surface-variant flex items-center justify-between">
+<span>Drift</span>
+<span class="font-medium text-error">±2.4cm</span>
+</div>
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container/60 text-error text-label-sm font-label-sm w-full truncate">
+<span class="material-symbols-outlined text-[13px]">warning</span>
+<span class="truncate">Mild Lumbar Round</span>
+</div>
+</div>
+</div>
+<!-- Present State -->
+<div class="bg-secondary-container/40 rounded-xl p-3 flex flex-col justify-between">
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-primary font-medium">Today · 75kg</span>
+<span class="text-label-sm font-label-sm px-1.5 py-0.5 rounded bg-primary text-on-primary">Latest</span>
+</div>
+<div class="text-metric-display font-metric-display text-primary mt-1">91°</div>
+<div class="text-body-sm font-body-sm text-primary">Parallel Lock</div>
+</div>
+<div class="pt-2 mt-2 space-y-1">
+<div class="text-label-sm font-label-sm text-primary flex items-center justify-between">
+<span>Drift</span>
+<span class="font-medium text-primary">±0.8cm</span>
+</div>
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-label-sm font-label-sm w-full truncate">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="truncate">96% Optimal Form</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Biomechanical Gain Bar -->
+<div class="mt-space-md py-2.5 px-3 rounded-xl bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">insights</span>
+</div>
+<span class="text-label-md font-label-md text-on-surface font-semibold">
+            +7° Depth Mastery · -66% Spinal Shear
+          </span>
+</div>
+</div>
+<!-- Action Button -->
+<button class="w-full mt-space-md py-3 rounded-full bg-primary text-on-primary font-title-sm text-title-sm flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(50,83,60,0.18)] hover:bg-primary-container transition-all active:scale-[0.99]">
+<span>Launch Side-by-Side 3D Diff</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</section>
+<!-- Grouped Replay Library -->
+<section class="space-y-space-lg">
+<!-- Workouts Group 1: Today -->
+<div class="space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<h3 class="text-title-md font-title-md text-on-surface">Today, Oct 18 · Smith Machine Hypertrophy</h3>
+</div>
+<span class="text-label-sm font-label-sm text-on-surface-variant">2 clips</span>
+</div>
+<!-- Card 1: Hero Analyzed Rep -->
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0_4px_16px_rgba(31,41,35,0.04)]">
+<!-- Biomechanical Visual Wireframe Overlay Viewport -->
+<div class="relative w-full h-48 bg-surface-container-high overflow-hidden">
+<img class="w-full h-full object-cover mix-blend-multiply opacity-85" data-alt="A serene Scandinavian fitness interior with warm natural lighting and soft sage shadows. In the center, an athlete in natural green activewear performs a calm, perfectly aligned Smith squat inside an airy studio with clean architectural lines and bamboo elements." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyEZMgvo7y8uqfwgrSLGUzlu8oOqoSgLyH93gB8hFMJHTRvJ9HNQv3otj9zXkhO0m3KroL4Lyl_OCB5wYQdIGAeJcV4tojEv1WqmrHHICLQE0D6xHNJi0SDeFL3e4YzlfFOmzT4kNIK64m_TW3B6oQwmD3X-z63QWuCAC-ZevMTtkyxeOXltk9aK9QuWQCIiXcLEsu2rmVZWHgEjU_NVWb-wkbUBLASjX2vyLGUSfsQqzMYdWXX2hf"/>
+<!-- Biomechanical Wireframe Vector Overlay (SVG) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" fill="none" viewbox="0 0 360 192">
+<!-- Grid Telemetry Lines -->
+<line stroke="rgba(74, 107, 83, 0.2)" stroke-dasharray="3 3" stroke-width="1" x1="40" x2="40" y1="20" y2="180"></line>
+<line stroke="rgba(74, 107, 83, 0.25)" stroke-dasharray="2 2" stroke-width="1" x1="180" x2="180" y1="10" y2="185"></line>
+<line stroke="rgba(74, 107, 83, 0.2)" stroke-dasharray="3 3" stroke-width="1" x1="320" x2="320" y1="20" y2="180"></line>
+<!-- Vertical Bar Path Guide (Pure Green True Line) -->
+<line stroke="#32533c" stroke-width="2.5" x1="178" x2="178" y1="35" y2="165"></line>
+<!-- Skeletal Kinematic Vector Lines -->
+<polyline points="178,55 174,102 142,138 152,175" stroke="#c6ebd1" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></polyline>
+<!-- Joint Vector Nodes -->
+<circle cx="178" cy="55" fill="#32533c" r="4.5"></circle>
+<circle cx="174" cy="102" fill="#446651" r="5"></circle>
+<circle cx="142" cy="138" fill="#32533c" r="6" stroke="#ffffff" stroke-width="1.5"></circle>
+<circle cx="152" cy="175" fill="#141e18" r="4"></circle>
+<!-- Angle Arch Badge -->
+<path d="M 158 130 A 18 18 0 0 0 134 148" fill="none" stroke="#32533c" stroke-width="2"></path>
+</svg>
+<!-- Angle & Notch floating pins -->
+<div class="absolute top-3 left-3 bg-surface/90 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-label-sm font-label-sm text-primary font-semibold">Hook Notch 8 · 91° Knee</span>
+</div>
+<div class="absolute top-3 right-3 bg-surface-container-lowest/90 backdrop-blur-md px-2 py-0.5 rounded-full text-label-sm font-label-sm text-on-surface">
+              0:04 Full Cycle
+            </div>
+<div class="absolute bottom-3 left-3 bg-primary/95 text-on-primary px-2.5 py-1 rounded-full text-label-sm font-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+<span>Analyzed Hero Rep</span>
+</div>
+<!-- Clip Duration Scrub Bar -->
+<div class="absolute bottom-0 inset-x-0 h-1 bg-surface-container-highest">
+<div class="h-full bg-primary w-2/3"></div>
+</div>
+</div>
+<!-- Card Content Body -->
+<div class="p-card-padding space-y-space-sm">
+<div class="flex items-start justify-between">
+<div>
+<h4 class="text-headline-sm font-headline-sm text-on-surface">Smith Squat · Set 2, Rep 7</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Kinematic verticality &amp; pelvic tilt validated</p>
+</div>
+<button aria-label="Bookmark rep" class="p-1.5 rounded-full text-primary hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+</button>
+</div>
+<!-- Telemetry Metrics Pills -->
+<div class="grid grid-cols-3 gap-space-2xs">
+<div class="bg-surface-container-low rounded-xl p-2 text-center">
+<span class="text-label-sm font-label-sm text-on-surface-variant block">Load</span>
+<span class="text-title-sm font-title-sm text-on-surface">75 kg</span>
+</div>
+<div class="bg-surface-container-low rounded-xl p-2 text-center">
+<span class="text-label-sm font-label-sm text-on-surface-variant block">Tempo</span>
+<span class="text-title-sm font-title-sm text-on-surface">3.1s ecc</span>
+</div>
+<div class="bg-secondary-container/50 rounded-xl p-2 text-center">
+<span class="text-label-sm font-label-sm text-primary block">Bar Path</span>
+<span class="text-title-sm font-title-sm text-primary font-bold">98% Vert</span>
+</div>
+</div>
+<!-- Bottom Interactive Actions -->
+<div class="flex items-center gap-space-xs pt-1">
+<button class="flex-1 py-2.5 px-3 rounded-full bg-primary text-on-primary text-label-md font-label-md flex items-center justify-center gap-1.5 hover:bg-primary-container transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">view_in_ar</span>
+<span>View 3D Replay</span>
+</button>
+<button class="py-2.5 px-4 rounded-full bg-surface-container-low text-primary text-label-md font-label-md flex items-center justify-center gap-1 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[16px]">psychology_alt</span>
+<span>Ask Kaori</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2: Secondary Rep -->
+<div class="bg-surface-container-lowest rounded-2xl p-card-padding flex items-center justify-between shadow-[0_2px_10px_rgba(31,41,35,0.03)]">
+<div class="flex items-center gap-space-sm">
+<div class="relative w-16 h-16 rounded-xl bg-surface-container-low overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Quiet fitness studio close-up of barbell bar guides with green tracking overlays and balanced warm daylight." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGcSTycxbYVdaJ2OmwJT6ez76m7I3mapxkZ1S5maAnCkLk8KksMnw8YBIFWs0k-jte1EN4gstDQvJ3lW0Tqzsv9WlKoD5CoUgw3Ua_3qnwxeW9yfG3u_1REsCqpi6uB0sBuwi3eedU8cBmHmFAxdRd-8JSJGAeggwoYa87-uSZUMUWswt4HqkXdWMrfhSrAyk-qWEjuvehj-XAqJMt-MoBGscW5L5tGs_erUXlYoa6Mu4Xrd6lYMjp"/>
+<div class="absolute inset-0 bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[20px]">play_circle</span>
+</div>
+</div>
+<div>
+<div class="flex items-center gap-1.5">
+<h4 class="text-title-sm font-title-sm text-on-surface">Smith Squat · Set 1, Rep 8</h4>
+<span class="text-label-sm font-label-sm px-1.5 py-0.2 rounded bg-secondary-container text-primary font-medium">93%</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant mt-0.5">70kg · 3.4s eccentric control</p>
+</div>
+</div>
+<button aria-label="More options" class="p-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Workouts Group 2: Oct 15 -->
+<div class="space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<h3 class="text-title-md font-title-md text-on-surface">Oct 15 · Posterior Chain &amp; Hinge</h3>
+</div>
+<span class="text-label-sm font-label-sm text-on-surface-variant">2 clips</span>
+</div>
+<!-- Card 3: Romanian Deadlift -->
+<div class="bg-surface-container-lowest rounded-2xl p-card-padding shadow-[0_2px_10px_rgba(31,41,35,0.03)] space-y-space-sm">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-14 h-14 rounded-xl bg-surface-container-low flex-shrink-0 relative overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Athletic practitioner executing a clean Romanian deadlift hinge form in an open minimalist wellness gym with pale timber walls and diffuse lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4ALBgbEMErhQUZ6SY0BJagpBTcoXaAhGQpaCtcQP2aJ1YGSYA2cX9ZFQ8sOQ7zr8NpUMPjSl1rGGcEr5NrbOvbE-Wwyo_zI0Fk15g-LwKs-PBq1ycMVBfJneDgzFB9G9CfLpF401oIYXS2nezYMa6uilLmKXaldrYQygSqBFeAnVlVnpV8VdEm0z_pBESpxxFfdNdAhuDpeQtJL6ztSccCHijNNqiIOfMefBllN7hwmo9F3EX_KnS"/>
+<span class="absolute bottom-1 right-1 text-[9px] px-1 rounded bg-on-surface/75 text-surface font-mono">0:05</span>
+</div>
+<div>
+<div class="flex items-center gap-1.5">
+<h4 class="text-title-sm font-title-sm text-on-surface">Romanian Deadlift · Set 3, Rep 5</h4>
+<span class="text-label-sm font-label-sm px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">95% Score</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant">80kg · Hip hinge 72° · Neutral cervical spine</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+</div>
+<div class="flex items-center justify-between pt-1">
+<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-low text-primary text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">eco</span>
+<span>Textbook Hip Hinge</span>
+</div>
+<button class="text-label-md font-label-md text-primary font-medium hover:underline flex items-center gap-0.5">
+<span>View Kinematics</span>
+<span class="material-symbols-outlined text-[16px]">arrow_outward</span>
+</button>
+</div>
+</div>
+<!-- Card 4: RDL Set 2 -->
+<div class="bg-surface-container-lowest rounded-2xl p-card-padding flex items-center justify-between shadow-[0_2px_10px_rgba(31,41,35,0.03)]">
+<div class="flex items-center gap-space-sm">
+<div class="w-12 h-12 rounded-xl bg-surface-container-low flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[22px]">fitness_center</span>
+</div>
+<div>
+<h4 class="text-title-sm font-title-sm text-on-surface">Romanian Deadlift · Set 2, Rep 6</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">75kg · 91% Form score · Minimal bar drift</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+</div>
+</div>
+<!-- Workouts Group 3: Oct 11 -->
+<div class="space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary-fixed-dim"></span>
+<h3 class="text-title-md font-title-md text-on-surface">Oct 11 · Upper Body Flow</h3>
+</div>
+<span class="text-label-sm font-label-sm text-on-surface-variant">1 clip</span>
+</div>
+<!-- Card 5: Incline Press -->
+<div class="bg-surface-container-lowest rounded-2xl p-card-padding flex items-center justify-between shadow-[0_2px_10px_rgba(31,41,35,0.03)]">
+<div class="flex items-center gap-space-sm">
+<div class="w-12 h-12 rounded-xl bg-surface-container-low flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[22px]">accessibility_new</span>
+</div>
+<div>
+<div class="flex items-center gap-1.5">
+<h4 class="text-title-sm font-title-sm text-on-surface">Incline Barbell Press · Set 2, Rep 6</h4>
+<span class="text-label-sm font-label-sm px-1.5 py-0.5 rounded bg-surface-container-low text-primary font-medium">94%</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Scapular retraction locked · 30° bar path</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Kaori Coach Recommendation Card -->
+<section class="bg-surface-container-low rounded-2xl p-card-padding relative overflow-hidden shadow-[0_4px_16px_rgba(45,74,54,0.03)]">
+<div class="flex items-start gap-space-sm">
+<div class="relative flex-shrink-0">
+<img alt="Kaori AI Biomechanical Coach" class="w-12 h-12 rounded-full object-cover shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDU8FYtnx-Xh5tKGnw4pnmPXX8U8HKVRp3hRCWO-ZoYBU2FGbfLbT12XBjsRFRRKhSIALuZ2o-zBsKtfeJ3JsaVgyvKU38pKZ9onwdsjCG5-fHBn30AeFTpuFX8UmRuCH6vsCtepiw-IR426B6H7LGU_JD4Pr5lvb81KiZPqoV2DCSxenLVGx8PiPK8w5Mt0fmWcZ0MdU7oKqoH9v6yg6cugqm0mzYuxeZ3W76V5K62XX3jUhgSTN5BTdDO4y7VDAHtuQ"/>
+<span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-primary ring-2 ring-surface-container-low flex items-center justify-center">
+<span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+</span>
+</div>
+<div class="space-y-1.5 flex-1">
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-primary font-semibold uppercase tracking-wider">Kaori Movement Insight</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Today</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface leading-relaxed">
+            “Your neural motor control has consolidated nicely on squats. The ±0.8cm bar drift confirms knee stability. You are ready to lock in <strong>77.5kg</strong> next week.”
+          </p>
+<div class="pt-2">
+<button class="inline-flex items-center gap-1 text-primary font-title-sm text-title-sm hover:underline">
+<span>Send Question to Kaori</span>
+<span class="material-symbols-outlined text-[16px]">chat_bubble_outline</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Vault Storage & Export Bar -->
+<section class="bg-surface-container-lowest rounded-2xl p-card-padding shadow-[0_2px_12px_rgba(31,41,35,0.03)] space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">cloud_done</span>
+</div>
+<div>
+<div class="text-label-md font-label-md text-on-surface font-semibold">14 High-Precision Kinematic Clips Saved</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant">480 MB · Encrypted Local &amp; Biometric Vault</div>
+</div>
+</div>
+</div>
+<!-- Storage Capacity Bar -->
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full w-1/4"></div>
+</div>
+<div class="pt-1 flex items-center gap-space-xs">
+<button class="w-full py-2.5 px-3 rounded-xl bg-surface-container-low text-on-surface hover:bg-surface-container font-label-md text-label-md flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px] text-primary">ios_share</span>
+<span>Export Biomechanical Data (CSV / BioVision)</span>
+</button>
+</div>
+</section>
+</div>
+</div>
+<script>
+  function toggleCompareMode() {
+    const indicator = document.getElementById('compare-indicator');
+    const btn = document.getElementById('compare-toggle-btn');
+    if (!indicator || !btn) return;
+    
+    const isActive = indicator.classList.contains('bg-primary');
+    if (isActive) {
+      indicator.classList.remove('bg-primary');
+      indicator.classList.add('bg-outline-variant');
+      btn.classList.remove('bg-primary-container', 'text-on-primary');
+      btn.classList.add('bg-surface-container', 'text-on-surface');
+    } else {
+      indicator.classList.remove('bg-outline-variant');
+      indicator.classList.add('bg-primary');
+      btn.classList.remove('bg-surface-container', 'text-on-surface');
+      btn.classList.add('bg-primary-container', 'text-on-primary');
+    }
+  }
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(45,74,54,0.06)]" data-active-classes="text-primary font-semibold"><div class="h-16 px-space-xs max-w-md mx-auto grid grid-cols-5 items-center"><a class="flex flex-col items-center justify-center min-h-[44px] min-w-[44px] gap-0.5 text-on-surface-variant transition-colors hover:text-on-surface" data-path="home" href="#"><span class="material-symbols-outlined text-[22px]">roofing</span><span class="font-label-sm text-label-sm">Home</span></a><a class="flex flex-col items-center justify-center min-h-[44px] min-w-[44px] gap-0.5 text-on-surface-variant transition-colors hover:text-on-surface" data-path="workouts" href="#"><span class="material-symbols-outlined text-[22px]">fitness_center</span><span class="font-label-sm text-label-sm">Workouts</span></a><a class="flex flex-col items-center justify-center min-h-[44px] min-w-[44px] gap-0.5 text-on-surface-variant transition-colors hover:text-on-surface" data-path="explorer" href="#"><span class="material-symbols-outlined text-[22px]">explore</span><span class="font-label-sm text-label-sm">Explorer</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-h-[44px] min-w-[44px] gap-0.5 transition-colors text-primary font-semibold" data-path="progress" href="#"><span class="material-symbols-outlined text-[22px]">vital_signs</span><span class="font-label-sm text-label-sm">Progress</span></a><a class="flex flex-col items-center justify-center min-h-[44px] min-w-[44px] gap-0.5 text-on-surface-variant transition-colors hover:text-on-surface" data-path="kaori-coach" href="#"><span class="material-symbols-outlined text-[22px]">psychology_alt</span><span class="font-label-sm text-label-sm">Kaori</span></a></div></nav></body></html>

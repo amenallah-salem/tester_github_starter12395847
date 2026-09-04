@@ -8,6 +8,9 @@ import 'package:gym_app/features/plan/presentation/plan_page.dart';
 import 'package:gym_app/features/plan_runner/presentation/plan_runner_page.dart';
 import 'package:gym_app/features/exercise_library/presentation/exercise_detail_page.dart';
 import 'package:gym_app/features/exercise_library/presentation/muscle_filter_bar.dart';
+import 'package:gym_app/features/exercise_library/domain/exercise.dart';
+import 'package:gym_app/core/di/injection.dart';
+import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:gym_app/features/progress/presentation/progress_page.dart';
 import 'package:gym_app/features/you/presentation/you_page.dart';
 import 'package:gym_app/features/auth/presentation/sign_in_page.dart';
@@ -15,6 +18,7 @@ import 'package:gym_app/features/recovery/presentation/recovery_page.dart';
 import 'package:gym_app/features/plan_runner/presentation/workout_setup_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/form_vault_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/replay_3d_page.dart';
+import 'package:gym_app/features/coach/presentation/coach_page.dart';
 import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/state/auth_state.dart';
 
@@ -45,6 +49,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/progress',
             builder: (context, state) => const ProgressPage(),
+          ),
+          GoRoute(
+            path: '/coach',
+            builder: (context, state) => const CoachPage(),
           ),
           GoRoute(
             path: '/you',
@@ -113,44 +121,87 @@ class ExerciseExplorerPage extends ConsumerStatefulWidget {
 
 class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
   String? _selectedMuscle;
+  String _query = '';
+
+  List<Exercise> _filter(List<Exercise> exercises) {
+    return exercises.where((exercise) {
+      final matchesMuscle = _selectedMuscle == null ||
+          exercise.muscleGroups.contains(_selectedMuscle) ||
+          exercise.muscleGroup == _selectedMuscle;
+      final query = _query.trim().toLowerCase();
+      final matchesQuery = query.isEmpty ||
+          exercise.name.toLowerCase().contains(query) ||
+          exercise.equipment.toLowerCase().contains(query);
+      return matchesMuscle && matchesQuery;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final exercises = ref.watch(exerciseRepositoryProvider).watchAll();
     return Scaffold(
-      appBar: AppBar(title: const Text('Exercise Explorer')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: MuscleFilterBar(
-              selected: _selectedMuscle,
-              onSelect: (v) => setState(() => _selectedMuscle = v),
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: const [
-                ListTile(
-                    title: Text('Goblet Squat'),
-                    subtitle: Text('Quads · Dumbbell')),
-                ListTile(
-                    title: Text('Push-Up'),
-                    subtitle: Text('Chest · Bodyweight')),
-                ListTile(
-                    title: Text('Barbell Squat'),
-                    subtitle: Text('Legs · Barbell')),
-                ListTile(
-                    title: Text('Bench Press'),
-                    subtitle: Text('Chest · Barbell')),
-                ListTile(
-                    title: Text('Dumbbell Row'),
-                    subtitle: Text('Back · Dumbbell')),
-                ListTile(
-                    title: Text('Plank'), subtitle: Text('Core · Bodyweight')),
-              ],
-            ),
+      appBar: AppBar(
+        title: const Text('Exercise Explorer'),
+        actions: [
+          IconButton(
+            tooltip: 'Form Vault',
+            onPressed: () => context.push('/vault'),
+            icon: const Icon(Icons.bookmark_border),
           ),
         ],
+      ),
+      body: StreamBuilder<List<Exercise>>(
+        stream: exercises,
+        builder: (context, snapshot) {
+          final visible = _filter(snapshot.data ?? const []);
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            children: [
+              TextField(
+                onChanged: (value) => setState(() => _query = value),
+                decoration: const InputDecoration(
+                  hintText: 'Search movement or equipment',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+              const SizedBox(height: 14),
+              MuscleFilterBar(
+                selected: _selectedMuscle,
+                onSelect: (value) => setState(() => _selectedMuscle = value),
+              ),
+              const SizedBox(height: 16),
+              if (snapshot.connectionState == ConnectionState.waiting)
+                const Center(child: CircularProgressIndicator())
+              else if (visible.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(child: Text('No movements match your filters.')),
+                )
+              else
+                for (final exercise in visible)
+                  Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(12),
+                      leading: CircleAvatar(
+                        backgroundColor: AppTheme.primaryContainer,
+                        child: const Icon(Icons.directions_run,
+                            color: AppTheme.primary),
+                      ),
+                      title: Text(exercise.name,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text(
+                        '${exercise.muscleGroup} · ${exercise.equipment}',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push(
+                        '/exercise/${Uri.encodeComponent(exercise.name)}',
+                      ),
+                    ),
+                  ),
+            ],
+          );
+        },
       ),
     );
   }

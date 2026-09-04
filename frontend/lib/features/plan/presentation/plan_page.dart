@@ -18,14 +18,36 @@ class PlanPage extends ConsumerWidget {
     final strings = ref.watch(coachingStringsProvider);
     final name = ref.watch(profileNameProvider);
 
-    final today = DateTime.now();
-    final dateLabel =
-        '${_weekday(today.weekday)} · ${_month(today.month)} ${today.day}';
-
     return mobileWrap(Scaffold(
       appBar: AppBar(
-        title: Text(dateLabel),
+        title: const Text(
+          'welora',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -1,
+            color: AppTheme.primary,
+          ),
+        ),
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            tooltip: 'Notifications',
+            onPressed: () {},
+            icon: const Icon(Icons.notifications_none_rounded),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: AppTheme.primary,
+              child: Text(
+                name.isEmpty ? '?' : name.characters.first.toUpperCase(),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
       ),
       body: planState.when(
         loading: () => const _PlanSkeleton(),
@@ -77,24 +99,28 @@ class _DashboardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.screenGutter,
+        8,
+        AppTheme.screenGutter,
+        24,
+      ),
       children: [
         // Greeting
         Text(
           strings.greeting(name),
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppTheme.onSurfaceVariant,
               ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           'Movement is self-care.',
-          style: TextStyle(
-            color: AppTheme.mut,
-            fontSize: 14,
-            fontStyle: FontStyle.italic,
-          ),
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                letterSpacing: -1.5,
+                color: AppTheme.ink,
+              ),
         ),
         const SizedBox(height: 16),
         // Bento grid
@@ -103,23 +129,26 @@ class _DashboardBody extends StatelessWidget {
           children: [
             Expanded(
               flex: 3,
-              child: _WeeklyRhythmCard(daysDone: 0),
+              child: _WeeklyRhythmCard(daysDone: 3),
             ),
             const SizedBox(width: 8),
             Expanded(
               flex: 2,
               child: _SessionProgressCard(
-                label: session.dayLabel,
+                label: '3/5 sessions',
                 mins: plan.profile.sessionMinutes,
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
+        const _CategoryGrid(),
+        const SizedBox(height: 16),
         // Session card + starter buttons preserved from original
         Card(
+          clipBehavior: Clip.antiAlias,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppTheme.cardPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -255,7 +284,70 @@ class _SessionProgressCard extends StatelessWidget {
       );
 }
 
-class _PlanSkeleton extends StatelessWidget {
+class _CategoryGrid extends StatelessWidget {
+  const _CategoryGrid();
+
+  @override
+  Widget build(BuildContext context) {
+    const categories = [
+      ('Strength', 'Build & tone', Icons.fitness_center, Color(0xFFE5F5E9)),
+      ('Mobility', 'Move better', Icons.self_improvement, Color(0xFFF1ECFA)),
+      ('Cardio', 'Elevate energy', Icons.favorite_border, Color(0xFFFFF0EA)),
+      ('Recovery', 'Rest & restore', Icons.nightlight_outlined, Color(0xFFE8F5F5)),
+    ];
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: categories.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.8,
+      ),
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        return InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          onTap: () => context.go('/explorer'),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: category.$4,
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            ),
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.white.withOpacity(0.65),
+                  child: Icon(category.$3, color: AppTheme.primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(category.$1,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 15)),
+                      Text(category.$2,
+                          style: const TextStyle(
+                              color: AppTheme.onSurfaceVariant, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PlanSkeleton  extends StatelessWidget {
   const _PlanSkeleton();
   @override
   Widget build(BuildContext context) =>
@@ -267,20 +359,3 @@ class _PlanSkeleton extends StatelessWidget {
         LoadingShimmer(height: 56)
       ]);
 }
-
-String _weekday(int d) =>
-    const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1];
-String _month(int m) => const [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ][m - 1];

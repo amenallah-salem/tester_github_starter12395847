@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#f1fcf3;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}
+/* Biomechanical Exercise Keyframe Animations */
+@keyframes benchPressBar {
+  0%, 100% { transform: translateY(0px); }
+  45% { transform: translateY(18px); }
+  55% { transform: translateY(18px); }
+}
+@keyframes benchPressArmForearm {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-24deg); }
+}
+@keyframes musclePulseChest {
+  0%, 100% { opacity: 0.35; filter: drop-shadow(0 0 0px transparent); }
+  50% { opacity: 0.95; filter: drop-shadow(0 0 6px #52b788); }
+}
+
+@keyframes tricepsPushdownCable {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(22px) rotate(16deg); }
+}
+@keyframes tricepsPulse {
+  0%, 100% { opacity: 0.25; filter: drop-shadow(0 0 0px transparent); }
+  50% { opacity: 1; filter: drop-shadow(0 0 7px #2d6a4f); }
+}
+
+@keyframes cableFlyLeft {
+  0%, 100% { transform: rotate(34deg); }
+  50% { transform: rotate(-12deg); }
+}
+@keyframes cableFlyRight {
+  0%, 100% { transform: rotate(-34deg); }
+  50% { transform: rotate(12deg); }
+}
+
+@keyframes inclinePressMove {
+  0%, 100% { transform: translate(0px, 0px); }
+  48% { transform: translate(-8px, 14px); }
+  58% { transform: translate(-8px, 14px); }
+}
+
+@keyframes rdlHingeTorso {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(44deg); }
+}
+@keyframes rdlBarbell {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(25px) translateX(-3px); }
+}
+
+@keyframes lateralRaiseLeft {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-62deg); }
+}
+@keyframes lateralRaiseRight {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(62deg); }
+}
+
+.anim-bench-bar { animation: benchPressBar 3.8s ease-in-out infinite; }
+.anim-chest-glow { animation: musclePulseChest 3.8s ease-in-out infinite; }
+.anim-triceps-bar { animation: tricepsPushdownCable 3.2s ease-in-out infinite; }
+.anim-triceps-glow { animation: tricepsPulse 3.2s ease-in-out infinite; }
+.anim-fly-l { transform-origin: 68px 38px; animation: cableFlyLeft 3.6s ease-in-out infinite; }
+.anim-fly-r { transform-origin: 92px 38px; animation: cableFlyRight 3.6s ease-in-out infinite; }
+.anim-incline-press { animation: inclinePressMove 3.6s ease-in-out infinite; }
+.anim-rdl-torso { transform-origin: 76px 54px; animation: rdlHingeTorso 4s ease-in-out infinite; }
+.anim-rdl-bar { animation: rdlBarbell 4s ease-in-out infinite; }
+.anim-lateral-l { transform-origin: 66px 36px; animation: lateralRaiseLeft 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+.anim-lateral-r { transform-origin: 94px 36px; animation: lateralRaiseRight 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+.anim-deltoid-glow { animation: musclePulseChest 3.4s ease-in-out infinite; }
+</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "surface-container-lowest": "#ffffff", "surface-container-highest": "#dae5dc", "secondary-fixed": "#c6ebd1", "surface-dim": "#d1ddd4", "background": "#f1fcf3", "tertiary": "#7a391d", "tertiary-fixed": "#ffdbce", "on-surface-variant": "#424842", "on-tertiary": "#ffffff", "tertiary-container": "#985032", "secondary-fixed-dim": "#abcfb2", "surface-container-low": "#ebf7ed", "secondary-container": "#c3e9cf", "on-background": "#141e18", "on-error-container": "#93000a", "primary": "#32533c", "surface-container": "#e5f1e7", "surface-container-high": "#e0ebe2", "on-surface": "#141e18", "surface-tint": "#45664e", "on-secondary": "#ffffff", "surface": "#f1fcf3", "error-container": "#ffdad6", "on-primary-container": "#c5eacc", "on-secondary-container": "#496a55", "primary-fixed": "#c7ecce", "primary-fixed-dim": "#abcfb2", "inverse-on-surface": "#e8f4ea", "inverse-primary": "#abcfb2", "on-secondary-fixed-variant": "#2d4d3a", "on-primary": "#ffffff", "on-primary-fixed": "#01210f", "on-tertiary-fixed": "#370e00", "on-secondary-fixed": "#002111", "on-tertiary-container": "#ffd9cc", "primary-container": "#4a6b53", "on-error": "#ffffff", "inverse-surface": "#29332c", "on-primary-fixed-variant": "#2e4e37", "outline-variant": "#c2c8c0", "surface-variant": "#dae5dc", "error": "#ba1a1a", "on-tertiary-fixed-variant": "#743419", "secondary": "#446651", "tertiary-fixed-dim": "#ffb599", "outline": "#727972", "surface-bright": "#f1fcf3" }, borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, spacing: { "space-xs": "0.5rem", "card-padding": "1.25rem", "space-xl": "1.5rem", "space-3xl": "2.5rem", "space-lg": "1.25rem", "gap-compact": "0.625rem", "gutter-screen": "1.25rem", "bottom-bar-height": "4.5rem", "space-md": "1rem", "space-2xs": "0.25rem", "space-2xl": "2rem", "space-sm": "0.75rem" }, fontFamily: { "headline-lg": ["Plus Jakarta Sans"], "title-sm": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "metric-display": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "display": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "title-md": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"] }, fontSize: { "headline-lg": ["28px", { lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "600" }], "title-sm": ["14px", { lineHeight: "20px", fontWeight: "600" }], "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }], "headline-md": ["22px", { lineHeight: "28px", letterSpacing: "-0.01em", fontWeight: "600" }], "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }], "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }], "metric-display": ["24px", { lineHeight: "28px", fontWeight: "700" }], "label-md": ["13px", { lineHeight: "18px", letterSpacing: "0.01em", fontWeight: "500" }], "display": ["36px", { lineHeight: "44px", letterSpacing: "-0.02em", fontWeight: "600" }], "headline-sm": ["18px", { lineHeight: "24px", fontWeight: "600" }], "title-md": ["16px", { lineHeight: "22px", fontWeight: "600" }], "label-sm": ["11px", { lineHeight: "14px", letterSpacing: "0.02em", fontWeight: "500" }] } } } }</script></head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/85 backdrop-blur-xl shadow-[0_1px_12px_rgba(31,41,35,0.04)]"><div class="h-16 px-gutter-screen flex items-center justify-between"><div class="flex items-center gap-space-xs"><button aria-label="Close modal" class="w-11 h-11 -ml-space-xs rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors" onclick="history.back()"><span class="material-symbols-outlined text-[24px]">close</span></button><h1 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">Explorador de Músculos</h1></div><div class="flex items-center"><button aria-label="Bookmark exercise" class="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-[22px]">bookmark_border</span></button></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-28 bg-surface"><div class="flex flex-col w-full">
+<!-- Search, Filter & Quick Action Bar -->
+<div class="px-gutter-screen pt-space-xs pb-space-sm flex flex-col gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<div class="flex-1 flex items-center h-11 px-space-md bg-surface-container-lowest rounded-full shadow-[0_2px_8px_rgba(31,41,35,0.04)]">
+<span class="material-symbols-outlined text-primary text-[20px] mr-space-xs">search</span>
+<input class="w-full bg-transparent font-body-md text-body-md text-on-surface placeholder:text-outline focus:outline-none" placeholder="Buscar músculo o ejercicio..." type="text"/>
+</div>
+<button aria-label="Filtros avanzados" class="w-11 h-11 rounded-full bg-surface-container-lowest text-on-surface-variant flex items-center justify-center shadow-[0_2px_8px_rgba(31,41,35,0.04)] active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+<button aria-label="Crear ejercicio personalizado" class="w-11 h-11 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-[0_4px_12px_rgba(50,83,60,0.2)] active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[22px]">add</span>
+</button>
+</div>
+<!-- Category Pills Navigation -->
+<div class="flex items-center gap-space-xs overflow-x-auto no-scrollbar py-space-2xs -mx-gutter-screen px-gutter-screen">
+<button class="px-space-md py-space-2xs rounded-full bg-primary text-on-primary font-label-md text-label-md shrink-0 shadow-sm">Todos</button>
+<button class="px-space-md py-space-2xs rounded-full bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md shrink-0 hover:text-on-surface">Pecho</button>
+<button class="px-space-md py-space-2xs rounded-full bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md shrink-0 hover:text-on-surface">Espalda</button>
+<button class="px-space-md py-space-2xs rounded-full bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md shrink-0 hover:text-on-surface">Hombros</button>
+<button class="px-space-md py-space-2xs rounded-full bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md shrink-0 hover:text-on-surface">Brazos</button>
+<button class="px-space-md py-space-2xs rounded-full bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md shrink-0 hover:text-on-surface">Piernas</button>
+<button class="px-space-md py-space-2xs rounded-full bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md shrink-0 hover:text-on-surface">Core</button>
+</div>
+</div>
+<!-- Anatomical Muscle Map Strip -->
+<div class="px-gutter-screen py-space-xs">
+<div class="bg-surface-container-lowest rounded-lg p-space-sm shadow-[0_4px_20px_rgba(31,41,35,0.04)]">
+<div class="flex items-center justify-between mb-space-xs px-space-2xs">
+<div class="flex items-center gap-space-2xs">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Mapa Anatómico</span>
+</div>
+<button class="flex items-center gap-space-2xs text-primary font-label-sm text-label-sm hover:underline">
+<span class="material-symbols-outlined text-[16px]">flip</span>
+<span>Vista Posterior</span>
+</button>
+</div>
+<!-- Anatomical Body Figurines Scroll -->
+<div class="flex items-center gap-space-xs overflow-x-auto no-scrollbar py-space-2xs">
+<!-- Bookmark / Favorites Shortcut -->
+<button class="flex flex-col items-center justify-center w-16 h-20 rounded-xl bg-surface-container-low text-primary shrink-0 transition-all hover:bg-surface-container active:scale-95">
+<span class="material-symbols-outlined text-[22px] mb-space-2xs">bookmark</span>
+<span class="font-label-sm text-label-sm text-on-surface font-medium">Favoritos</span>
+</button>
+<!-- Figure 1: Chest (Active / Highlighted) -->
+<button class="group flex flex-col items-center justify-between w-16 h-20 p-space-2xs rounded-xl bg-secondary-container text-on-secondary-container shrink-0 transition-all shadow-sm">
+<div class="w-10 h-12 flex items-center justify-center">
+<svg class="w-8 h-10" fill="none" viewbox="0 0 60 72" xmlns="http://www.w3.org/2000/svg">
+<circle class="fill-on-secondary-container/20" cx="30" cy="10" r="7"></circle>
+<path class="fill-on-secondary-container/25" d="M18 22C18 20 22 18 30 18C38 18 42 20 42 22L46 34C46 35 44 36 42 35L38 31V48H22V31L18 35C16 36 14 35 14 34L18 22Z"></path>
+<!-- Highlighted Chest Group -->
+<path class="fill-primary" d="M22 23C25 24 29 24 30 27C31 24 35 24 38 23C39 27 38 31 30 33C22 31 21 27 22 23Z"></path>
+</svg>
+</div>
+<span class="font-label-sm text-label-sm text-primary font-semibold">Pecho</span>
+</button>
+<!-- Figure 2: Biceps & Arms -->
+<button class="group flex flex-col items-center justify-between w-16 h-20 p-space-2xs rounded-xl bg-surface-container-low text-on-surface-variant shrink-0 transition-all hover:bg-surface-container active:scale-95">
+<div class="w-10 h-12 flex items-center justify-center">
+<svg class="w-8 h-10" fill="none" viewbox="0 0 60 72" xmlns="http://www.w3.org/2000/svg">
+<circle class="fill-outline-variant/40" cx="30" cy="10" r="7"></circle>
+<path class="fill-outline-variant/30" d="M18 22C18 20 22 18 30 18C38 18 42 20 42 22L46 34C46 35 44 36 42 35L38 31V48H22V31L18 35C16 36 14 35 14 34L18 22Z"></path>
+<!-- Highlighted Biceps -->
+<rect class="fill-tertiary-container" height="10" rx="2.5" width="5" x="14" y="24"></rect>
+<rect class="fill-tertiary-container" height="10" rx="2.5" width="5" x="41" y="24"></rect>
+</svg>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Bíceps</span>
+</button>
+<!-- Figure 3: Triceps -->
+<button class="group flex flex-col items-center justify-between w-16 h-20 p-space-2xs rounded-xl bg-surface-container-low text-on-surface-variant shrink-0 transition-all hover:bg-surface-container active:scale-95">
+<div class="w-10 h-12 flex items-center justify-center">
+<svg class="w-8 h-10" fill="none" viewbox="0 0 60 72" xmlns="http://www.w3.org/2000/svg">
+<circle class="fill-outline-variant/40" cx="30" cy="10" r="7"></circle>
+<path class="fill-outline-variant/30" d="M18 22C18 20 22 18 30 18C38 18 42 20 42 22L46 34C46 35 44 36 42 35L38 31V48H22V31L18 35C16 36 14 35 14 34L18 22Z"></path>
+<path class="fill-secondary" d="M15 22L17 32H13L15 22Z"></path>
+<path class="fill-secondary" d="M45 22L47 32H43L45 22Z"></path>
+</svg>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Tríceps</span>
+</button>
+<!-- Figure 4: Back / Dorsales -->
+<button class="group flex flex-col items-center justify-between w-16 h-20 p-space-2xs rounded-xl bg-surface-container-low text-on-surface-variant shrink-0 transition-all hover:bg-surface-container active:scale-95">
+<div class="w-10 h-12 flex items-center justify-center">
+<svg class="w-8 h-10" fill="none" viewbox="0 0 60 72" xmlns="http://www.w3.org/2000/svg">
+<circle class="fill-outline-variant/40" cx="30" cy="10" r="7"></circle>
+<path class="fill-outline-variant/30" d="M18 22C18 20 22 18 30 18C38 18 42 20 42 22L46 34C46 35 44 36 42 35L38 31V48H22V31L18 35C16 36 14 35 14 34L18 22Z"></path>
+<path class="fill-secondary" d="M22 24C24 24 28 28 30 36C32 28 36 24 38 24C37 32 35 40 30 42C25 40 23 32 22 24Z"></path>
+</svg>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Espalda</span>
+</button>
+<!-- Figure 5: Shoulders -->
+<button class="group flex flex-col items-center justify-between w-16 h-20 p-space-2xs rounded-xl bg-surface-container-low text-on-surface-variant shrink-0 transition-all hover:bg-surface-container active:scale-95">
+<div class="w-10 h-12 flex items-center justify-center">
+<svg class="w-8 h-10" fill="none" viewbox="0 0 60 72" xmlns="http://www.w3.org/2000/svg">
+<circle class="fill-outline-variant/40" cx="30" cy="10" r="7"></circle>
+<path class="fill-outline-variant/30" d="M18 22C18 20 22 18 30 18C38 18 42 20 42 22L46 34C46 35 44 36 42 35L38 31V48H22V31L18 35C16 36 14 35 14 34L18 22Z"></path>
+<circle class="fill-secondary" cx="19" cy="23" r="3.5"></circle>
+<circle class="fill-secondary" cx="41" cy="23" r="3.5"></circle>
+</svg>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Hombros</span>
+</button>
+<!-- Figure 6: Legs / Quads -->
+<button class="group flex flex-col items-center justify-between w-16 h-20 p-space-2xs rounded-xl bg-surface-container-low text-on-surface-variant shrink-0 transition-all hover:bg-surface-container active:scale-95">
+<div class="w-10 h-12 flex items-center justify-center">
+<svg class="w-8 h-10" fill="none" viewbox="0 0 60 72" xmlns="http://www.w3.org/2000/svg">
+<circle class="fill-outline-variant/40" cx="30" cy="10" r="7"></circle>
+<path class="fill-outline-variant/25" d="M22 22H38V44H22V22Z"></path>
+<rect class="fill-secondary" height="24" rx="3" width="6" x="22" y="44"></rect>
+<rect class="fill-secondary" height="24" rx="3" width="6" x="32" y="44"></rect>
+</svg>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Piernas</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Section Header & Controls -->
+<div class="px-gutter-screen pt-space-md pb-space-xs flex items-center justify-between">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Pecho &amp; Push Chain</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">34 ejercicios disponibles</p>
+</div>
+<div class="flex items-center gap-space-2xs bg-surface-container-high p-1 rounded-full">
+<button aria-label="Vista cuadrícula" class="w-8 h-8 rounded-full bg-surface-container-lowest text-primary flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-[18px]">grid_view</span>
+</button>
+<button aria-label="Vista lista" class="w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center hover:text-on-surface">
+<span class="material-symbols-outlined text-[18px]">view_list</span>
+</button>
+</div>
+</div>
+<!-- 2-Column Exercise Cards Grid -->
+<div class="px-gutter-screen py-space-xs grid grid-cols-2 gap-space-sm pb-space-xl">
+<!-- Card 1: Bench Press (Animated Repetition & Biomechanics) -->
+<div class="relative bg-surface-container-lowest rounded-DEFAULT p-space-sm flex flex-col justify-between shadow-[0_4px_16px_rgba(31,41,35,0.04)] ring-2 ring-primary transition-all">
+<div class="flex items-center justify-between mb-space-2xs">
+<button aria-label="Guardar ejercicio" class="w-8 h-8 rounded-full bg-secondary-container text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+</button>
+<button aria-label="Guía postural y tutorial" class="w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">help_outline</span>
+</button>
+</div>
+<div class="w-full h-32 my-space-2xs rounded-lg bg-[#eef6f0] overflow-hidden flex flex-col items-center justify-center p-2 relative border border-[#dae5dc]">
+<span class="absolute top-1.5 left-2 font-label-sm text-[10px] text-primary uppercase font-bold tracking-wider z-10">Target: Pectoral Mayor</span>
+<!-- Live Form Badge -->
+<div class="absolute bottom-1.5 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-container/90 backdrop-blur-xs text-primary z-10">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+<span class="font-label-sm text-[9px] font-semibold">4s Cadencia</span>
+</div>
+<!-- Biomechanical Animated SVG -->
+<svg class="w-full h-24" fill="none" viewbox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><rect fill="#dae5dc" height="6" rx="2" width="92" x="32" y="66"></rect><path d="M42 72L42 86M114 72L114 86" stroke="#727972" stroke-linecap="round" stroke-width="2.5"></path><path d="M42 86H120" stroke="#727972" stroke-width="1.5"></path><rect fill="#c2c8c0" height="28" rx="1.5" width="4" x="34" y="42"></rect><path d="M34 57 C33 53 37 49 42 50 C46 51 47 55 46 60 C44 63 39 64 36 63 Z" fill="#32533c"></path><path d="M42 58 C46 59 50 61 54 62 C62 62 76 63 90 64 C98 64 104 67 110 74 C114 79 116 83 118 87 C115 88 111 88 108 84 C104 78 100 75 92 73 C86 73 70 70 56 68 C49 67 44 65 42 62 Z" fill="#446651"></path><path d="M104 74 C108 67 115 67 122 74 C123 79 123 85 124 87 L117 87 C115 82 113 77 108 76 Z" fill="#32533c"></path><path class="anim-chest-glow" d="M51 55 C57 52 68 53 74 57 C72 61 63 64 54 62 C50 60 48 57 51 55 Z" fill="#25a244"></path><g class="anim-bench-bar"><rect fill="#141e18" height="3" rx="1" width="62" x="40" y="32"></rect><rect fill="#32533c" height="16" rx="1.5" width="5" x="38" y="25.5"></rect><rect fill="#32533c" height="16" rx="1.5" width="5" x="99" y="25.5"></rect><path d="M50 56 C52 50 58 44 63 41 C67 39 68 35 67 33 C64 34 60 38 56 43 C52 48 48 53 50 56 Z" fill="#446651"></path><path d="M74 58 C75 51 74 44 71 39 C70 37 70 34 72 33 C75 35 76 40 77 46 C78 51 77 56 74 58 Z" fill="#446651"></path><circle class="anim-chest-glow" cx="63" cy="42" fill="#25a244" r="2.5"></circle></g></svg>
+<span class="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-xs z-10">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</span>
+</div>
+<div class="mt-space-2xs flex flex-col">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Bench Press</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate mt-0.5">Pecho • Tríceps • Barra</p>
+</div>
+</div>
+<!-- Card 2: Triceps Pushdown (Animated Cable Biomechanics) -->
+<div class="relative bg-surface-container-lowest rounded-DEFAULT p-space-sm flex flex-col justify-between shadow-[0_4px_16px_rgba(31,41,35,0.04)] ring-2 ring-primary transition-all">
+<div class="flex items-center justify-between mb-space-2xs">
+<button aria-label="Guardar ejercicio" class="w-8 h-8 rounded-full bg-secondary-container text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+</button>
+<button aria-label="Guía postural y tutorial" class="w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">help_outline</span>
+</button>
+</div>
+<div class="w-full h-32 my-space-2xs rounded-lg bg-[#eef6f0] overflow-hidden flex flex-col items-center justify-center p-2 relative border border-[#dae5dc]">
+<span class="absolute top-1.5 left-2 font-label-sm text-[10px] text-primary uppercase font-bold tracking-wider z-10">Target: Tríceps Braquial</span>
+<div class="absolute bottom-1.5 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-container/90 backdrop-blur-xs text-primary z-10">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+<span class="font-label-sm text-[9px] font-semibold">Pico de Tensión</span>
+</div>
+<!-- Animated SVG Biomechanics -->
+<svg class="w-full h-24" fill="none" viewbox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><rect fill="#dae5dc" height="78" rx="2" stroke="#727972" stroke-width="1.5" width="14" x="132" y="10"></rect><circle cx="132" cy="18" fill="#446651" r="3.5"></circle><line stroke="#727972" stroke-dasharray="3 3" stroke-width="1.5" x1="130" x2="86" y1="18" y2="40"></line><path d="M57 15 C54 15 52 18 53 22 C54 26 57 28 61 27 C64 26 66 22 64 18 C62 15 59 15 57 15 Z" fill="#32533c"></path><path d="M59 26 C61 30 63 34 64 39 C65 47 64 54 62 61 C60 68 59 74 60 82 C61 86 60 90 58 92 C56 93 54 90 55 86 C56 79 56 71 58 63 C58 56 58 48 56 41 C55 35 56 29 59 26 Z" fill="#446651"></path><path d="M62 60 C66 65 67 73 68 81 C69 86 69 91 67 93 C65 93 64 90 64 85 C63 78 62 70 60 64 Z" fill="#32533c"></path><path d="M62 31 C65 31 70 34 71 39 C72 44 71 50 69 54 C67 54 66 52 66 48 C66 43 64 38 61 34 Z" fill="#32533c"></path><path class="anim-triceps-glow" d="M63 35 C66 36 68 40 68 46 C67 49 65 50 64 47 C64 43 63 39 63 35 Z" fill="#25a244"></path><g class="anim-triceps-bar" style="transform-origin: 68px 51px;"><path d="M68 51 C73 51 81 52 87 53 C87 55 84 56 79 56 C73 56 68 54 68 51 Z" fill="#446651"></path><rect fill="#141e18" height="14" rx="1.5" transform="rotate(15 88 53)" width="4" x="86" y="46"></rect><circle class="anim-triceps-glow" cx="67" cy="46" fill="#25a244" r="2.5"></circle></g></svg>
+<span class="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-xs z-10">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</span>
+</div>
+<div class="mt-space-2xs flex flex-col">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Triceps Pushdown</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate mt-0.5">Tríceps • Polea Alta</p>
+</div>
+</div>
+<!-- Card 3: Aperturas en Polea / Cable Fly (Animated Fly Movement) -->
+<div class="relative bg-surface-container-lowest rounded-DEFAULT p-space-sm flex flex-col justify-between shadow-[0_4px_16px_rgba(31,41,35,0.04)] transition-all">
+<div class="flex items-center justify-between mb-space-2xs">
+<button aria-label="Guardar ejercicio" class="w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">bookmark_border</span>
+</button>
+<button aria-label="Guía postural y tutorial" class="w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">help_outline</span>
+</button>
+</div>
+<div class="w-full h-32 my-space-2xs rounded-lg bg-[#eef6f0] overflow-hidden flex flex-col items-center justify-center p-2 relative border border-[#dae5dc]">
+<span class="absolute top-1.5 left-2 font-label-sm text-[10px] text-primary uppercase font-bold tracking-wider z-10">Target: Pecho &amp; Deltoides</span>
+<div class="absolute bottom-1.5 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-container/90 backdrop-blur-xs text-primary z-10">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+<span class="font-label-sm text-[9px] font-semibold">Aducción Pectoral</span>
+</div>
+<!-- Animated Frontal Cable Fly SVG -->
+<svg class="w-full h-24" fill="none" viewbox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><line stroke="#727972" stroke-linecap="round" stroke-width="2" x1="16" x2="16" y1="12" y2="88"></line><line stroke="#727972" stroke-linecap="round" stroke-width="2" x1="144" x2="144" y1="12" y2="88"></line><circle cx="16" cy="30" fill="#32533c" r="3.5"></circle><circle cx="144" cy="30" fill="#32533c" r="3.5"></circle><line opacity="0.4" stroke="#727972" stroke-dasharray="2 2" stroke-width="1" x1="16" x2="80" y1="30" y2="52"></line><line opacity="0.4" stroke="#727972" stroke-dasharray="2 2" stroke-width="1" x1="144" x2="80" y1="30" y2="52"></line><path d="M76 15 C73 15 72 18 73 22 C74 26 77 28 80 28 C83 28 86 26 87 22 C88 18 87 15 84 15 Z" fill="#32533c"></path><path d="M74 28 C70 30 68 35 68 42 C69 48 71 55 72 65 C72 73 70 82 69 90 C72 91 75 91 76 86 C77 78 78 70 78 64 C80 64 81 64 82 64 C82 70 83 78 84 86 C85 91 88 91 91 90 C90 82 88 73 88 65 C89 55 91 48 92 42 C92 35 90 30 86 28 Z" fill="#446651"></path><path class="anim-chest-glow" d="M72 36 C77 39 80 40 84 39 C87 37 88 35 88 33 C84 34 81 35 77 34 C74 33 72 34 72 36 Z" fill="#25a244"></path><g class="anim-fly-l"><path d="M71 33 C65 34 56 39 49 46 C48 48 49 50 52 49 C57 45 64 40 70 38 Z" fill="#32533c"></path><circle cx="48" cy="48" fill="#141e18" r="3"></circle></g><g class="anim-fly-r"><path d="M89 33 C95 34 104 39 111 46 C112 48 111 50 108 49 C103 45 96 40 90 38 Z" fill="#32533c"></path><circle cx="112" cy="48" fill="#141e18" r="3"></circle></g></svg>
+<button aria-label="Seleccionar ejercicio" class="absolute top-2 right-2 w-5 h-5 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors z-10">
+<span class="material-symbols-outlined text-[14px]">add</span>
+</button>
+</div>
+<div class="mt-space-2xs flex flex-col">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Aperturas en Polea</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate mt-0.5">Pecho • Polea Cruzada</p>
+</div>
+</div>
+<!-- Card 4: Incline Press (Animated Angular Movement) -->
+<div class="relative bg-surface-container-lowest rounded-DEFAULT p-space-sm flex flex-col justify-between shadow-[0_4px_16px_rgba(31,41,35,0.04)] transition-all">
+<div class="flex items-center justify-between mb-space-2xs">
+<button aria-label="Guardar ejercicio" class="w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">bookmark_border</span>
+</button>
+<button aria-label="Guía postural y tutorial" class="w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">help_outline</span>
+</button>
+</div>
+<div class="w-full h-32 my-space-2xs rounded-lg bg-[#eef6f0] overflow-hidden flex flex-col items-center justify-center p-2 relative border border-[#dae5dc]">
+<span class="absolute top-1.5 left-2 font-label-sm text-[10px] text-primary uppercase font-bold tracking-wider z-10">Target: Pecho Clavicular</span>
+<div class="absolute bottom-1.5 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-container/90 backdrop-blur-xs text-primary z-10">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+<span class="font-label-sm text-[9px] font-semibold">30° Inclinación</span>
+</div>
+<!-- Animated Incline Press SVG -->
+<svg class="w-full h-24" fill="none" viewbox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><line stroke="#727972" stroke-linecap="round" stroke-width="4" x1="44" x2="88" y1="46" y2="76"></line><line stroke="#727972" stroke-linecap="round" stroke-width="4" x1="88" x2="114" y1="76" y2="76"></line><line stroke="#dae5dc" stroke-width="2.5" x1="62" x2="62" y1="58" y2="88"></line><line stroke="#dae5dc" stroke-width="2.5" x1="102" x2="102" y1="76" y2="88"></line><path d="M44 34 C41 32 38 34 37 38 C37 42 40 45 44 44 C47 44 49 41 48 37 C48 35 46 34 44 34 Z" fill="#32533c"></path><path d="M48 42 C51 44 56 48 62 53 C69 58 76 64 83 71 C87 75 92 76 97 76 C103 76 107 79 109 84 C110 87 107 89 103 88 C99 84 94 82 89 80 C82 76 77 71 70 65 C63 59 56 53 50 48 Z" fill="#446651"></path><path class="anim-chest-glow" d="M54 44 C58 47 64 51 68 54 C66 56 61 55 57 52 C53 49 52 46 54 44 Z" fill="#25a244"></path><g class="anim-incline-press"><line stroke="#141e18" stroke-linecap="round" stroke-width="3" x1="42" x2="86" y1="20" y2="38"></line><rect fill="#32533c" height="14" rx="1.5" transform="rotate(22 40 20)" width="4" x="38" y="14"></rect><rect fill="#32533c" height="14" rx="1.5" transform="rotate(22 86 38)" width="4" x="84" y="32"></rect><path d="M56 46 C58 42 61 35 63 29 C65 29 66 31 65 34 C63 39 61 46 59 49 Z" fill="#446651"></path><circle class="anim-chest-glow" cx="60" cy="38" fill="#25a244" r="2.5"></circle></g></svg>
+<button aria-label="Seleccionar ejercicio" class="absolute top-2 right-2 w-5 h-5 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors z-10">
+<span class="material-symbols-outlined text-[14px]">add</span>
+</button>
+</div>
+<div class="mt-space-2xs flex flex-col">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Incline Press</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate mt-0.5">Pecho Sup. • Barra / Banco</p>
+</div>
+</div>
+<!-- Card 5: Peso Muerto Rumano (RDL) (Animated Hip Hinge & Posterior Chain) -->
+<div class="relative bg-surface-container-lowest rounded-DEFAULT p-space-sm flex flex-col justify-between shadow-[0_4px_16px_rgba(31,41,35,0.04)] transition-all">
+<div class="flex items-center justify-between mb-space-2xs">
+<button aria-label="Guardar ejercicio" class="w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">bookmark_border</span>
+</button>
+<button aria-label="Guía postural y tutorial" class="w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">help_outline</span>
+</button>
+</div>
+<div class="w-full h-32 my-space-2xs rounded-lg bg-[#eef6f0] overflow-hidden flex flex-col items-center justify-center p-2 relative border border-[#dae5dc]">
+<span class="absolute top-1.5 left-2 font-label-sm text-[10px] text-primary uppercase font-bold tracking-wider z-10">Target: Isquios &amp; Glúteos</span>
+<div class="absolute bottom-1.5 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-container/90 backdrop-blur-xs text-primary z-10">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+<span class="font-label-sm text-[9px] font-semibold">Bisagra Cadera</span>
+</div>
+<!-- Animated RDL Hip Hinge Biomechanics SVG -->
+<svg class="w-full h-24" fill="none" viewbox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><line stroke="#dae5dc" stroke-linecap="round" stroke-width="2" x1="40" x2="120" y1="90" y2="90"></line><path d="M74 53 C76 56 77 62 76 69 C75 76 73 83 72 89 C70 90 68 89 69 85 C70 80 72 73 73 66 C73 61 72 57 70 54 Z" fill="#446651"></path><path class="anim-chest-glow" d="M74 55 C77 59 77 66 76 72 C74 72 73 67 73 62 C72 58 72 56 74 55 Z" fill="#25a244"></path><g class="anim-rdl-torso"><path d="M84 20 C81 19 79 22 80 26 C81 29 84 31 87 30 C90 29 91 26 90 22 C89 20 86 19 84 20 Z" fill="#32533c"></path><path d="M82 28 C79 32 77 39 76 46 C75 51 74 55 72 58 C74 59 78 57 80 52 C82 46 84 40 86 34 C87 31 85 29 82 28 Z" fill="#32533c"></path><path d="M82 32 C81 38 80 46 78 56 C77 58 75 57 75 54 C77 46 78 38 80 32 Z" fill="#446651"></path><circle class="anim-chest-glow" cx="74" cy="54" fill="#25a244" r="3"></circle></g><g class="anim-rdl-bar"><circle cx="77" cy="62" fill="#141e18" r="7"></circle><circle cx="77" cy="62" fill="#dae5dc" r="3"></circle><line stroke="#446651" stroke-width="3" x1="67" x2="87" y1="62" y2="62"></line></g></svg>
+<button aria-label="Seleccionar ejercicio" class="absolute top-2 right-2 w-5 h-5 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors z-10">
+<span class="material-symbols-outlined text-[14px]">add</span>
+</button>
+</div>
+<div class="mt-space-2xs flex flex-col">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Peso Muerto Rumano</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate mt-0.5">Isquios • Glúteos • Barra</p>
+</div>
+</div>
+<!-- Card 6: Lateral Raise (Animated Controlled Abduction) -->
+<div class="relative bg-surface-container-lowest rounded-DEFAULT p-space-sm flex flex-col justify-between shadow-[0_4px_16px_rgba(31,41,35,0.04)] transition-all">
+<div class="flex items-center justify-between mb-space-2xs">
+<button aria-label="Guardar ejercicio" class="w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">bookmark_border</span>
+</button>
+<button aria-label="Guía postural y tutorial" class="w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">help_outline</span>
+</button>
+</div>
+<div class="w-full h-32 my-space-2xs rounded-lg bg-[#eef6f0] overflow-hidden flex flex-col items-center justify-center p-2 relative border border-[#dae5dc]">
+<span class="absolute top-1.5 left-2 font-label-sm text-[10px] text-primary uppercase font-bold tracking-wider z-10">Target: Deltoide Lateral</span>
+<div class="absolute bottom-1.5 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-container/90 backdrop-blur-xs text-primary z-10">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+<span class="font-label-sm text-[9px] font-semibold">Elevación 90°</span>
+</div>
+<!-- Animated Standing Athlete Lateral Raise SVG -->
+<svg class="w-full h-24" fill="none" viewbox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><path d="M78 14 C75 14 74 17 75 21 C76 25 78 27 81 27 C84 27 87 25 87 21 C88 17 86 14 84 14 Z" fill="#32533c"></path><path d="M76 27 C71 29 69 34 69 41 C70 48 72 55 73 64 C73 72 71 81 70 89 C73 90 76 90 77 85 C78 77 79 69 79 63 C81 63 82 63 83 63 C83 69 84 77 85 85 C86 90 89 90 92 89 C91 81 89 72 89 64 C90 55 92 48 93 41 C93 34 91 29 86 27 Z" fill="#446651"></path><path class="anim-deltoid-glow" d="M68 31 C66 33 66 36 68 38 C70 38 71 36 71 33 C71 31 69 30 68 31 Z" fill="#25a244"></path><path class="anim-deltoid-glow" d="M94 31 C96 33 96 36 94 38 C92 38 91 36 91 33 C91 31 93 30 94 31 Z" fill="#25a244"></path><g class="anim-lateral-l"><path d="M68 33 C64 39 60 49 57 58 C59 59 61 58 63 53 C66 45 69 37 71 33 Z" fill="#32533c"></path><rect fill="#141e18" height="6" rx="1.5" width="11" x="52" y="57"></rect></g><g class="anim-lateral-r"><path d="M94 33 C98 39 102 49 105 58 C103 59 101 58 99 53 C96 45 93 37 91 33 Z" fill="#32533c"></path><rect fill="#141e18" height="6" rx="1.5" width="11" x="99" y="57"></rect></g></svg>
+<button aria-label="Seleccionar ejercicio" class="absolute top-2 right-2 w-5 h-5 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors z-10">
+<span class="material-symbols-outlined text-[14px]">add</span>
+</button>
+</div>
+<div class="mt-space-2xs flex flex-col">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Lateral Raise</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate mt-0.5">Deltoides • Mancuernas</p>
+</div>
+</div>
+</div>
+<!-- Floating Selection Drawer / Batch Status Toast -->
+<div class="sticky bottom-2 px-gutter-screen z-30 pointer-events-none">
+<div class="pointer-events-auto max-w-md mx-auto bg-primary text-on-primary rounded-full p-2 pl-space-md flex items-center justify-between shadow-[0_8px_24px_rgba(31,41,35,0.18)] transition-all">
+<div class="flex items-center gap-space-xs">
+<span class="w-7 h-7 rounded-full bg-on-primary/15 flex items-center justify-center font-label-md text-label-md font-semibold">2</span>
+<span class="font-title-sm text-title-sm">ejercicios listos</span>
+</div>
+<button class="h-10 px-space-md rounded-full bg-secondary-container text-on-secondary-container font-title-sm text-title-sm flex items-center gap-space-2xs active:scale-95 transition-transform">
+<span>Añadir a Rutina</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div></main><aside class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-4px_24px_rgba(31,41,35,0.06)]"><div class="h-20 px-gutter-screen flex items-center justify-between gap-space-sm max-w-md mx-auto"><button class="h-12 px-space-lg rounded-full bg-surface-container-high text-on-surface font-title-sm text-title-sm hover:bg-surface-container-highest transition-colors" onclick="history.back()">Cancelar</button><a class="flex-1 h-12 px-space-lg rounded-full bg-primary text-on-primary font-title-sm text-title-sm flex items-center justify-center gap-space-xs shadow-[0_6px_16px_rgba(74,107,83,0.18)] hover:bg-primary-container transition-all" data-path="active-session" href="#"><span class="material-symbols-outlined text-[20px]">play_arrow</span><span>Iniciar Ejercicio (2)</span></a></div></aside></body></html>

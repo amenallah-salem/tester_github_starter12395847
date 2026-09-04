@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:gym_app/core/widgets/common.dart';
 
-/// Bottom tab host for the post-plan app. Three tabs per TES-6 §2:
-/// Today (plan) / Progress / You. The Plan Runner and Exercise Detail are
-/// full-screen routes outside this shell, so the tab bar is hidden there.
+/// Welora's five-destination app shell.
 class HomePage extends StatelessWidget {
   const HomePage({required this.child, required this.location, super.key});
 
@@ -13,9 +12,11 @@ class HomePage extends StatelessWidget {
   final String location;
 
   static const _tabs = [
-    _Tab('/', Icons.today_outlined, 'Today'),
+    _Tab('/', Icons.home_outlined, 'Home'),
+    _Tab('/explorer', Icons.fitness_center_outlined, 'Workouts'),
+    _Tab('/coach', Icons.groups_outlined, 'Train'),
     _Tab('/progress', Icons.show_chart_outlined, 'Progress'),
-    _Tab('/you', Icons.person_outline, 'You'),
+    _Tab('/you', Icons.person_outline, 'More'),
   ];
 
   int _indexFor(String location) {
@@ -33,17 +34,34 @@ class HomePage extends StatelessWidget {
           Expanded(child: child),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: current,
-        onTap: (i) => context.go(_tabs[i].path),
-        items: _tabs
-            .map(
-              (t) => BottomNavigationBarItem(
-                icon: Icon(t.icon),
-                label: t.label,
-              ),
-            )
-            .toList(),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+              boxShadow: AppTheme.cardShadow,
+            ),
+            child: NavigationBar(
+              selectedIndex: current,
+              onDestinationSelected: (i) => context.go(_tabs[i].path),
+              height: 68,
+              backgroundColor: Colors.transparent,
+              indicatorColor: AppTheme.primaryContainer,
+              destinations: _tabs
+                  .map(
+                    (t) => NavigationDestination(
+                      icon: Icon(t.icon),
+                      selectedIcon: Icon(t.icon),
+                      label: t.label,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ),
       ),
     ));
   }
