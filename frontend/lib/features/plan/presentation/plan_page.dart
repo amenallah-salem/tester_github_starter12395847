@@ -7,6 +7,7 @@ import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/strings/coaching.dart';
 import 'package:gym_app/core/widgets/common.dart';
 import 'package:gym_app/features/plan/state/plan_notifier.dart';
+import 'package:gym_app/features/plan/domain/plan_contract.dart';
 
 /// Welora dashboard (Today tab). Enhanced per Stitch.
 class PlanPage extends ConsumerWidget {
@@ -152,7 +153,7 @@ class _DashboardBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(plan.profile.goal.name,
+                Text(enumName(plan.profile.goal),
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
                 for (final e in session.exercises) ...[

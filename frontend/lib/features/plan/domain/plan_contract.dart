@@ -60,12 +60,12 @@ class OnboardingProfile {
   }
 
   Map<String, dynamic> toJson() => {
-        'goal': goal.name,
-        'experience': experience.name,
+        'goal': enumName(goal),
+        'experience': enumName(experience),
         'daysPerWeek': daysPerWeek,
         'sessionMinutes': sessionMinutes,
-        'equipment': equipment.map((e) => e.name).toList(),
-        'focusAreas': focusAreas.map((e) => e.name).toList(),
+        'equipment': equipment.map(enumName).toList(),
+        'focusAreas': focusAreas.map(enumName).toList(),
         'limitations': limitations,
         'notes': notes,
       };
@@ -131,7 +131,7 @@ class WorkoutPlan {
         'model': model,
         'profile': profile.toJson(),
         'summary': summary,
-        'weeklySplit': weeklySplit.name,
+        'weeklySplit': enumName(weeklySplit),
         'days': days.map((d) => d.toJson()).toList(),
         'progression': progression,
         'safetyNotes': safetyNotes,
@@ -206,7 +206,7 @@ class PlanBlock {
       );
 
   Map<String, dynamic> toJson() => {
-        'blockType': blockType.name,
+        'blockType': enumName(blockType),
         'rounds': rounds,
         'exercises': exercises.map((e) => e.toJson()).toList(),
       };
@@ -263,8 +263,8 @@ class PlanExercise {
   Map<String, dynamic> toJson() => {
         'exerciseId': exerciseId,
         'name': name,
-        'equipment': equipment.name,
-        'muscleGroups': muscleGroups.map((e) => e.name).toList(),
+        'equipment': enumName(equipment),
+        'muscleGroups': muscleGroups.map(enumName).toList(),
         'sets': sets,
         'reps': reps,
         'weight': weight,
@@ -311,8 +311,11 @@ class CoachReply {
 
 T enumFromString<T extends Enum>(List<T> values, dynamic value, [T? fallback]) {
   for (final v in values) {
-    if (v.name == value) return v;
+    if (enumName(v) == value) return v;
   }
+
   if (fallback != null) return fallback;
   throw ArgumentError('Unknown enum value: $value');
 }
+
+String enumName(Enum value) => value.toString().split('.').last;

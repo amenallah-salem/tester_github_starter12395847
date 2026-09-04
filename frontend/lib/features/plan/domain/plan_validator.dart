@@ -254,10 +254,10 @@ void _requireListOf<T>(Map<String, dynamic> json, String key) {
 }
 
 void _validateEnum<T extends Enum>(String value, List<T> values, String field) {
-  if (values.every((v) => v.name != value)) {
+  if (values.every((v) => enumName(v) != value)) {
     throw PlanValidationException(
         '$field has invalid value "$value". Allowed: '
-        '${values.map((v) => v.name).join(', ')}.');
+        '${values.map(enumName).join(', ')}.');
   }
 }
 

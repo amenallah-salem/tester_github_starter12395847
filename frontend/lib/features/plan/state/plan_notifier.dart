@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:gym_app/features/plan/data/sample_plan.dart';
@@ -25,6 +27,7 @@ import 'package:gym_app/services/api_client.dart';
 class PlanNotifier extends Notifier<AsyncValue<WorkoutPlan?>> {
   @override
   AsyncValue<WorkoutPlan?> build() {
+    if (kIsWeb) return AsyncData(samplePlan);
     _init();
     return const AsyncLoading();
   }
@@ -50,23 +53,34 @@ class PlanNotifier extends Notifier<AsyncValue<WorkoutPlan?>> {
     // Guard: never render a plan that fails the contract.
     final raw = jsonEncode(plan.toJson());
     final validated = validatePlanJson(raw);
-    final dao = ref.read(planDaoProvider);
-    await dao.upsert(
-      CachedPlansCompanion.insert(
-        planId: validated.planId,
-        schemaVersion: validated.schemaVersion,
-        json: raw,
-        updatedAt: DateTime.now(),
-      ),
-    );
     state = AsyncData(validated);
+    final dao = ref.read(planDaoProvider);
+    unawaited(
+      dao
+          .upsert(
+        CachedPlansCompanion.insert(
+          planId: validated.planId,
+          schemaVersion: validated.schemaVersion,
+          json: raw,
+          updatedAt: DateTime.now(),
+        ),
+      )
+          .catchError((error, stackTrace) {
+        debugPrint('Unable to cache generated plan: $error');
+      }),
+    );
   }
 
   /// First-run generation triggered from onboarding.
   Future<void> generatePlan() async {
     state = const AsyncLoading();
     await Future.delayed(const Duration(milliseconds: 1600));
-    await _cacheAndEmit(samplePlan);
+    try {
+      await _cacheAndEmit(samplePlan);
+    } catch (error) {
+      state = AsyncData(samplePlan);
+      debugPrint('Unable to persist generated plan: $error');
+    }
   }
 
   /// "Regenerate plan" from the Today view.
@@ -86,17 +100,19 @@ class PlanNotifier extends Notifier<AsyncValue<WorkoutPlan?>> {
           .cast<Map<String, dynamic>>();
       if (exercises.isEmpty) return;
       final dayExercises = exercises
-          .map((e) => PlanExercise(
-                exerciseId: e['id'].toString(),
-                name: e['name'] as String,
-                equipment: Equipment.bodyweight,
-                muscleGroups: const [FocusArea.fullBody],
-                sets: (e['target_sets'] as num?)?.toInt() ?? 3,
-                reps: '${(e['target_reps'] as num?)?.toInt() ?? 10}',
-                weight: e['target_weight_kg']?.toString(),
-                restSec: 60,
-                notes: e['description'] as String?,
-              ))
+          .map(
+            (e) => PlanExercise(
+              exerciseId: e['id'].toString(),
+              name: e['name'] as String,
+              equipment: Equipment.bodyweight,
+              muscleGroups: const [FocusArea.fullBody],
+              sets: (e['target_sets'] as num?)?.toInt() ?? 3,
+              reps: '${(e['target_reps'] as num?)?.toInt() ?? 10}',
+              weight: e['target_weight_kg']?.toString(),
+              restSec: 60,
+              notes: e['description'] as String?,
+            ),
+          )
           .toList();
       final plan = WorkoutPlan(
         schemaVersion: '1.0',
@@ -119,7 +135,7 @@ class PlanNotifier extends Notifier<AsyncValue<WorkoutPlan?>> {
             dayLabel: remote['name'] as String,
             focus: 'Full Body',
             blocks: [
-              PlanBlock(blockType: BlockType.straight, exercises: dayExercises)
+              PlanBlock(blockType: BlockType.straight, exercises: dayExercises),
             ],
             estimatedMinutes: 35,
           ),
@@ -136,6 +152,4 @@ class PlanNotifier extends Notifier<AsyncValue<WorkoutPlan?>> {
 }
 
 final planNotifierProvider =
-    NotifierProvider<PlanNotifier, AsyncValue<WorkoutPlan?>>(
-  PlanNotifier.new,
-);
+    NotifierProvider<PlanNotifier, AsyncValue<WorkoutPlan?>>(PlanNotifier.new);

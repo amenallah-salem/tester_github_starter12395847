@@ -38,22 +38,19 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   void _buildPlan() {
-    ref.read(onboardingDoneProvider.notifier).state = true;
-    persistOnboardingDone();
+    setState(() => _step = 7);
     ref.read(planNotifierProvider.notifier).generatePlan();
-    setState(() => _step = 6);
+    Future<void>.delayed(const Duration(milliseconds: 1900), () {
+      if (!mounted) return;
+      ref.read(onboardingDoneProvider.notifier).state = true;
+      persistOnboardingDone();
+      context.go('/');
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final strings = ref.watch(coachingStringsProvider);
-
-    // When generation completes, leave onboarding for Today.
-    ref.listen(planNotifierProvider, (_, next) {
-      if (next is AsyncData && next.value != null && _step == 6) {
-        context.go('/');
-      }
-    });
 
     switch (_step) {
       case 0:
@@ -163,8 +160,10 @@ class _Welcome extends StatelessWidget {
                       color: AppTheme.primaryContainer,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.spa_outlined,
-                        color: AppTheme.primary),
+                    child: const Icon(
+                      Icons.spa_outlined,
+                      color: AppTheme.primary,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   const Text(
@@ -194,8 +193,11 @@ class _Welcome extends StatelessWidget {
                     border: Border.all(color: AppTheme.primaryContainer),
                     boxShadow: AppTheme.cardShadow,
                   ),
-                  child: const Icon(Icons.self_improvement_outlined,
-                      size: 76, color: AppTheme.primary),
+                  child: const Icon(
+                    Icons.self_improvement_outlined,
+                    size: 76,
+                    color: AppTheme.primary,
+                  ),
                 ),
               ),
               const Spacer(),
@@ -214,9 +216,10 @@ class _Welcome extends StatelessWidget {
                 child: Text(
                   strings.welcomeSub,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.onSurfaceVariant,
-                      ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(color: AppTheme.onSurfaceVariant),
                 ),
               ),
               const Spacer(),
@@ -390,16 +393,20 @@ class _KitStep extends StatelessWidget {
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        leading:
-            IconButton(icon: const Icon(Icons.arrow_back), onPressed: onBack),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: onBack,
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(strings.kitTitle,
-                style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              strings.kitTitle,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 24),
             Text(strings.daysQuestion, style: const TextStyle(fontSize: 15)),
             Row(

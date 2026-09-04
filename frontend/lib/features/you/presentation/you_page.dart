@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/strings/coaching.dart';
 import 'package:gym_app/features/plan/data/sample_plan.dart';
+import 'package:gym_app/features/plan/domain/plan_contract.dart';
 import 'package:gym_app/features/plan/state/plan_notifier.dart';
 import 'package:gym_app/services/api_client.dart';
 import 'package:go_router/go_router.dart';
@@ -194,7 +195,7 @@ class _YouPageState extends ConsumerState<YouPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    plan.profile.goal.name,
+                    enumName(plan.profile.goal),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -202,7 +203,7 @@ class _YouPageState extends ConsumerState<YouPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${plan.profile.daysPerWeek}-day plan · ${plan.weeklySplit.name}',
+                    '${plan.profile.daysPerWeek}-day plan · ${enumName(plan.weeklySplit)}',
                     style: const TextStyle(color: AppTheme.mut, fontSize: 13),
                   ),
                 ],
