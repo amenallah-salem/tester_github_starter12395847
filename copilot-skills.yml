@@ -142,6 +142,8 @@ policies:
   notify_on_actions: ["create-pr","create-draft-pr","fix-ci","merge"]
   feature_delivery: "When requested to implement a task or develop a feature, implement it as completely and professionally as possible. Run the application locally on its development port, exercise the new UI/flows in the running app, and run smoke tests. Verify that no existing features are broken; if regressions are found, fix them or create a focused follow-up with clear reproduction steps. Document how to run and test the feature in the PR description. If secrets or external services are required, notify maintainers and create a draft PR."
   design_expectation: "Respect the app's existing design system and visual language. Deliver professional, attractive UI/UX changes that match the product's style. Prefer using existing components; when introducing new visual patterns provide screenshots, rationale, and request design review for significant changes."
+  rebuild_after_task: "After completing a development task, run the repository rebuild script (scripts/rebuild-containers.sh) or equivalent to rebuild and restart frontend and backend containers, apply database migrations, and allow immediate UX validation on http://localhost:8080. Record the command used in the PR or task notes so reviewers can reproduce the same steps."
+
 
 # Usage examples and quick triggers to put in commit or PR messages to hint desired behavior
 hints:
