@@ -8,3 +8,5 @@ services:
     ports: ["8080:8080"]
     volumes: [./frontend:/app]
     restart: unless-stopped
+    networks:
+      - gym_network
