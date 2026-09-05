@@ -41,17 +41,43 @@ class ExerciseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Exercise
         fields = [
-            'id', 'plan', 'user', 'name', 'description',
+            'id', 'plan', 'user', 'name', 'aliases', 'body_part',
+            'primary_muscles', 'secondary_muscles', 'equipment',
+            'movement_pattern', 'exercise_type', 'difficulty',
+            'instructions', 'setup', 'execution', 'breathing', 'common_mistakes',
+            'alternatives', 'progression_exercises', 'regression_exercises',
+            'video_url', 'animation_url', 'image',
             'target_sets', 'target_reps', 'target_weight_kg',
-            'order', 'created_at',
+            'order', 'is_library', 'created_at',
         ]
         read_only_fields = ['id', 'user', 'created_at']
+        extra_kwargs = {
+            'plan': {'required': False, 'allow_null': True},
+            'aliases': {'required': False},
+            'primary_muscles': {'required': False},
+            'secondary_muscles': {'required': False},
+            'equipment': {'required': False},
+            'alternatives': {'required': False},
+            'progression_exercises': {'required': False},
+            'regression_exercises': {'required': False},
+            'video_url': {'required': False, 'allow_null': True},
+            'animation_url': {'required': False, 'allow_null': True},
+            'image': {'required': False, 'allow_null': True},
+        }
 
     def validate_plan(self, plan):
         user = self.context['request'].user
         if plan is not None and plan.user_id != user.id:
             raise serializers.ValidationError('You can only use your own plans.')
         return plan
+
+    def validate(self, attrs):
+        # If marking as library, user should be None (admin-managed)
+        is_library = attrs.get('is_library', getattr(self.instance, 'is_library', False))
+        user = attrs.get('user', getattr(self.instance, 'user', None))
+        if is_library and user is not None:
+            raise serializers.ValidationError({'user': 'Library exercises should not be tied to a user.'})
+        return attrs
 
 
 class ExerciseNestedSerializer(serializers.ModelSerializer):
@@ -115,7 +141,8 @@ class ProgressMetricSerializer(serializers.ModelSerializer):
         exercise = attrs.get('exercise', getattr(self.instance, 'exercise', None))
         if session and session.user_id != user.id:
             raise serializers.ValidationError({'session': 'This session does not belong to you.'})
-        if exercise and exercise.user_id != user.id:
+        # allow library exercises (exercise.user may be None)
+        if exercise and exercise.user_id is not None and exercise.user_id != user.id:
             raise serializers.ValidationError({'exercise': 'This exercise does not belong to you.'})
         if session and exercise and exercise.plan_id and session.plan_id != exercise.plan_id:
             raise serializers.ValidationError({'exercise': 'The exercise must belong to the session plan.'})

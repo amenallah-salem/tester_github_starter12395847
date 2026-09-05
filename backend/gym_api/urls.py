@@ -9,6 +9,7 @@ from .views import (
     ProfileViewSet,
     PlanViewSet,
     ExerciseViewSet,
+    LibraryExerciseViewSet,
     WorkoutSessionViewSet,
     ProgressMetricViewSet,
     RegisterView,
@@ -19,6 +20,7 @@ router = DefaultRouter()
 router.register(r'profiles', ProfileViewSet, basename='profile')
 router.register(r'plans', PlanViewSet, basename='plan')
 router.register(r'exercises', ExerciseViewSet, basename='exercise')
+router.register(r'library/exercises', LibraryExerciseViewSet, basename='library-exercise')
 router.register(r'sessions', WorkoutSessionViewSet, basename='session')
 router.register(r'metrics', ProgressMetricViewSet, basename='metric')
 router.register(r'billing', SubscriptionViewSet, basename='subscription')

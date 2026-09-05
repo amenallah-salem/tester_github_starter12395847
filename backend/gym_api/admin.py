@@ -22,10 +22,18 @@ class PlanAdmin(admin.ModelAdmin):
 
 @admin.register(Exercise)
 class ExerciseAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'plan', 'user', 'target_sets', 'target_reps', 'order']
-    list_filter = ['created_at']
-    search_fields = ['name', 'user__username']
+    list_display = ['id', 'name', 'body_part', 'difficulty', 'movement_pattern', 'exercise_type', 'is_library', 'user', 'image']
+    list_filter = ['body_part', 'difficulty', 'exercise_type', 'movement_pattern', 'is_library']
+    search_fields = ['name', 'aliases', 'body_part', 'primary_muscles', 'secondary_muscles', 'equipment']
     readonly_fields = ['id', 'created_at']
+    fieldsets = (
+        ('General', {'fields': ('name', 'aliases', 'body_part', 'difficulty', 'exercise_type', 'is_library')}),
+        ('Muscles & Equipment', {'fields': ('primary_muscles', 'secondary_muscles', 'equipment', 'movement_pattern')}),
+        ('Instructions', {'fields': ('instructions', 'setup', 'execution', 'breathing', 'common_mistakes')}),
+        ('Relationships', {'fields': ('alternatives', 'progression_exercises', 'regression_exercises')}),
+        ('Media', {'fields': ('image', 'video_url', 'animation_url')}),
+        ('Plan/Targets', {'fields': ('plan', 'user', 'target_sets', 'target_reps', 'target_weight_kg', 'order')}),
+    )
 
 
 @admin.register(WorkoutSession)
