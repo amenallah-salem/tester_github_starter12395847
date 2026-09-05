@@ -79,14 +79,27 @@ else
   done
 fi
 
-# Wait for backend to accept connections on localhost:8000 (timeout BACKEND_TIMEOUT)
-echo "Waiting for backend HTTP on http://localhost:8000/ (timeout=${BACKEND_TIMEOUT}s)"
+# Wait for backend to accept connections (try host then container; timeout BACKEND_TIMEOUT)
+BACKEND_HOST="${BACKEND_HOST:-127.0.0.1}"
+BACKEND_PORT="${BACKEND_PORT:-8000}"
+# prefer numeric host to avoid IPv6 localhost (::1) resolution issues
+echo "Waiting for backend HTTP on http://${BACKEND_HOST}:${BACKEND_PORT}/ (timeout=${BACKEND_TIMEOUT}s)"
 BACKEND_WAITED=0
 BACKEND_INTERVAL=2
+# get backend container id to allow an in-container health probe fallback
+BACKEND_CID=$(docker compose -f "$BACKEND_FILE" -f "$FRONTEND_FILE" ps -q backend || true)
 while true; do
-  if curl -sfI http://localhost:8000/ >/dev/null 2>&1; then
-    echo "Backend is responding on http://localhost:8000/"
+  # 1) check from the host (binds are typically to 127.0.0.1)
+  if curl -sfI "http://${BACKEND_HOST}:${BACKEND_PORT}/" >/dev/null 2>&1; then
+    echo "Backend is responding on http://${BACKEND_HOST}:${BACKEND_PORT}/"
     break
+  fi
+  # 2) fallback: check from inside the backend container (if available)
+  if [ -n "$BACKEND_CID" ]; then
+    if docker exec -i "$BACKEND_CID" sh -c "curl -sfI http://127.0.0.1:${BACKEND_PORT}/" >/dev/null 2>&1; then
+      echo "Backend is responding inside container on http://127.0.0.1:${BACKEND_PORT}/"
+      break
+    fi
   fi
   if [ "$BACKEND_WAITED" -ge "$BACKEND_TIMEOUT" ]; then
     if [ "$STRICT" -eq 1 ]; then
