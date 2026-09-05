@@ -100,15 +100,21 @@ class ExerciseViewSet(viewsets.ModelViewSet):
 
 
 class LibraryExerciseViewSet(viewsets.ModelViewSet):
-    """ViewSet for global admin-managed exercise library."""
+    """ViewSet for global admin-managed exercise library.
+
+    Read-only access is public (AllowAny) so the frontend can fetch the library without
+    authentication. Write actions (create/update/destroy) require admin privileges and
+    an authenticated user (token).
+    """
     serializer_class = ExerciseSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def get_permissions(self):
-        # Allow authenticated users to read; only admin users may create/update/delete
+        # Allow anyone to perform safe methods (list, retrieve).
+        # Require admin for write operations.
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [permissions.IsAuthenticated(), permissions.IsAdminUser()]
-        return [permissions.IsAuthenticated()]
+        return [permissions.AllowAny()]
 
     def get_queryset(self):
         qs = Exercise.objects.filter(is_library=True)
