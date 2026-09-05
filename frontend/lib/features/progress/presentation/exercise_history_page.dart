@@ -28,7 +28,8 @@ class ExerciseHistoryPage extends ConsumerWidget {
         leading: IconButton(
           tooltip: 'Back',
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/progress'),
         ),
         title: Text(exerciseName),
       ),

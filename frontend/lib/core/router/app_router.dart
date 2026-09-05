@@ -23,6 +23,7 @@ import 'package:gym_app/features/biomechanics/presentation/form_vault_page.dart'
 import 'package:gym_app/features/biomechanics/presentation/replay_3d_page.dart';
 import 'package:gym_app/features/coach/presentation/coach_page.dart';
 import 'package:gym_app/features/progress/domain/workout_session.dart';
+import 'package:gym_app/core/router/redirect.dart';
 import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/state/auth_state.dart';
 
@@ -30,8 +31,19 @@ class _MissingSessionPage extends StatelessWidget {
   const _MissingSessionPage();
 
   @override
-  Widget build(BuildContext context) => const Scaffold(
-        body: Center(child: Text('This workout is not available offline.')),
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            tooltip: 'Back',
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/progress'),
+          ),
+          title: const Text('Workout details'),
+        ),
+        body: const Center(
+          child: Text('This workout is not available offline.'),
+        ),
       );
 }
 
@@ -65,6 +77,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const CoachPage(),
           ),
           GoRoute(path: '/you', builder: (context, state) => const YouPage()),
+          // Bottom-nav tab: must live inside the shell so navigation stays.
+          GoRoute(
+            path: '/explorer',
+            builder: (context, state) => const ExerciseExplorerPage(),
+          ),
         ],
       ),
       GoRoute(
@@ -75,11 +92,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/exercise/:id',
         builder: (context, state) =>
             ExerciseDetailPage(exerciseId: state.pathParameters['id']!),
-      ),
-      // Welora new routes
-      GoRoute(
-        path: '/explorer',
-        builder: (context, state) => const ExerciseExplorerPage(),
       ),
       GoRoute(
         path: '/vault',
@@ -119,21 +131,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
     redirect: (context, state) {
-      final loc = state.matchedLocation;
       if (authReady.isLoading || onboardingReady.isLoading) return null;
-      final done = ref.read(onboardingDoneProvider);
-      if (accessToken == null && loc != '/sign-in') return '/sign-in';
-      if (accessToken != null && loc == '/sign-in')
-        return done ? '/' : '/onboarding';
-      // After onboarding completes, stay inside app for all non-auth routes.
-      if (loc == '/sign-in' && done) return '/';
-      if (!done &&
-          !loc.startsWith('/sign-in') &&
-          !loc.startsWith('/onboarding')) {
-        return '/onboarding';
-      }
-
-      return null;
+      return resolveRedirect(
+        location: state.matchedLocation,
+        signedIn: accessToken != null,
+        onboardingDone: ref.read(onboardingDoneProvider),
+      );
     },
   );
 });

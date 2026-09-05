@@ -51,7 +51,8 @@ class _BreathworkPageState extends State<BreathworkPage> {
       appBar: AppBar(
         title: const Text('Mindful recovery'),
         leading: IconButton(
-          onPressed: () => context.pop(),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/recovery'),
           icon: const Icon(Icons.close),
         ),
       ),

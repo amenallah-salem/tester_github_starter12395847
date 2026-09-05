@@ -158,7 +158,7 @@ class _DashboardBody extends StatelessWidget {
                 const SizedBox(height: 12),
                 for (final e in session.exercises) ...[
                   InkWell(
-                    onTap: () => context.go('/exercise/${e.exerciseId}'),
+                    onTap: () => context.push('/exercise/${e.exerciseId}'),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(

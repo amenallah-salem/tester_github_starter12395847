@@ -20,7 +20,8 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
       appBar: AppBar(
         title: const Text('Session setup'),
         leading: IconButton(
-          onPressed: () => context.pop(),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/'),
           icon: const Icon(Icons.arrow_back),
         ),
       ),
