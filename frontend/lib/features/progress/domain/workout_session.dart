@@ -40,12 +40,19 @@ class WorkoutSession {
       };
 
   factory WorkoutSession.fromJson(Map<String, dynamic> json) {
-    final date = DateTime.tryParse(json['date'] as String? ?? '') ??
+    var date = DateTime.tryParse(json['date'] as String? ?? '') ??
         DateTime.fromMillisecondsSinceEpoch(0);
+    // Ensure we work in the device's local timezone for date comparisons and 'today'.
+    date = date.toLocal();
+    final finishedAtRaw = json['finishedAt'] as String?;
+    final finishedAt = finishedAtRaw != null && finishedAtRaw.isNotEmpty
+        ? DateTime.tryParse(finishedAtRaw)?.toLocal()
+        : null;
     return WorkoutSession(
       id: json['id'] as String?,
       date: date,
       name: json['name'] as String? ?? 'Workout',
+      finishedAt: finishedAt,
       exerciseCount: (json['exerciseCount'] as num?)?.toInt() ?? 0,
       setCount: (json['setCount'] as num?)?.toInt() ?? 0,
       minutes: (json['minutes'] as num?)?.toInt() ?? 0,

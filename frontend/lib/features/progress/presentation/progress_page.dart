@@ -38,8 +38,13 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
 
   List<WorkoutSession> _visible(List<WorkoutSession> all) {
     if (_range == 'month') return all;
-    final weekAgo = DateTime.now().subtract(const Duration(days: 7));
-    return all.where((s) => s.date.isAfter(weekAgo)).toList();
+    // Compare by date (local) rather than exact DateTime to avoid timezone edge cases.
+    final now = DateTime.now().toLocal();
+    final weekAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7));
+    return all.where((s) {
+      final sessionDay = DateTime(s.date.year, s.date.month, s.date.day);
+      return sessionDay.isAfter(weekAgo) || sessionDay.isAtSameMomentAs(weekAgo);
+    }).toList();
   }
 
   int get _streak {
@@ -47,7 +52,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
         .read(workoutSessionsProvider)
         .map((s) => DateTime(s.date.year, s.date.month, s.date.day))
         .toSet();
-    var day = DateTime.now();
+    var day = DateTime.now().toLocal();
     day = DateTime(day.year, day.month, day.day);
     var count = 0;
     while (dates.contains(day)) {
