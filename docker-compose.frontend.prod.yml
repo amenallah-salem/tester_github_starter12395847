@@ -1,0 +1,19 @@
+# Production compose for frontend (serves built static site via nginx)
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gym_frontend
+    env_file: .env.prod
+    # In prod serve static assets from Nginx inside the image; no source mount
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    networks:
+      - gym_network
+
+networks:
+  gym_network:
+    driver: bridge
