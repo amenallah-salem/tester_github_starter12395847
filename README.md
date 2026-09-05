@@ -205,6 +205,19 @@ cd /home/amen/Desktop/tester_github_starter12395847
 docker compose -f docker-compose.frontend.yml up --build
 ```
 
+Or use the helper script which builds, brings up DB+backend, waits for readiness, then starts frontend:
+
+```bash
+./docker.dev.sh
+```
+
+This script performs the following steps:
+- Builds frontend and backend development images
+- Starts `db` and `backend` and waits for Postgres to report healthy and the backend to respond on `http://localhost:8000/`
+- Starts `frontend` after the backend is reachable
+
+This ordering avoids Nginx failing at startup because it cannot resolve or reach the backend service.
+
 ### Access
 - **App (web UI)**: <http://localhost:8080>
 - **API**: <http://localhost:8000/api/>
