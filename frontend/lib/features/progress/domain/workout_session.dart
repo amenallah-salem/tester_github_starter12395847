@@ -60,7 +60,6 @@ class WorkoutSession {
           (json['exerciseNames'] as List? ?? const []).cast<String>(),
       durationSeconds: (json['durationSeconds'] as num?)?.toInt(),
       volumeKg: (json['volumeKg'] as num?)?.toDouble() ?? 0,
-      finishedAt: DateTime.tryParse(json['finishedAt'] as String? ?? ''),
     );
   }
 }
