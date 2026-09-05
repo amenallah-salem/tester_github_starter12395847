@@ -332,6 +332,20 @@ class ApiClient {
     return (list ?? const []).cast<Map<String, dynamic>>();
   }
 
+  /// Fetch global library exercises (admin-managed library).
+  Future<List<Map<String, dynamic>>> fetchLibraryExercises({Map<String, String>? params}) async {
+    final query = (params ?? {}).entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&');
+    final path = query.isEmpty ? '/library/exercises/' : '/library/exercises/?$query';
+    final response = await _send(
+      () => http.get(_uri(path), headers: _headers()),
+      method: 'GET',
+      path: path,
+    );
+    final data = jsonDecode(response.body);
+    final list = data is Map ? data['results'] as List? : data as List?;
+    return (list ?? const []).cast<Map<String, dynamic>>();
+  }
+
   Future<Map<String, dynamic>?> fetchCurrentPlan() async {
     final plansData = _jsonObject(
       await _send(

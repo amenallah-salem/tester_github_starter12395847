@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:gym_app/core/database/app_database.dart';
 import 'package:gym_app/core/database/daos/exercise_dao.dart';
 import 'package:gym_app/features/exercise_library/domain/exercise.dart' as domain;
+import 'package:gym_app/services/api_client.dart';
 
 /// Reads/writes the exercise library against the local Drift database.
 /// Milestone 1 seeds a small starter library on first launch.
@@ -14,9 +15,9 @@ class ExerciseRepository {
 
   Stream<List<domain.Exercise>> watchAll() {
     if (kIsWeb) return Stream.value(_webExercises);
-    return _dao.watchAll().map(
-          (rows) => rows.map((r) => _toDomain(r)).toList(),
-        );
+    // Fetch the library from the backend API once and expose as a single-event stream.
+    return Stream.fromFuture(ApiClient.I.fetchLibraryExercises().then((list) =>
+        list.map((m) => _fromApi(m)).toList(growable: false)));
   }
 
   Future<domain.Exercise?> getByName(String name) async {
@@ -26,6 +27,14 @@ class ExerciseRepository {
       }
       return null;
     }
+    // Try the backend library first
+    final list = await ApiClient.I.fetchLibraryExercises();
+    for (final m in list) {
+      if ((m['name'] as String).toLowerCase() == name.toLowerCase()) {
+        return _fromApi(m);
+      }
+    }
+    // Fallback to local DB if available
     final row = await _dao.getByName(name);
     return row == null ? null : _toDomain(row);
   }
@@ -214,7 +223,13 @@ class ExerciseRepository {
   ];
 
   Future<void> seedDefaults() async {
-    await _dao.seedIfEmpty(_defaultExercises());
+    // No-op: library is now sourced from the backend API. Keep signature for compatibility.
+    // Optionally, warm the local cache by fetching once.
+    try {
+      await ApiClient.I.fetchLibraryExercises();
+    } catch (_) {
+      // ignore network errors during app startup
+    }
   }
 }
 
@@ -229,6 +244,46 @@ domain.Exercise _toDomain(Exercise r) {
     howTo: _split(r.howTo),
     coachTip: r.coachTip,
   );
+}
+
+/// Convert API exercise JSON to domain model with best-effort mapping.
+domain.Exercise _fromApi(Map<String, dynamic> m) {
+  final name = (m['name'] ?? '') as String;
+  final bodyPart = (m['body_part'] ?? '') as String;
+  final primary = (m['primary_muscles'] as List?)?.cast<String>() ?? [];
+  final secondary = (m['secondary_muscles'] as List?)?.cast<String>() ?? [];
+  final equipmentList = (m['equipment'] as List?)?.cast<String>() ?? [];
+  final movement = (m['movement_pattern'] ?? '') as String;
+  final instructions = (m['instructions'] ?? '') as String;
+  final setup = (m['setup'] ?? '') as String;
+  final execution = (m['execution'] ?? '') as String;
+  final commonMistakes = (m['common_mistakes'] as List?)?.cast<String>() ?? [];
+
+  final muscleGroups = [...primary, ...secondary];
+  final howTo = <String>[];
+  if (setup.isNotEmpty) howTo.addAll(_splitSentences(setup));
+  if (execution.isNotEmpty) howTo.addAll(_splitSentences(execution));
+  if (howTo.isEmpty && instructions.isNotEmpty) howTo.addAll(_splitSentences(instructions));
+
+  return domain.Exercise(
+    id: null,
+    name: name,
+    muscleGroup: bodyPart.isNotEmpty ? bodyPart : (primary.isNotEmpty ? primary.first : 'Unknown'),
+    equipment: equipmentList.isNotEmpty ? equipmentList.first : 'Bodyweight',
+    description: instructions.isNotEmpty ? instructions : (howTo.isNotEmpty ? howTo.first : ''),
+    muscleGroups: muscleGroups,
+    howTo: howTo,
+    coachTip: commonMistakes.isNotEmpty ? commonMistakes.first : '',
+  );
+}
+
+List<String> _splitSentences(String text) {
+  // Naive split on periods, question marks and newlines; trim and remove empties.
+  return text
+      .split(RegExp(r'[\.\?\n]'))
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
 }
 
 List<String> _split(String value) =>
