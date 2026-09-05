@@ -18,6 +18,11 @@ class Profile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     display_name = models.CharField(max_length=100, blank=True)
+    # Onboarding / localization fields
+    onboarding_completed = models.BooleanField(default=False)
+    onboarding_completed_at = models.DateTimeField(null=True, blank=True)
+    locale = models.CharField(max_length=20, blank=True)
+    country = models.CharField(max_length=4, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -85,6 +90,8 @@ class Exercise(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exercises')
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    # Image illustrating the exercise (auto-generated if not provided)
+    image = models.ImageField(upload_to='exercises/', null=True, blank=True)
     target_sets = models.PositiveIntegerField(default=3, validators=[MinValueValidator(1)])
     target_reps = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1)])
     target_weight_kg = models.DecimalField(

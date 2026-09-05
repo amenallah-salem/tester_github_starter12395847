@@ -1,0 +1,71 @@
+# copilot-setup-steps.yml
+# Guidance for the Copilot cloud agent or any developer onboarding automation to prepare a workspace
+# and preinstall tools so sessions start quickly and reliably.
+
+# High-level: detect repository language, install runtimes, install dev dependencies, run quick checks
+
+setup:
+  - name: detect-language
+    description: "Detect primary languages and package managers in repo (package.json, pyproject.toml, go.mod, etc.)."
+    check: "ls | grep -E '(package.json|pyproject.toml|requirements.txt|Pipfile|go.mod|Cargo.toml)'"
+
+  - name: node-setup
+    when: "package.json exists"
+    description: "Install Node.js runtime and project dependencies."
+    steps:
+      - "Ensure Node 18+ available (nvm or distro package)."
+      - "npm ci --prefer-offline --no-audit"
+      - "npm run build (only if repo has a build script)"
+
+  - name: python-setup
+    when: "pyproject.toml or requirements.txt exists"
+    description: "Install Python and dependencies in a virtualenv."
+    steps:
+      - "python3 -m venv .venv"
+      - ". .venv/bin/activate && pip install -U pip setuptools wheel"
+      - "pip install -r requirements.txt || pip install -e .[dev] || pip install -r dev-requirements.txt"
+
+  - name: go-setup
+    when: "go.mod exists"
+    description: "Prepare Go toolchain and cache modules."
+    steps:
+      - "go env -w GOPATH=$(go env GOPATH)"
+      - "go mod download"
+
+  - name: common-tools
+    description: "Install or make available common CLI tools used by agents."
+    tools:
+      - git
+      - curl
+      - jq
+      - make
+
+  - name: run-tests
+    description: "Run a fast smoke test suite to ensure environment works. Keep this fast to avoid delays."
+    commands:
+      - "npm test -- --runInBand --testPathPattern=unit || true"
+      - "pytest -q -k 'smoke or fast' || true"
+      - "go test ./... || true"
+
+  - name: cache
+    description: "Cache package manager artifacts for faster subsequent starts."
+    actions:
+      - "Cache ~/.npm, .venv, $GOMODCACHE as appropriate"
+
+# Recommended run commands the agent can register for the UI Run button
+run_commands:
+  - name: Start dev server
+    command: "npm run dev"
+    when: "package.json exists and scripts.dev is present"
+  - name: Run tests
+    command: "npm test"
+    when: "package.json exists"
+  - name: Run fast tests (Python)
+    command: "pytest -q -k 'not integration'"
+    when: "pyproject.toml or requirements.txt exists"
+
+# Notes for maintainers
+notes:
+  - "Keep these steps minimal and fast. Cloud agents should prefer caching and selective install to reduce start time."
+  - "If the repository requires special environment variables or secrets for tests, do not store them here—document them in the secure store or in the project README."
+  - "If a particular toolchain is required (specific node/python version), pin it explicitly in the appropriate step."

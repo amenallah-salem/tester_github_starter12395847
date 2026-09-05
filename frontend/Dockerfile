@@ -24,19 +24,27 @@ RUN git clone \
     https://github.com/flutter/flutter.git \
     ${FLUTTER_SDK}
 
-RUN flutter doctor
+# Create a non-root user for Flutter operations and ensure ownership
+RUN groupadd -r builder && useradd -r -g builder -m -s /bin/bash builder \
+    && chown -R builder:builder ${FLUTTER_SDK} \
+    && mkdir -p /app && chown -R builder:builder /app
+
+# Switch to non-root user for Flutter commands (avoids Flutter's root warning)
+USER builder
 
 WORKDIR /app
 
-COPY pubspec.yaml ./
+COPY --chown=builder:builder pubspec.yaml ./
 
 RUN flutter pub get
 
-COPY . .
+COPY --chown=builder:builder . .
 
 RUN dart run build_runner build --delete-conflicting-outputs
 
 RUN flutter build web --release
+
+# Revert to root for the final runtime image stage (COPY from builder does not need root here)
 
 # Runtime
 FROM nginx:alpine
