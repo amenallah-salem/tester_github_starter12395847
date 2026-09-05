@@ -1,0 +1,128 @@
+# copilot-skills.yml
+# Repository-level skill definitions and guidance for GitHub Copilot and related cloud agents.
+# Keep this file under version control. Use it to declare available skills, recommended triggers,
+# examples, and constraints so Copilot can act consistently in this repo.
+
+skills:
+  - id: act-on-feedback
+    name: Act on feedback
+    description: "Respond to user feedback submitted for this session. Use to process 'Submit Feedback' items and apply fixes or follow-up changes."
+    recommended_when: "When a user attaches feedback to a session or a PR and asks the agent to act on it."
+    permissions: [write:repo, issue:comment]
+    examples:
+      - "Apply a small fix requested in feedback and push a follow-up commit."
+
+  - id: code-review
+    name: Code review
+    description: "Perform a focused code review on diffs/changes. Report high-confidence bugs or security issues and provide corrective edits."
+    recommended_when: "User requests a review of a specific diff, staged changes, or a PR."
+    constraints: "Do not change unrelated files. Only report high-confidence issues; omit stylistic noise."
+    permissions: [read:repo]
+    examples:
+      - "Run a review on an open PR and add review comments for security and correctness issues."
+
+  - id: commit
+    name: Commit helper
+    description: "Stage and commit changes with an AI-generated commit message that follows the repository's commit style."
+    recommended_when: "User asks to commit changes in the working tree."
+    requirements: "Run only on changes created by this session unless user requests otherwise."
+    examples:
+      - "Commit staged changes with a concise message and Co-authored-by trailer."
+
+  - id: create-draft-pr
+    name: Create draft PR
+    description: "Create a draft pull request for the current session branch with a summary of changes and intended next steps."
+    recommended_when: "Work is incomplete but the user wants early visibility."
+    examples:
+      - "Open a draft PR titled 'WIP: improve UX flows' and include a short checklist."
+
+  - id: create-pr
+    name: Create PR
+    description: "Open a pull request for the current session's branch. Include changelog-like summary and testing notes."
+    recommended_when: "User asks to publish completed work."
+    examples:
+      - "Create a PR with title, body, and linked issue(s)."
+
+  - id: fix-ci
+    name: Fix CI
+    description: "Investigate and fix failing CI checks for the current session or PR. Use existing CI logs and tests."
+    recommended_when: "CI is failing and user requests help to make the tests/CI pass."
+    examples:
+      - "Run failing test set locally, apply minimal fix, and push change."
+
+  - id: generate-run-commands
+    name: Generate run commands
+    description: "Generate or modify run commands for the project (Run button/task definitions)."
+    recommended_when: "User requests updated run profiles or new run configurations."
+    examples:
+      - "Add a Run command for 'Start dev server' that runs 'npm run dev'."
+
+  - id: merge
+    name: Merge
+    description: "Merge session branch into the target branch following repo's merge policy."
+    recommended_when: "User asks to merge changes and branch is up-to-date with upstream."
+    constraints: "Respect protected-branch rules and require approvals when configured."
+    examples:
+      - "Merge topic branch into main once checks pass and approvals are present."
+
+  - id: sync-upstream
+    name: Sync upstream (rebase)
+    description: "Rebase or otherwise update a session branch onto the latest upstream branch, adapting changes to resolve conflicts."
+    recommended_when: "Upstream has moved and session branch must be rebased."
+    examples:
+      - "Rebase onto origin/main and resolve simple conflicts preserving upstream changes."
+
+  - id: sync
+    name: Sync/publish branch
+    description: "Push the current session branch to the remote and/or set upstream tracking."
+    recommended_when: "User asks to publish branch or push local commits."
+    examples:
+      - "Push branch 'feature/ux-improvements' and set upstream."
+
+  - id: troubleshoot
+    name: Troubleshoot
+    description: "Investigate unexpected behavior in the current Copilot agent session by analyzing logs and events."
+    recommended_when: "A session or tool behaves unexpectedly and user asks why."
+    examples:
+      - "Explain why a background task failed or why a tool wasn't available."
+
+  - id: update-pr
+    name: Update PR
+    description: "Push new changes to an existing pull request and update the PR description or checklist as requested."
+    recommended_when: "User asks to modify a PR with new commits or updated description."
+    examples:
+      - "Add a test and push to the PR branch, mentioning the change in PR body."
+
+  - id: update-skills
+    name: Update skills
+    description: "Create or update repository skills and instructions for future sessions. Use when 'learn!' or when a recurring pattern should be captured."
+    recommended_when: "Significant repeated patterns or learnings are discovered and should be codified."
+    examples:
+      - "Add a new skill entry documenting an internal workflow."
+
+  - id: customize-cloud-agent
+    name: Customize cloud agent
+    description: "Define cloud-agent preinstall steps, tools, and environment configuration for this repository."
+    recommended_when: "You want the cloud agent to have preinstalled dependencies and run-commands for faster startup."
+    examples:
+      - "Preinstall Node 18, Python 3.11, and project deps; add run command for tests."
+
+  - id: github-pr-media
+    name: GitHub PR Media
+    description: "Upload screenshots or media to GitHub attachments and embed them in PR descriptions/comments."
+    recommended_when: "User requests images/screenshots in PR or issue."
+    examples:
+      - "Attach a UI screenshot and embed it in the PR description."
+
+# Repository-specific notes and policies that Copilot and agents should follow
+policies:
+  commit_trailer: "When creating commits, include the Co-authored-by trailer: 'Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>' unless user opts out."
+  scope_restriction: "Agents must only modify files related to the task at hand. Avoid broad repository-wide edits without explicit permission."
+  pr_template: "When creating PRs, include Test Plan, Related Issues, and 'How to test' steps."
+  notify_on_actions: ["create-pr","create-draft-pr","fix-ci","merge"]
+
+# Usage examples and quick triggers to put in commit or PR messages to hint desired behavior
+hints:
+  - "@copilot:run-tests"  # Run test suite and report failures
+  - "@copilot:fix-ci"     # Attempt to fix failing CI for this branch
+  - "@copilot:create-pr"  # Create PR for current branch
