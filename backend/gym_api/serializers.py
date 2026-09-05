@@ -33,15 +33,20 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ['id', 'user', 'display_name', 'created_at', 'updated_at']
+        fields = [
+            'id', 'user', 'display_name', 'created_at', 'updated_at',
+            'onboarding_completed', 'onboarding_completed_at', 'locale', 'country',
+        ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class ExerciseSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(read_only=True)
+
     class Meta:
         model = Exercise
         fields = [
-            'id', 'plan', 'user', 'name', 'aliases', 'body_part',
+            'id', 'plan', 'user', 'name', 'description', 'aliases', 'body_part',
             'primary_muscles', 'secondary_muscles', 'equipment',
             'movement_pattern', 'exercise_type', 'difficulty',
             'instructions', 'setup', 'execution', 'breathing', 'common_mistakes',
@@ -64,6 +69,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
             'animation_url': {'required': False, 'allow_null': True},
             'image': {'required': False, 'allow_null': True},
         }
+
 
     def validate_plan(self, plan):
         user = self.context['request'].user

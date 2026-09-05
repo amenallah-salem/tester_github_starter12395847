@@ -18,6 +18,11 @@ class Profile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     display_name = models.CharField(max_length=100, blank=True)
+    # Onboarding / localization fields
+    onboarding_completed = models.BooleanField(default=False)
+    onboarding_completed_at = models.DateTimeField(null=True, blank=True)
+    locale = models.CharField(max_length=20, blank=True)
+    country = models.CharField(max_length=4, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -128,6 +133,9 @@ class Exercise(models.Model):
     # allow user to be null for library/global exercises
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exercises', null=True, blank=True)
     name = models.CharField(max_length=200)
+    # Short human-readable description (kept for compatibility with older code)
+    description = models.TextField(blank=True)
+
     aliases = models.JSONField(blank=True, null=True, default=list)
     body_part = models.CharField(max_length=50, choices=BODY_PART_CHOICES, blank=True)
     primary_muscles = models.JSONField(blank=True, null=True, default=list)
@@ -149,6 +157,7 @@ class Exercise(models.Model):
 
     video_url = models.URLField(blank=True, null=True)
     animation_url = models.URLField(blank=True, null=True)
+    # Image illustrating the exercise (auto-generated if not provided)
     image = models.ImageField(upload_to='exercises/', blank=True, null=True)
 
     # Preserve original targets for per-user plan exercises

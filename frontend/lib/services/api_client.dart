@@ -89,6 +89,10 @@ class ApiClient {
     return true;
   }
 
+  /// Public helper to attempt refreshing the access token using a stored refresh token.
+  /// Returns true if a new access token was obtained and stored in [accessToken].
+  Future<bool> refreshAccessToken() async => await _refreshAccessToken();
+
   Future<Map<String, dynamic>> login({
     required String username,
     required String password,
@@ -195,6 +199,31 @@ class ApiClient {
       method: 'PATCH',
       path: '/sessions/$sessionId/',
     );
+  }
+
+  // Fetch the current user's profile (GET /profiles/me/). Returns parsed JSON.
+  Future<Map<String, dynamic>> fetchProfile() async {
+    final response = await _send(
+      () => http.get(_uri('/profiles/me/'), headers: _headers()),
+      method: 'GET',
+      path: '/profiles/me/',
+    );
+    return _jsonObject(response, 'profile');
+  }
+
+  // Update the current user's profile (PATCH /profiles/{id}/). `patch` should
+  // contain serializable fields such as onboarding_completed, locale, country, display_name.
+  Future<Map<String, dynamic>> updateProfile(String profileId, Map<String, dynamic> patch) async {
+    final response = await _send(
+      () => http.patch(
+        _uri('/profiles/$profileId/'),
+        headers: _headers(json: true),
+        body: jsonEncode(patch),
+      ),
+      method: 'PATCH',
+      path: '/profiles/$profileId/',
+    );
+    return _jsonObject(response, 'profile update');
   }
 
   Future<void> logWorkoutMetric({
