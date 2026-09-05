@@ -89,6 +89,10 @@ class ApiClient {
     return true;
   }
 
+  /// Public helper to attempt refreshing the access token using a stored refresh token.
+  /// Returns true if a new access token was obtained and stored in [accessToken].
+  Future<bool> refreshAccessToken() async => await _refreshAccessToken();
+
   Future<Map<String, dynamic>> login({
     required String username,
     required String password,

@@ -13,9 +13,22 @@ final currentUsernameProvider = StateProvider<String?>((ref) => null);
 
 final authBootstrapProvider = FutureProvider<void>((ref) async {
   final prefs = await SharedPreferences.getInstance();
-  final access = prefs.getString('access_token');
+  var access = prefs.getString('access_token');
   final refresh = prefs.getString('refresh_token');
   final username = prefs.getString('username');
+
+  // If we have no access token but a refresh token, try to refresh it now so the app
+  // can restore authenticated state on startup.
+  if ((access == null || access.isEmpty) && refresh != null && refresh.isNotEmpty) {
+    ApiClient.I.refreshToken = refresh;
+    final refreshed = await ApiClient.I.refreshAccessToken();
+    if (refreshed) {
+      access = ApiClient.I.accessToken;
+      // persist refreshed access so subsequent startups have it
+      if (access != null) await prefs.setString('access_token', access);
+    }
+  }
+
   if (access != null && access.isNotEmpty) {
     ref.read(accessTokenProvider.notifier).state = access;
     ApiClient.I.accessToken = access;
