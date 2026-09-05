@@ -5,7 +5,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: gym-planner-web
-    ports: ["8080:8080"]
+    ports: ["8080:80"]
     volumes: [./frontend:/app]
     restart: unless-stopped
     networks:
