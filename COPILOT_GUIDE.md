@@ -27,6 +27,13 @@ Skill usage and scope
 - Avoid repository-wide refactors unless explicitly requested and approved.
 - When fixing CI or tests, prefer minimal, well-tested changes that preserve intent.
 
+Feature development workflow
+- When asked to implement a task or feature, implement it as fully and professionally as possible. This includes writing necessary code, tests, and documentation.
+- Start the application locally on the project's development port and perform interactive user-experience testing in the running app (open the app in a browser, exercise the new flows, and verify behavior).
+- Run the project's smoke and test suites and ensure no regressions. If regressions are discovered, fix them or document a clear follow-up plan in the PR.
+- Respect the app's design and visual language: prefer existing components and styling, and produce polished, attractive UI that fits the product. For significant visual changes include screenshots or short recordings in the PR and request a design review when appropriate.
+- Document how to run the app, test the feature, and any special environment requirements in the PR description so reviewers can validate the UX changes.
+
 Onboarding / Local dev (quick)
 1. Clone the repo and switch to main:
    git checkout main
