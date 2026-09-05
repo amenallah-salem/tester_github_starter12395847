@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Build-only dev script: builds backend and frontend development images
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo "Building development images: backend + frontend"
 
 if ! command -v docker >/dev/null 2>&1; then
