@@ -115,6 +115,26 @@ skills:
       - "Attach a UI screenshot and embed it in the PR description."
 
 # Repository-specific notes and policies that Copilot and agents should follow
+
+# Skill: track-tool-usage
+# Purpose: Ensure the skills catalog stays current. Whenever an agent or developer uses
+# a tool, integration, or workflow not yet described here, a matching skill entry must be
+# created or the existing skill updated with examples and permissions.
+
+  - id: track-tool-usage
+    name: Track tool usage and update skills
+    description: "When an agent or developer uses a tool, integration, or workflow not yet described in this repository's skills, create or update an appropriate skill entry (in copilot-skills.yml or a new skills file) describing the tool, usage patterns, permissions, and examples."
+    recommended_when: "A tool, CLI, service, or workflow is used for the first time in this repository or when existing skill definitions need correction or expansion."
+    responsibilities:
+      - "Add a concise skill entry describing the tool, sample commands, and required permissions."
+      - "If the tool is project-specific, add examples showing how it is used within this repo."
+      - "If changes to an existing skill are needed, update that skill's description and examples; include migration notes and versioning if applicable."
+      - "Open a draft PR for the skill change when it affects other contributors or when it adds new permissions or external integrations."
+    permissions: [write:repo]
+    examples:
+      - "After using 'firebase emulators:start' for the first time, add a 'firebase-emulator' skill entry describing when and how to run it."
+      - "If a CI helper script 'ci/tools/deploy.sh' is used, add a corresponding skill entry with usage and safety notes."
+
 policies:
   commit_trailer: "When creating commits, include the Co-authored-by trailer: 'Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>' unless user opts out."
   scope_restriction: "Agents must only modify files related to the task at hand. Avoid broad repository-wide edits without explicit permission."

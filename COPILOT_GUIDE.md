@@ -34,6 +34,16 @@ Feature development workflow
 - Respect the app's design and visual language: prefer existing components and styling, and produce polished, attractive UI that fits the product. For significant visual changes include screenshots or short recordings in the PR and request a design review when appropriate.
 - Document how to run the app, test the feature, and any special environment requirements in the PR description so reviewers can validate the UX changes.
 
+Tool tracking and skills upkeep
+- Whenever a tool, library, CLI, service, or workflow is used that is not yet described in copilot-skills.yml, add or update a skill entry documenting:
+  - purpose and brief description of the tool
+  - sample commands or usage patterns used in this repository
+  - required permissions or external integrations
+  - examples and when the tool should (or should not) be used
+- If adding or updating a skill affects security, external services, credentials, or repo permissions, open a draft PR and notify maintainers for review rather than merging automatically.
+- Keep skill entries concise, actionable, and repository-specific so future agents and contributors can discover and re-use them.
+- When correcting an existing skill, include a short changelog note in the skill's description and the PR body explaining why the change was made.
+
 Onboarding / Local dev (quick)
 1. Clone the repo and switch to main:
    git checkout main
