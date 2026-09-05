@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build-only dev script: builds backend and frontend development images
+# docker.dev.sh — helper to build and start dev stack (db + backend + frontend)
+# Usage:
+#   ./docker.dev.sh build        # build images only
+#   ./docker.dev.sh up [--no-strict]  # build + bring up services; strict by default
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "Building development images: backend + frontend"
+CMD="${1:-up}"
+# Allow overriding timeout via env var BACKEND_TIMEOUT (seconds); default 120
+BACKEND_TIMEOUT="${BACKEND_TIMEOUT:-120}"
+STRICT=1
+if [ "${2:-}" = "--no-strict" ]; then
+  STRICT=0
+fi
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Error: docker is not installed or not on PATH" >&2
@@ -27,11 +37,20 @@ echo "Using files:"
 echo "  $BACKEND_FILE"
 echo "  $FRONTEND_FILE"
 
+if [ "$CMD" = "build" ]; then
+  echo "Building development images: backend + frontend"
+  docker compose -f "$BACKEND_FILE" -f "$FRONTEND_FILE" build --parallel --pull
+  echo "Dev images built successfully."
+  exit 0
+fi
+
+# Default: up — build, start db+backend, wait, then start frontend
+echo "Building development images: backend + frontend"
 docker compose -f "$BACKEND_FILE" -f "$FRONTEND_FILE" build --parallel --pull
 
 echo "Dev images built successfully."
 
-# Start DB and backend and wait for readiness before starting frontend
+# Start DB and backend
 echo "Bringing up db and backend..."
 docker compose -f "$BACKEND_FILE" -f "$FRONTEND_FILE" up -d db backend
 
@@ -60,9 +79,8 @@ else
   done
 fi
 
-# Wait for backend to accept connections on localhost:8000 (timeout 60s)
-echo "Waiting for backend HTTP on http://localhost:8000/"
-BACKEND_TIMEOUT=60
+# Wait for backend to accept connections on localhost:8000 (timeout BACKEND_TIMEOUT)
+echo "Waiting for backend HTTP on http://localhost:8000/ (timeout=${BACKEND_TIMEOUT}s)"
 BACKEND_WAITED=0
 BACKEND_INTERVAL=2
 while true; do
@@ -71,8 +89,13 @@ while true; do
     break
   fi
   if [ "$BACKEND_WAITED" -ge "$BACKEND_TIMEOUT" ]; then
-    echo "Timed out waiting for backend HTTP. Continuing to start frontend..." >&2
-    break
+    if [ "$STRICT" -eq 1 ]; then
+      echo "ERROR: Timed out waiting for backend HTTP after ${BACKEND_TIMEOUT}s. Exiting (strict mode)." >&2
+      exit 5
+    else
+      echo "Timed out waiting for backend HTTP. Continuing to start frontend (non-strict mode)." >&2
+      break
+    fi
   fi
   sleep $BACKEND_INTERVAL
   BACKEND_WAITED=$((BACKEND_WAITED + BACKEND_INTERVAL))
