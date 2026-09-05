@@ -1,20 +1,32 @@
-#!/bin/bash
-# Dev launcher: backend (runserver reload) + frontend (hot reload or build)
+#!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== Dev Mode: Backend (runserver auto-reload) + Frontend ==="
-echo "Backend: edit files in ./backend -> reloads automatically"
-echo "Frontend: edit files in ./frontend -> rebuild required (dev server available)"
+# Build-only dev script: builds backend and frontend development images
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+"
+echo "Building development images: backend + frontend"
 
-echo "Starting backend..."
-docker compose -f docker-compose.frontend.yml up -d backend || docker compose up -d backend
+if ! command -v docker >/dev/null 2>&1; then
+  echo "Error: docker is not installed or not on PATH" >&2
+  exit 2
+fi
 
-echo "Building & starting frontend (production static)..."
-docker compose -f docker-compose.frontend.yml up --build -d frontend || docker compose up --build -d frontend
+BACKEND_FILE="$ROOT_DIR/docker-compose.backend.dev.yml"
+FRONTEND_FILE="$ROOT_DIR/docker-compose.frontend.dev.yml"
 
-echo "=== Services ==="
-echo "Frontend (website): http://localhost:8080"
-echo "Backend (API):     http://localhost:8000 (internal proxy via nginx at /api/)"
-echo "Backend direct test (no rebuild): docker compose exec backend python manage.py migrate"
-echo "Dev mode on: edit backend files, save -> Django reloads instantly."
-echo "For faster frontend edits, use: docker compose -f docker-compose.frontend.dev.yml up --build -d"
+if [ ! -f "$BACKEND_FILE" ]; then
+  echo "Error: backend compose file not found: $BACKEND_FILE" >&2
+  exit 3
+fi
+if [ ! -f "$FRONTEND_FILE" ]; then
+  echo "Error: frontend compose file not found: $FRONTEND_FILE" >&2
+  exit 4
+fi
+
+echo "Using files:"
+echo "  $BACKEND_FILE"
+echo "  $FRONTEND_FILE"
+
+docker compose -f "$BACKEND_FILE" -f "$FRONTEND_FILE" build --parallel --pull
+
+echo "Dev images built successfully."
