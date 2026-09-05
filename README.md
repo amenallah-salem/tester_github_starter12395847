@@ -346,3 +346,31 @@ The `docker-compose.yml` bind-mounts `./backend:/app`. If you hit permission iss
 - Honest limits: no SDK/macOS/keystore in this env; no actual `flutter build` executed; release artifacts unsigned; billing is stub only
 
 Branch: `main` (merged T-09 + T-17 + CI + improvements).
+
+---
+
+# Simple guide (beginner-friendly)
+
+If you prefer an extra-simple guide, follow these short steps.
+
+1. Install Docker (https://www.docker.com/get-started).
+2. Open a terminal and go to the project folder.
+3. Start backend only (database + API):
+
+   docker compose -f docker-compose.backend.dev.yml up --build
+
+4. In another terminal, start frontend only (website):
+
+   docker compose -f docker-compose.frontend.dev.yml up --build
+
+5. Open your browser:
+   - backend API: http://127.0.0.1:8000/api/
+   - frontend app: http://127.0.0.1:8080
+
+6. Stop everything when done:
+
+   docker compose -f docker-compose.backend.dev.yml down -v
+   docker compose -f docker-compose.frontend.dev.yml down
+
+
+If you want me to replace `.env.prod` with `.env.prod.example` and add `.env.prod` to `.gitignore` (recommended), say "Yes, secure .env.prod" and I will make that change.

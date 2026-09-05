@@ -83,19 +83,66 @@ class PlanViewSet(viewsets.ModelViewSet):
 
 
 class ExerciseViewSet(viewsets.ModelViewSet):
-    """ViewSet for exercises."""
+    """ViewSet for user exercises (per-user, plan-attached)."""
     serializer_class = ExerciseSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        qs = Exercise.objects.filter(user=self.request.user)
+        # return exercises belonging to the authenticated user
+        qs = Exercise.objects.filter(user=self.request.user, is_library=False)
         plan_id = self.request.query_params.get('plan')
         if plan_id:
             qs = qs.filter(plan_id=plan_id)
         return qs.select_related('plan')
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user=self.request.user, is_library=False)
+
+
+class LibraryExerciseViewSet(viewsets.ModelViewSet):
+    """ViewSet for global admin-managed exercise library.
+
+    Read-only access is public (AllowAny) so the frontend can fetch the library without
+    authentication. Write actions (create/update/destroy) require admin privileges and
+    an authenticated user (token).
+    """
+    serializer_class = ExerciseSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_permissions(self):
+        # Allow anyone to perform safe methods (list, retrieve).
+        # Require admin for write operations.
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated(), permissions.IsAdminUser()]
+        return [permissions.AllowAny()]
+
+    def get_queryset(self):
+        qs = Exercise.objects.filter(is_library=True)
+        # support filters for body_part, difficulty, equipment, movement_pattern, exercise_type
+        params = self.request.query_params
+        body_part = params.get('body_part')
+        difficulty = params.get('difficulty')
+        equipment = params.get('equipment')
+        movement_pattern = params.get('movement_pattern')
+        exercise_type = params.get('exercise_type')
+        search = params.get('search')
+        if body_part:
+            qs = qs.filter(body_part__iexact=body_part)
+        if difficulty:
+            qs = qs.filter(difficulty__iexact=difficulty)
+        if movement_pattern:
+            qs = qs.filter(movement_pattern__iexact=movement_pattern)
+        if exercise_type:
+            qs = qs.filter(exercise_type__iexact=exercise_type)
+        if equipment:
+            qs = qs.filter(equipment__contains=[equipment])
+        if search:
+            qs = qs.filter(name__icontains=search) | qs.filter(aliases__icontains=search)
+        return qs.prefetch_related('alternatives', 'progression_exercises', 'regression_exercises')
+
+    def perform_create(self, serializer):
+        # ensure created library exercises are marked as library and not tied to a user
+        serializer.save(user=None, is_library=True)
 
 
 class WorkoutSessionViewSet(viewsets.ModelViewSet):

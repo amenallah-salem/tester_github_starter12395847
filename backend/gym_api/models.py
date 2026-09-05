@@ -84,26 +84,106 @@ class Plan(models.Model):
 
 
 class Exercise(models.Model):
-    """An exercise definition that can belong to a plan."""
+    """An exercise definition that can belong to a plan or be a library entry.
+
+    This model was extended to support the Exercise Library. Existing fields
+    are preserved. The `user` field is now nullable so library exercises can
+    be represented with `is_library=True` and `user=None` (created/managed
+    in Django Admin by staff users).
+    """
+    BODY_PART_CHOICES = [
+        ('Chest', 'Chest'),
+        ('Back', 'Back'),
+        ('Shoulders', 'Shoulders'),
+        ('Arms', 'Arms'),
+        ('Legs', 'Legs'),
+        ('Core', 'Core'),
+        ('Other', 'Other'),
+    ]
+    MOVEMENT_PATTERN_CHOICES = [
+        ('Horizontal Push', 'Horizontal Push'),
+        ('Vertical Push', 'Vertical Push'),
+        ('Horizontal Pull', 'Horizontal Pull'),
+        ('Vertical Pull', 'Vertical Pull'),
+        ('Squat', 'Squat'),
+        ('Lunge', 'Lunge'),
+        ('Hinge', 'Hinge'),
+        ('Isolation', 'Isolation'),
+        ('Core Stabilization', 'Core Stabilization'),
+        ('Rotation', 'Rotation'),
+        ('Other', 'Other'),
+    ]
+    EXERCISE_TYPE_CHOICES = [
+        ('Compound', 'Compound'),
+        ('Isolation', 'Isolation'),
+        ('Bodyweight', 'Bodyweight'),
+        ('Machine', 'Machine'),
+        ('Cardio', 'Cardio'),
+        ('Mobility', 'Mobility'),
+        ('Other', 'Other'),
+    ]
+    DIFFICULTY_CHOICES = [
+        ('Beginner', 'Beginner'),
+        ('Intermediate', 'Intermediate'),
+        ('Advanced', 'Advanced'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='exercises', null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exercises')
+    # allow user to be null for library/global exercises
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exercises', null=True, blank=True)
     name = models.CharField(max_length=200)
+    # Short human-readable description (kept for compatibility with older code)
     description = models.TextField(blank=True)
+
+    aliases = models.JSONField(blank=True, null=True, default=list)
+    body_part = models.CharField(max_length=50, choices=BODY_PART_CHOICES, blank=True)
+    primary_muscles = models.JSONField(blank=True, null=True, default=list)
+    secondary_muscles = models.JSONField(blank=True, null=True, default=list)
+    equipment = models.JSONField(blank=True, null=True, default=list)
+    movement_pattern = models.CharField(max_length=50, choices=MOVEMENT_PATTERN_CHOICES, blank=True)
+    exercise_type = models.CharField(max_length=50, choices=EXERCISE_TYPE_CHOICES, blank=True)
+    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, blank=True)
+
+    instructions = models.TextField(blank=True)
+    setup = models.TextField(blank=True)
+    execution = models.TextField(blank=True)
+    breathing = models.TextField(blank=True)
+    common_mistakes = models.JSONField(blank=True, null=True, default=list)
+
+    alternatives = models.ManyToManyField('self', blank=True, symmetrical=False, related_name='alternative_for')
+    progression_exercises = models.ManyToManyField('self', blank=True, symmetrical=False, related_name='progression_for')
+    regression_exercises = models.ManyToManyField('self', blank=True, symmetrical=False, related_name='regression_for')
+
+    video_url = models.URLField(blank=True, null=True)
+    animation_url = models.URLField(blank=True, null=True)
     # Image illustrating the exercise (auto-generated if not provided)
-    image = models.ImageField(upload_to='exercises/', null=True, blank=True)
+    image = models.ImageField(upload_to='exercises/', blank=True, null=True)
+
+    # Preserve original targets for per-user plan exercises
     target_sets = models.PositiveIntegerField(default=3, validators=[MinValueValidator(1)])
     target_reps = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1)])
     target_weight_kg = models.DecimalField(
         max_digits=6, decimal_places=2, null=True, blank=True,
         validators=[MinValueValidator(0)]
     )
+
     order = models.PositiveIntegerField(default=0)
+    is_library = models.BooleanField(default=False, help_text='True when this exercise is part of the global library')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'exercises'
         ordering = ['plan', 'order', 'created_at']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['body_part']),
+            models.Index(fields=['movement_pattern']),
+            models.Index(fields=['difficulty']),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'plan', 'user'], name='unique_exercise_per_owner')
+        ]
 
     def __str__(self):
         return self.name
