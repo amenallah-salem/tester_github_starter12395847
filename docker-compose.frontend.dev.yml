@@ -3,7 +3,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: gym-planner-web
     ports: ["8080:8080"]
     volumes: [./frontend:/app]
