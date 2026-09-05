@@ -85,6 +85,8 @@ class Exercise(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exercises')
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    # Image illustrating the exercise (auto-generated if not provided)
+    image = models.ImageField(upload_to='exercises/', null=True, blank=True)
     target_sets = models.PositiveIntegerField(default=3, validators=[MinValueValidator(1)])
     target_reps = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1)])
     target_weight_kg = models.DecimalField(

@@ -38,14 +38,17 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class ExerciseSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(read_only=True)
+
     class Meta:
         model = Exercise
         fields = [
-            'id', 'plan', 'user', 'name', 'description',
+            'id', 'plan', 'user', 'name', 'description', 'image',
             'target_sets', 'target_reps', 'target_weight_kg',
             'order', 'created_at',
         ]
         read_only_fields = ['id', 'user', 'created_at']
+
 
     def validate_plan(self, plan):
         user = self.context['request'].user
