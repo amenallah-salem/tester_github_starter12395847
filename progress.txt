@@ -45,3 +45,8 @@
   - backend: exercises can be marked is_timed and metrics accept duration_seconds
   - frontend: timed runner rows expose a duration input and submit duration metrics
   - tested: all 26 backend tests, Flutter web build
+
+## Tier 2 checkpoint
+- Built: PR detection, favorite-first exercise browsing, freestyle sessions, wake-lock during active workouts, and timed exercise logging.
+- Deviation: freestyle selection currently uses the global exercise library; user-created exercises can still be added through the existing plan flow.
+- Cleanup: replace the temporary generic defaults in freestyle selections (three sets, 8-12 reps, bodyweight) with per-exercise prescription editing in a future iteration.
