@@ -38,5 +38,7 @@
   - frontend: freestyle picker starts the runner with ad hoc library exercises
   - frontend: runner reuses last-set lookup to prefill each selected exercise
   - tested: Flutter web build
-[TODO] 2.4 Screen-stays-awake during a workout
+[DONE] 2.4 Screen-stays-awake during a workout
+  - frontend: wakelock_plus is enabled when the runner opens and released on finish/dispose
+  - tested: Flutter web build
 [TODO] 2.5 Timed exercises

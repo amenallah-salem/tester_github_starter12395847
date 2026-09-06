@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -62,6 +63,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   @override
   void initState() {
     super.initState();
+    WakelockPlus.enable();
     final plan = ref.read(planNotifierProvider).value ?? samplePlan;
     _exercises = widget.initialExercises ?? plan.todaySession.exercises;
     _sessionStartedAt = DateTime.now();
@@ -72,6 +74,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   @override
   void dispose() {
     _timer?.cancel();
+    WakelockPlus.disable();
     _weightController.dispose();
     super.dispose();
   }
@@ -265,6 +268,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
 
   void _finish() {
     _timer?.cancel();
+    WakelockPlus.disable();
     setState(() {
       _finished = true;
       _phase = _Phase.finished;
