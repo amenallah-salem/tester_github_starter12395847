@@ -51,6 +51,59 @@ class APITests(APITestCase):
         resp = self.client.delete(f'/api/plans/{plan_id}/')
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
 
+    def test_plan_week_can_be_read_and_replaced(self):
+        plan = Plan.objects.create(user=self.user, name='Weekly Plan')
+        exercises = [
+            Exercise.objects.create(
+                user=self.user,
+                name=f'Exercise {index}',
+                plan=plan,
+            )
+            for index in range(2)
+        ]
+        payload = {
+            'days': [
+                {
+                    'weekday': weekday,
+                    'exercise_ids': [str(exercises[weekday % 2].id)]
+                    if weekday in (0, 2, 4)
+                    else [],
+                }
+                for weekday in range(7)
+            ],
+        }
+
+        resp = self.client.put(f'/api/plans/{plan.id}/week/', payload, format='json')
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['days']), 7)
+        self.assertEqual(
+            str(resp.data['days'][0]['assignments'][0]['exercise']),
+            str(exercises[0].id),
+        )
+        self.assertEqual(resp.data['days'][1]['assignments'], [])
+
+        resp = self.client.get(f'/api/plans/{plan.id}/week/')
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['days'][4]['assignments'][0]['order'], 0)
+
+    def test_plan_week_rejects_incomplete_or_foreign_assignments(self):
+        plan = Plan.objects.create(user=self.user, name='Weekly Plan')
+        other_exercise = Exercise.objects.create(
+            user=self.other_user,
+            name='Private Exercise',
+        )
+
+        resp = self.client.put(
+            f'/api/plans/{plan.id}/week/',
+            {'days': [{'weekday': 0, 'exercise_ids': [str(other_exercise.id)]}] * 7},
+            format='json',
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('days', resp.data)
+
     def test_exercise_crud(self):
         resp = self.client.post('/api/exercises/', {'name': 'Deadlift', 'target_sets': 4, 'target_reps': 6})
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)

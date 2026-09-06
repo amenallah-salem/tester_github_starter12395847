@@ -401,6 +401,35 @@ class ApiClient {
     return {...plan, 'exercises': exercises};
   }
 
+  Future<Map<String, dynamic>> fetchPlanWeek(String planId) async {
+    return _jsonObject(
+      await _send(
+        () => http.get(_uri('/plans/$planId/week/'), headers: _headers()),
+        method: 'GET',
+        path: '/plans/$planId/week/',
+      ),
+      'plan week',
+    );
+  }
+
+  Future<Map<String, dynamic>> updatePlanWeek(
+    String planId,
+    List<Map<String, dynamic>> days,
+  ) async {
+    return _jsonObject(
+      await _send(
+        () => http.put(
+          _uri('/plans/$planId/week/'),
+          headers: _headers(json: true),
+          body: jsonEncode({'days': days}),
+        ),
+        method: 'PUT',
+        path: '/plans/$planId/week/',
+      ),
+      'plan week',
+    );
+  }
+
   Future<Map<String, dynamic>> fetchSubscription() async {
     final response = await _send(
       () => http.get(_uri('/billing/subscription/'), headers: _headers()),

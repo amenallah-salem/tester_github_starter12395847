@@ -4,7 +4,10 @@ REST serializers for the Gym Planner API.
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
+from .models import (
+    Profile, Plan, Exercise, PlanDay, PlanDayExercise,
+    WorkoutSession, ProgressMetric, Subscription,
+)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -128,6 +131,22 @@ class PlanListSerializer(serializers.ModelSerializer):
             'exercise_count', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class PlanDayExerciseSerializer(serializers.ModelSerializer):
+    exercise_name = serializers.CharField(source='exercise.name', read_only=True)
+
+    class Meta:
+        model = PlanDayExercise
+        fields = ['exercise', 'exercise_name', 'order']
+
+
+class PlanDaySerializer(serializers.ModelSerializer):
+    assignments = PlanDayExerciseSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = PlanDay
+        fields = ['weekday', 'assignments']
 
 
 class ProgressMetricSerializer(serializers.ModelSerializer):

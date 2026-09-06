@@ -6,11 +6,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-from django.db import connections
+from django.db import connections, models, transaction
 from django.db.models import F, Sum
 from django.db.utils import OperationalError
 
-from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
+from .models import (
+    Profile, Plan, Exercise, PlanDay, PlanDayExercise,
+    WorkoutSession, ProgressMetric, Subscription,
+)
 from .serializers import (
     ProfileSerializer,
     PlanSerializer,
@@ -21,6 +24,7 @@ from .serializers import (
     ProgressMetricSerializer,
     RegisterSerializer,
     SubscriptionSerializer,
+    PlanDaySerializer,
 )
 
 
@@ -56,6 +60,24 @@ class RegisterView(APIView):
         if s.is_valid():
             user = s.save()
             Profile.objects.get_or_create(user=user)
+            starter_plan = Plan.objects.create(
+                user=user,
+                name='Starter Week',
+                description='A simple full-body routine to get started.',
+            )
+            starter_exercises = list(
+                Exercise.objects.filter(is_library=True).order_by('created_at')[:3]
+            )
+            if starter_exercises:
+                starter_day = PlanDay.objects.create(plan=starter_plan, weekday=0)
+                PlanDayExercise.objects.bulk_create([
+                    PlanDayExercise(
+                        plan_day=starter_day,
+                        exercise=exercise,
+                        order=order,
+                    )
+                    for order, exercise in enumerate(starter_exercises)
+                ])
             from rest_framework_simplejwt.tokens import RefreshToken
             refresh = RefreshToken.for_user(user)
             return Response({
@@ -107,6 +129,75 @@ class PlanViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['get', 'put'], url_path='week')
+    def week(self, request, pk=None):
+        plan = self.get_object()
+        if request.method == 'GET':
+            days = plan.days.prefetch_related(
+                'assignments__exercise',
+            )
+            return Response({
+                'plan': str(plan.id),
+                'days': PlanDaySerializer(days, many=True).data,
+            })
+
+        raw_days = request.data.get('days')
+        if not isinstance(raw_days, list):
+            return Response(
+                {'days': 'Expected a list of weekday assignments.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        weekdays = [item.get('weekday') for item in raw_days if isinstance(item, dict)]
+        if len(raw_days) != 7 or sorted(weekdays) != list(range(7)):
+            return Response(
+                {'days': 'Exactly one assignment is required for each weekday 0 through 6.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        assignments = []
+        for item in raw_days:
+            exercise_ids = item.get('exercise_ids')
+            if not isinstance(exercise_ids, list) or not all(
+                isinstance(exercise_id, str) for exercise_id in exercise_ids
+            ):
+                return Response(
+                    {'days': 'Each weekday must include an exercise_ids list.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if len(exercise_ids) != len(set(exercise_ids)):
+                return Response(
+                    {'days': 'An exercise can only appear once per weekday.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            exercises = list(Exercise.objects.filter(
+                id__in=exercise_ids,
+            ).filter(
+                models.Q(user=request.user) | models.Q(is_library=True, user__isnull=True),
+            ))
+            if len(exercises) != len(set(exercise_ids)):
+                return Response(
+                    {'days': 'Each exercise must belong to you or the exercise library.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            exercises_by_id = {str(exercise.id): exercise for exercise in exercises}
+            assignments.append((item['weekday'], [
+                exercises_by_id[exercise_id] for exercise_id in exercise_ids
+            ]))
+
+        with transaction.atomic():
+            PlanDay.objects.filter(plan=plan).delete()
+            for weekday, exercises in assignments:
+                day = PlanDay.objects.create(plan=plan, weekday=weekday)
+                PlanDayExercise.objects.bulk_create([
+                    PlanDayExercise(plan_day=day, exercise=exercise, order=order)
+                    for order, exercise in enumerate(exercises)
+                ])
+        days = plan.days.prefetch_related('assignments__exercise')
+        return Response({
+            'plan': str(plan.id),
+            'days': PlanDaySerializer(days, many=True).data,
+        })
 
 
 class ExerciseViewSet(viewsets.ModelViewSet):

@@ -189,6 +189,43 @@ class Exercise(models.Model):
         return self.name
 
 
+class PlanDay(models.Model):
+    """A weekday assignment within a user's weekly plan."""
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='days')
+    weekday = models.PositiveSmallIntegerField()
+
+    class Meta:
+        db_table = 'plan_days'
+        ordering = ['weekday']
+        constraints = [
+            models.UniqueConstraint(fields=['plan', 'weekday'], name='unique_plan_weekday'),
+            models.CheckConstraint(
+                condition=models.Q(weekday__gte=0, weekday__lte=6),
+                name='plan_day_weekday_range',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.plan.name} – day {self.weekday}'
+
+
+class PlanDayExercise(models.Model):
+    """An ordered exercise assigned to a specific plan weekday."""
+    plan_day = models.ForeignKey(PlanDay, on_delete=models.CASCADE, related_name='assignments')
+    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name='plan_day_assignments')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'plan_day_exercises'
+        ordering = ['order', 'id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['plan_day', 'exercise'],
+                name='unique_exercise_per_plan_day',
+            ),
+        ]
+
+
 class WorkoutSession(models.Model):
     """A concrete workout session instance."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

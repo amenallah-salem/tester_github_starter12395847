@@ -8,6 +8,7 @@ import 'package:gym_app/core/strings/coaching.dart';
 import 'package:gym_app/core/widgets/common.dart';
 import 'package:gym_app/features/plan/state/plan_notifier.dart';
 import 'package:gym_app/features/plan/domain/plan_contract.dart';
+import 'package:gym_app/services/api_client.dart';
 
 /// Welora dashboard (Today tab). Enhanced per Stitch.
 class PlanPage extends ConsumerWidget {
@@ -144,6 +145,8 @@ class _DashboardBody extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const _CategoryGrid(),
+        const SizedBox(height: 16),
+        const _WeeklyPlanEditor(),
         const SizedBox(height: 16),
         // Session card + starter buttons preserved from original
         Card(
@@ -283,6 +286,182 @@ class _SessionProgressCard extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _WeeklyPlanEditor extends StatefulWidget {
+  const _WeeklyPlanEditor();
+
+  @override
+  State<_WeeklyPlanEditor> createState() => _WeeklyPlanEditorState();
+}
+
+class _WeeklyPlanEditorState extends State<_WeeklyPlanEditor> {
+  late Future<Map<String, dynamic>?> _weekFuture;
+  int _selectedDay = DateTime.now().weekday - 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _weekFuture = _loadWeek();
+  }
+
+  Future<Map<String, dynamic>?> _loadWeek() async {
+    if (ApiClient.I.accessToken == null) return null;
+    final plan = await ApiClient.I.fetchCurrentPlan();
+    if (plan == null) return null;
+    final week = await ApiClient.I.fetchPlanWeek(plan['id'].toString());
+    return {...week, 'plan_id': plan['id'].toString()};
+  }
+
+  Future<void> _editDay(
+    BuildContext context,
+    Map<String, dynamic> week,
+    Map<String, dynamic> day,
+  ) async {
+    final library = await ApiClient.I.fetchLibraryExercises();
+    final current = (day['assignments'] as List? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map((item) => item['exercise'].toString())
+        .toSet();
+    final selected = {...current};
+    if (!context.mounted) return;
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * .75,
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'Edit exercises',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    children: library.map((exercise) {
+                      final id = exercise['id'].toString();
+                      return CheckboxListTile(
+                        value: selected.contains(id),
+                        title: Text(exercise['name'] as String? ?? 'Exercise'),
+                        subtitle: Text(exercise['body_part'] as String? ?? ''),
+                        onChanged: (value) => setSheetState(() {
+                          if (value == true) {
+                            selected.add(id);
+                          } else {
+                            selected.remove(id);
+                          }
+                        }),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(true),
+                    child: const Text('Save day'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (saved != true || !mounted) return;
+
+    final days = (week['days'] as List).cast<Map<String, dynamic>>().map((item) {
+      final weekday = item['weekday'] as int;
+      final exerciseIds = weekday == day['weekday']
+          ? selected.toList()
+          : (item['assignments'] as List? ?? const [])
+              .cast<Map<String, dynamic>>()
+              .map((assignment) => assignment['exercise'].toString())
+              .toList();
+      return {'weekday': weekday, 'exercise_ids': exerciseIds};
+    }).toList();
+    await ApiClient.I.updatePlanWeek(week['plan_id'] as String, days);
+    if (mounted) {
+      setState(() => _weekFuture = _loadWeek());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _weekFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LinearProgressIndicator();
+        }
+        final week = snapshot.data;
+        if (week == null) return const SizedBox.shrink();
+        final days = (week['days'] as List).cast<Map<String, dynamic>>();
+        final selected = days.firstWhere(
+          (day) => day['weekday'] == _selectedDay,
+          orElse: () => {'weekday': _selectedDay, 'assignments': const []},
+        );
+        final assignments = (selected['assignments'] as List? ?? const [])
+            .cast<Map<String, dynamic>>();
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.cardPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Your week',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: List.generate(7, (index) {
+                      final labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(labels[index]),
+                          selected: _selectedDay == index,
+                          onSelected: (_) => setState(() => _selectedDay = index),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (assignments.isEmpty)
+                  const Text('Rest day - add exercises to schedule a workout.')
+                else
+                  ...assignments.map(
+                    (assignment) => ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.fitness_center),
+                      title: Text(assignment['exercise_name'] as String? ?? 'Exercise'),
+                    ),
+                  ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => _editDay(context, week, selected),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit day'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _CategoryGrid extends StatelessWidget {
