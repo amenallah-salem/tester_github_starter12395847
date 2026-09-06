@@ -51,6 +51,48 @@ write is this project's own property.
    (e.g. `feat: weekly plan per weekday (Tier 1.2)`).
 7. If an item seems to require something out of scope (see above), stop
    and ask rather than expanding scope on your own.
+8. **Run it, don't just write it.** You have Docker and a browser
+   available — after implementing an item, actually run
+   `docker compose up` (backend + frontend), open the app in the browser,
+   and exercise the feature end to end before marking it done. Fix what's
+   broken before moving on. A backend test suite passing is not enough
+   on its own — confirm the Flutter UI actually calls the real endpoint
+   and shows real data.
+
+## Progress tracking: `progress.txt`
+
+Maintain a file called `progress.txt` at the repo root, functioning like
+a lightweight kanban board so I can follow along between sessions. Rules:
+
+- One line per numbered item (1.1, 1.2, 2.1, etc.), status is one of:
+  `TODO`, `IN PROGRESS`, `TESTING`, `DONE`, `BLOCKED`.
+- Update the status **as you move through the work**, not just at the
+  end — flip an item to `IN PROGRESS` when you start reading/planning it,
+  to `TESTING` once code is written and you're running it in
+  Docker/browser, to `DONE` only after you've confirmed it works end to
+  end. Use `BLOCKED` with a one-line reason if you have to stop and ask
+  me something.
+- Under each item, keep a short bullet list: what changed (files touched,
+  one line each), and what you actually tested (e.g. "tested: POST
+  /plan-days/ in browser network tab, confirmed 7-day strip renders on
+  Home"). Keep entries terse — this is a status board, not a changelog.
+- Never delete history — append/update, don't rewrite the file from
+  scratch each time.
+- Example line format:
+
+```
+[DONE] 1.1 Exercise library search + filter
+  - backend: gym_api/views.py ExerciseViewSet, added ?search & ?body_part
+  - frontend: exercise_library/presentation, wired search bar to query params
+  - tested: ran docker compose up, searched "bench" in browser, filtered by Chest, both worked
+
+[TESTING] 1.2 Weekly plan per weekday
+  - backend: new PlanDay model + migration, /plan-days/ endpoint
+  - frontend: home_page.dart day strip built, tapping a day not yet wired
+  - tested: backend endpoint confirmed via curl, frontend UI not yet verified in browser
+
+[TODO] 1.3 Guided workout session
+```
 
 ---
 
@@ -155,3 +197,5 @@ Read `backend/gym_api/models.py`, `backend/gym_api/serializers.py`,
 Summarize the current state of each in a few sentences before starting
 1.1, so we both know what you're building on top of.
 
+Create `progress.txt` at this point too, with all Tier 1 and Tier 2 items
+listed as `TODO`, before writing any feature code.
