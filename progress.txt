@@ -41,4 +41,7 @@
 [DONE] 2.4 Screen-stays-awake during a workout
   - frontend: wakelock_plus is enabled when the runner opens and released on finish/dispose
   - tested: Flutter web build
-[TODO] 2.5 Timed exercises
+[DONE] 2.5 Timed exercises
+  - backend: exercises can be marked is_timed and metrics accept duration_seconds
+  - frontend: timed runner rows expose a duration input and submit duration metrics
+  - tested: all 26 backend tests, Flutter web build

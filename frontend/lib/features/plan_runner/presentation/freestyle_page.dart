@@ -27,6 +27,7 @@ class _FreestylePageState extends State<FreestylePage> {
       sets: 3,
       reps: '8-12',
       restSec: 60,
+      isTimed: exercise['is_timed'] == true,
     );
   }
 

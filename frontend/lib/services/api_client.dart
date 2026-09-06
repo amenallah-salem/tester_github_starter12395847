@@ -267,6 +267,7 @@ class ApiClient {
     required int setNumber,
     required int reps,
     double? weightKg,
+    int? durationSeconds,
     bool queueOnFailure = true,
   }) async {
     final payload = {
@@ -274,6 +275,7 @@ class ApiClient {
       'set_number': setNumber,
       'reps': reps,
       'weight_kg': weightKg,
+      'duration_seconds': durationSeconds,
     };
     try {
       final response = await _send(

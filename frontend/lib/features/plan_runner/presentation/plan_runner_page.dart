@@ -44,6 +44,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   bool _finished = false;
   final List<Map<String, Object?>> _loggedSets = [];
   final _weightController = TextEditingController();
+  final _durationController = TextEditingController();
   late final DateTime _sessionStartedAt;
   String? _remoteSessionId;
   bool _loggingSet = false;
@@ -76,6 +77,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     _timer?.cancel();
     WakelockPlus.disable();
     _weightController.dispose();
+    _durationController.dispose();
     super.dispose();
   }
 
@@ -85,6 +87,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     _workRemaining = _workSeconds(_ex);
     _repsAdj = _parseReps(_ex.reps);
     _weightController.clear();
+    _durationController.clear();
     _prefillWeight();
     if (announce) {
       _coach = ref.read(coachingStringsProvider).startCue(_ex.name, _setIndex);
@@ -176,12 +179,15 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     if (_finished) return;
     final completedSet = _setIndex + 1;
     final weight = double.tryParse(_weightController.text.trim());
+    final duration = int.tryParse(_durationController.text.trim());
+    if (_ex.isTimed && (duration == null || duration <= 0)) return;
     if (weight != null && weight < 0) return;
     final completed = <String, Object?>{
       'exercise': _ex.name,
       'set': completedSet,
       'reps': _repsAdj,
       'weight': weight,
+      'duration': _ex.isTimed ? duration : null,
     };
     setState(() => _loggingSet = true);
     try {
@@ -223,6 +229,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
         setNumber: set['set']! as int,
         reps: set['reps']! as int,
         weightKg: set['weight'] as double?,
+        durationSeconds: set['duration'] as int?,
       );
       if (result?['is_new_personal_record'] == true && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -461,6 +468,17 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
               'Logged reps: $_repsAdj / ${_ex.reps}',
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppTheme.mut),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _durationController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Duration (seconds)',
+                hintText: 'Required for timed exercises',
+                prefixIcon: Icon(Icons.timer_outlined),
+              ),
+              enabled: _ex.isTimed,
             ),
             const SizedBox(height: 10),
             TextField(

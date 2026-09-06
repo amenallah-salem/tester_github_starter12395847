@@ -51,7 +51,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'plan', 'user', 'name', 'description', 'aliases', 'body_part',
             'primary_muscles', 'secondary_muscles', 'equipment',
-            'movement_pattern', 'exercise_type', 'difficulty',
+            'movement_pattern', 'exercise_type', 'difficulty', 'is_timed',
             'instructions', 'setup', 'execution', 'breathing', 'common_mistakes',
             'alternatives', 'progression_exercises', 'regression_exercises',
             'video_url', 'animation_url', 'image',

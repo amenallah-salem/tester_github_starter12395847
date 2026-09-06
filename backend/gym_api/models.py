@@ -143,6 +143,7 @@ class Exercise(models.Model):
     equipment = models.JSONField(blank=True, null=True, default=list)
     movement_pattern = models.CharField(max_length=50, choices=MOVEMENT_PATTERN_CHOICES, blank=True)
     exercise_type = models.CharField(max_length=50, choices=EXERCISE_TYPE_CHOICES, blank=True)
+    is_timed = models.BooleanField(default=False)
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, blank=True)
 
     instructions = models.TextField(blank=True)

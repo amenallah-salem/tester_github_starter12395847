@@ -216,6 +216,20 @@ class APITests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('exercise_name', resp.data)
 
+    def test_session_log_metric_accepts_duration(self):
+        session = WorkoutSession.objects.create(user=self.user, name='Core')
+        resp = self.client.post(
+            f'/api/sessions/{session.id}/log-metric/',
+            {
+                'exercise_name': 'Plank',
+                'set_number': 1,
+                'reps': 0,
+                'duration_seconds': 45,
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['duration_seconds'], 45)
+
     def test_metric_summary_is_scoped_and_derived(self):
         session = WorkoutSession.objects.create(user=self.user, name='Strength')
         exercise = Exercise.objects.create(user=self.user, name='Squat')
