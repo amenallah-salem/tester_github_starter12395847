@@ -101,11 +101,11 @@ class Migration(migrations.Migration):
                 max_length=50,
             ),
         ),
-        migrations.AddField(
-            model_name="exercise",
-            name="image",
-            field=models.ImageField(blank=True, null=True, upload_to="exercises/"),
-        ),
+        # NOTE: "image" is intentionally NOT added here. It is already added by the
+        # sibling migration 0002_exercise_image (same field definition), and both
+        # 0002_* migrations are joined by 0004_merge. Adding it in both branches
+        # caused: django.db.utils.ProgrammingError: column "image" of relation
+        # "exercises" already exists, whichever branch happened to run second.
         migrations.AddField(
             model_name="exercise",
             name="instructions",

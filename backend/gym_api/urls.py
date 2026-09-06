@@ -14,6 +14,7 @@ from .views import (
     ProgressMetricViewSet,
     RegisterView,
     SubscriptionViewSet,
+    HealthCheckView,
 )
 
 router = DefaultRouter()
@@ -26,6 +27,8 @@ router.register(r'metrics', ProgressMetricViewSet, basename='metric')
 router.register(r'billing', SubscriptionViewSet, basename='subscription')
 
 urlpatterns = [
+    # Unauthenticated readiness probe (used by docker.dev.sh / orchestrators)
+    path('health/', HealthCheckView.as_view(), name='health'),
     # JWT auth endpoints
     path('auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
