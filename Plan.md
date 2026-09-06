@@ -23,13 +23,6 @@ biomechanics/pose replay, breathwork/recovery content, social features.
 If you find existing code for these, leave it alone unless asked —
 don't extend it.
 
-**Inspiration, not copying:** Some feature *ideas* below are inspired by
-an existing open-source app (openGym), described here in plain language.
-You have not seen and must not reference or copy that app's source code,
-UI text, or asset names. Implement the underlying idea as original code
-that fits this codebase's existing patterns and naming. Everything you
-write is this project's own property.
-
 ---
 
 ## Ground rules for this work
@@ -52,8 +45,7 @@ write is this project's own property.
 7. If an item seems to require something out of scope (see above), stop
    and ask rather than expanding scope on your own.
 8. **Run it, don't just write it.** You have Docker and a browser
-   available — after implementing an item, actually run
-   `docker compose up` (backend + frontend), open the app in the browser,
+   available — after implementing an item, actually run it either using docker compose up for (backend + frontend) or `./docker.dev.sh up` , open the app in the browser,
    and exercise the feature end to end before marking it done. Fix what's
    broken before moving on. A backend test suite passing is not enough
    on its own — confirm the Flutter UI actually calls the real endpoint
