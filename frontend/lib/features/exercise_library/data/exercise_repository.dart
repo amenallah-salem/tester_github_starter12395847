@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
-
 import 'package:gym_app/core/database/app_database.dart';
 import 'package:gym_app/core/database/daos/exercise_dao.dart';
 import 'package:gym_app/features/exercise_library/domain/exercise.dart' as domain;
@@ -13,11 +12,20 @@ class ExerciseRepository {
 
   final ExerciseDao _dao;
 
-  Stream<List<domain.Exercise>> watchAll() {
-    if (kIsWeb) return Stream.value(_webExercises);
+  Stream<List<domain.Exercise>> watchAll({
+    String? search,
+    String? bodyPart,
+  }) {
+    final params = <String, String>{
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      if (bodyPart != null && bodyPart.isNotEmpty) 'body_part': bodyPart,
+    };
     // Fetch the library from the backend API once and expose as a single-event stream.
-    return Stream.fromFuture(ApiClient.I.fetchLibraryExercises().then((list) =>
-        list.map((m) => _fromApi(m)).toList(growable: false)));
+    return Stream.fromFuture(
+      ApiClient.I.fetchLibraryExercises(params: params).then(
+        (list) => list.map((m) => _fromApi(m)).toList(growable: false),
+      ),
+    );
   }
 
   Future<domain.Exercise?> getByName(String name) async {

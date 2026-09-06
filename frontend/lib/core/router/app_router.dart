@@ -153,22 +153,12 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
   String? _selectedMuscle;
   String _query = '';
 
-  List<Exercise> _filter(List<Exercise> exercises) {
-    return exercises.where((exercise) {
-      final matchesMuscle = _selectedMuscle == null ||
-          exercise.muscleGroups.contains(_selectedMuscle) ||
-          exercise.muscleGroup == _selectedMuscle;
-      final query = _query.trim().toLowerCase();
-      final matchesQuery = query.isEmpty ||
-          exercise.name.toLowerCase().contains(query) ||
-          exercise.equipment.toLowerCase().contains(query);
-      return matchesMuscle && matchesQuery;
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final exercises = ref.watch(exerciseRepositoryProvider).watchAll();
+    final exercises = ref.watch(exerciseRepositoryProvider).watchAll(
+          search: _query,
+          bodyPart: _selectedMuscle,
+        );
     return Scaffold(
       appBar: AppBar(
         title: const Text('Exercise Explorer'),
@@ -183,7 +173,7 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
       body: StreamBuilder<List<Exercise>>(
         stream: exercises,
         builder: (context, snapshot) {
-          final visible = _filter(snapshot.data ?? const []);
+          final visible = snapshot.data ?? const <Exercise>[];
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
@@ -202,6 +192,13 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
               const SizedBox(height: 16),
               if (snapshot.connectionState == ConnectionState.waiting)
                 const Center(child: CircularProgressIndicator())
+              else if (snapshot.hasError)
+                const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(
+                    child: Text('Unable to load exercises. Try again.'),
+                  ),
+                )
               else if (visible.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(32),

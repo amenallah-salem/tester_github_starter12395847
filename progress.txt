@@ -1,0 +1,15 @@
+[DONE] 1.1 Exercise library search + filter
+  - backend: library endpoint tests cover combined search/body_part filtering and an empty-result filter
+  - frontend: explorer sends search and body_part query parameters; API data is used on web and mobile
+  - tested: all 15 backend tests, live filtered endpoint over HTTP, Flutter web build, browser app load
+[TODO] 1.2 Weekly plan per weekday
+[TODO] 1.3 Guided workout session
+[TODO] 1.4 Set logging
+[TODO] 1.5 Reschedule a day
+[TODO] 1.6 Body-weight tracking
+[TODO] 1.7 Basic stats
+[TODO] 2.1 PR detection
+[TODO] 2.2 Favorite exercises
+[TODO] 2.3 Freestyle sessions
+[TODO] 2.4 Screen-stays-awake during a workout
+[TODO] 2.5 Timed exercises
