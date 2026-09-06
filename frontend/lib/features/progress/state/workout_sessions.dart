@@ -90,3 +90,9 @@ final progressSummaryProvider =
   if (ApiClient.I.accessToken == null) return const {};
   return ApiClient.I.fetchProgressSummary();
 });
+
+final bodyWeightProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  if (ApiClient.I.accessToken == null) return const [];
+  return ApiClient.I.fetchBodyWeight();
+});

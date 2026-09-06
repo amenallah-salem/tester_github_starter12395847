@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,7 +21,10 @@ enum _Phase { work, rest, finished }
 /// Hides the tab bar (it is a top-level route) and disables system back
 /// mid-set to avoid accidental exits.
 class PlanRunnerPage extends ConsumerStatefulWidget {
-  const PlanRunnerPage({super.key});
+  const PlanRunnerPage({this.scheduledDate, this.initialExercises, super.key});
+
+  final DateTime? scheduledDate;
+  final List<PlanExercise>? initialExercises;
 
   @override
   ConsumerState<PlanRunnerPage> createState() => _PlanRunnerPageState();
@@ -40,7 +44,10 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   bool _finished = false;
   final List<Map<String, Object?>> _loggedSets = [];
   final _weightController = TextEditingController();
+  final _durationController = TextEditingController();
   late final DateTime _sessionStartedAt;
+  String? _remoteSessionId;
+  bool _loggingSet = false;
 
   PlanExercise get _ex => _exercises[_exIndex];
 
@@ -57,8 +64,9 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   @override
   void initState() {
     super.initState();
+    WakelockPlus.enable();
     final plan = ref.read(planNotifierProvider).value ?? samplePlan;
-    _exercises = plan.todaySession.exercises;
+    _exercises = widget.initialExercises ?? plan.todaySession.exercises;
     _sessionStartedAt = DateTime.now();
     _enterExercise(announce: true);
     _startTimer();
@@ -67,7 +75,9 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   @override
   void dispose() {
     _timer?.cancel();
+    WakelockPlus.disable();
     _weightController.dispose();
+    _durationController.dispose();
     super.dispose();
   }
 
@@ -77,8 +87,25 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     _workRemaining = _workSeconds(_ex);
     _repsAdj = _parseReps(_ex.reps);
     _weightController.clear();
+    _durationController.clear();
+    _prefillWeight();
     if (announce) {
       _coach = ref.read(coachingStringsProvider).startCue(_ex.name, _setIndex);
+    }
+  }
+
+  Future<void> _prefillWeight() async {
+    if (ApiClient.I.accessToken == null || _ex.exerciseId.isEmpty) return;
+    try {
+      final metric =
+          await ApiClient.I.fetchLastMetricForExercise(_ex.exerciseId);
+      if (!mounted || metric == null) return;
+      final weight = metric['weight_kg'];
+      if (weight != null) {
+        _weightController.text = weight.toString();
+      }
+    } on ApiException catch (error) {
+      debugPrint('Unable to prefill last set: $error');
     }
   }
 
@@ -148,17 +175,28 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     }
   }
 
-  void _doneSet() {
+  Future<void> _doneSet() async {
     if (_finished) return;
     final completedSet = _setIndex + 1;
     final weight = double.tryParse(_weightController.text.trim());
+    final duration = int.tryParse(_durationController.text.trim());
+    if (_ex.isTimed && (duration == null || duration <= 0)) return;
     if (weight != null && weight < 0) return;
-    _loggedSets.add({
+    final completed = <String, Object?>{
       'exercise': _ex.name,
       'set': completedSet,
       'reps': _repsAdj,
       'weight': weight,
-    });
+      'duration': _ex.isTimed ? duration : null,
+    };
+    setState(() => _loggingSet = true);
+    try {
+      await _logSetRemotely(completed);
+    } finally {
+      if (mounted) setState(() => _loggingSet = false);
+    }
+    if (!mounted) return;
+    _loggedSets.add(completed);
     setState(() {
       if (_phase == _Phase.work) {
         _enterRest();
@@ -168,6 +206,44 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     });
     final s = ref.read(coachingStringsProvider);
     _coach = s.setDoneCue(completedSet, _setIndex);
+  }
+
+  Future<void> _logSetRemotely(Map<String, Object?> set) async {
+    if (ApiClient.I.accessToken == null) return;
+    try {
+      _remoteSessionId ??= (await ApiClient.I.createWorkout(
+        name: (ref.read(planNotifierProvider).value ?? samplePlan)
+            .todaySession
+            .dayLabel,
+        notes: 'Workout in progress.',
+        scheduledFor: widget.scheduledDate,
+      ))['id']
+          ?.toString();
+      final sessionId = _remoteSessionId;
+      if (sessionId == null) {
+        throw StateError('The workout session could not be created.');
+      }
+      final result = await ApiClient.I.logWorkoutMetric(
+        sessionId: sessionId,
+        exerciseName: set['exercise']! as String,
+        setNumber: set['set']! as int,
+        reps: set['reps']! as int,
+        weightKg: set['weight'] as double?,
+        durationSeconds: set['duration'] as int?,
+      );
+      if (result?['is_new_personal_record'] == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('New personal record!')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Set was not saved: $error')),
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<void> _skip() async {
@@ -199,6 +275,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
 
   void _finish() {
     _timer?.cancel();
+    WakelockPlus.disable();
     setState(() {
       _finished = true;
       _phase = _Phase.finished;
@@ -230,10 +307,18 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   Future<void> _persistWorkout(DateTime finishedAt) async {
     if (ApiClient.I.accessToken == null) return;
     try {
+      if (_remoteSessionId != null) {
+        await ApiClient.I.finishWorkout(
+          sessionId: _remoteSessionId!,
+          finishedAt: finishedAt,
+        );
+        return;
+      }
       final plan = ref.read(planNotifierProvider).value ?? samplePlan;
       final session = await ApiClient.I.createWorkout(
         name: plan.todaySession.dayLabel,
         notes: 'Completed in the workout runner.',
+        scheduledFor: widget.scheduledDate,
       );
       final sessionId = session['id']?.toString();
       if (sessionId == null) return;
@@ -386,6 +471,17 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
             ),
             const SizedBox(height: 10),
             TextField(
+              controller: _durationController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Duration (seconds)',
+                hintText: 'Required for timed exercises',
+                prefixIcon: Icon(Icons.timer_outlined),
+              ),
+              enabled: _ex.isTimed,
+            ),
+            const SizedBox(height: 10),
+            TextField(
               controller: _weightController,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
@@ -403,7 +499,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
             ),
             const SizedBox(height: 10),
             FilledButton(
-              onPressed: _doneSet,
+              onPressed: _loggingSet ? null : _doneSet,
               child: Text(strings.doneSet),
             ),
             const SizedBox(height: 10),

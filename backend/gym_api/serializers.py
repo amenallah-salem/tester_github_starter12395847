@@ -4,7 +4,10 @@ REST serializers for the Gym Planner API.
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
+from .models import (
+    Profile, Plan, Exercise, PlanDay, PlanDayExercise,
+    WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
+)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -36,8 +39,20 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'display_name', 'created_at', 'updated_at',
             'onboarding_completed', 'onboarding_completed_at', 'locale', 'country',
+            'bio', 'training_goals', 'experience_level', 'availability', 'location',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_training_goals(self, value):
+        if value in (None, ''):
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError('training_goals must be a list.')
+        valid_goals = {choice for choice, _ in Profile.GOAL_CHOICES}
+        invalid = [goal for goal in value if goal not in valid_goals]
+        if invalid:
+            raise serializers.ValidationError(f'Invalid goal(s): {invalid}')
+        return value
 
 
 class ExerciseSerializer(serializers.ModelSerializer):
@@ -48,7 +63,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'plan', 'user', 'name', 'description', 'aliases', 'body_part',
             'primary_muscles', 'secondary_muscles', 'equipment',
-            'movement_pattern', 'exercise_type', 'difficulty',
+            'movement_pattern', 'exercise_type', 'difficulty', 'is_timed',
             'instructions', 'setup', 'execution', 'breathing', 'common_mistakes',
             'alternatives', 'progression_exercises', 'regression_exercises',
             'video_url', 'animation_url', 'image',
@@ -130,6 +145,22 @@ class PlanListSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
+class PlanDayExerciseSerializer(serializers.ModelSerializer):
+    exercise_name = serializers.CharField(source='exercise.name', read_only=True)
+
+    class Meta:
+        model = PlanDayExercise
+        fields = ['exercise', 'exercise_name', 'order']
+
+
+class PlanDaySerializer(serializers.ModelSerializer):
+    assignments = PlanDayExerciseSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = PlanDay
+        fields = ['weekday', 'assignments']
+
+
 class ProgressMetricSerializer(serializers.ModelSerializer):
     exercise_name = serializers.CharField(source='exercise.name', read_only=True)
 
@@ -155,6 +186,28 @@ class ProgressMetricSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class BodyWeightEntrySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BodyWeightEntry
+        fields = ['id', 'weight_kg', 'logged_at']
+        read_only_fields = ['id', 'logged_at']
+
+
+class FavoriteExerciseSerializer(serializers.ModelSerializer):
+    exercise_name = serializers.CharField(source='exercise.name', read_only=True)
+
+    class Meta:
+        model = FavoriteExercise
+        fields = ['id', 'exercise', 'exercise_name']
+        read_only_fields = ['id']
+
+    def validate_exercise(self, exercise):
+        user = self.context['request'].user
+        if exercise.user_id not in (None, user.id) and not exercise.is_library:
+            raise serializers.ValidationError('You can only favorite library or your own exercises.')
+        return exercise
+
+
 class WorkoutSessionSerializer(serializers.ModelSerializer):
     metrics = ProgressMetricSerializer(many=True, read_only=True)
     user = UserSerializer(read_only=True)
@@ -165,7 +218,7 @@ class WorkoutSessionSerializer(serializers.ModelSerializer):
         model = WorkoutSession
         fields = [
             'id', 'user', 'plan', 'name',
-            'started_at', 'finished_at', 'notes', 'metrics',
+            'scheduled_for', 'started_at', 'finished_at', 'notes', 'metrics',
             'duration_seconds', 'total_volume_kg',
         ]
         read_only_fields = ['id', 'started_at']
@@ -197,7 +250,7 @@ class WorkoutSessionListSerializer(serializers.ModelSerializer):
         model = WorkoutSession
         fields = [
             'id', 'plan', 'name', 'started_at',
-            'finished_at', 'metric_count', 'exercise_names',
+            'scheduled_for', 'finished_at', 'metric_count', 'exercise_names',
             'duration_seconds', 'total_volume_kg',
         ]
         read_only_fields = ['id', 'started_at']

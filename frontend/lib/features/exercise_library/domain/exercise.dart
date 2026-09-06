@@ -3,6 +3,7 @@
 class Exercise {
   const Exercise({
     this.id,
+    this.remoteId,
     required this.name,
     required this.muscleGroup,
     this.equipment = 'bodyweight',
@@ -13,6 +14,7 @@ class Exercise {
   });
 
   final int? id;
+  final String? remoteId;
   final String name;
   final String muscleGroup;
   final String equipment;
@@ -30,6 +32,7 @@ class Exercise {
 
   Exercise copyWith({
     int? id,
+    String? remoteId,
     String? name,
     String? muscleGroup,
     String? equipment,
@@ -40,6 +43,7 @@ class Exercise {
   }) {
     return Exercise(
       id: id ?? this.id,
+      remoteId: remoteId ?? this.remoteId,
       name: name ?? this.name,
       muscleGroup: muscleGroup ?? this.muscleGroup,
       equipment: equipment ?? this.equipment,

@@ -170,15 +170,49 @@ class ApiClient {
     return _jsonObject(response, 'progress summary');
   }
 
+  Future<List<Map<String, dynamic>>> fetchBodyWeight() async {
+    final data = _jsonObject(
+      await _send(
+        () => http.get(_uri('/body-weight/'), headers: _headers()),
+        method: 'GET',
+        path: '/body-weight/',
+      ),
+      'body weight',
+    );
+    return ((data['results'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> logBodyWeight(double weightKg) async {
+    return _jsonObject(
+      await _send(
+        () => http.post(
+          _uri('/body-weight/'),
+          headers: _headers(json: true),
+          body: jsonEncode({'weight_kg': weightKg}),
+        ),
+        method: 'POST',
+        path: '/body-weight/',
+      ),
+      'body weight',
+    );
+  }
+
   Future<Map<String, dynamic>> createWorkout({
     required String notes,
     String name = 'Workout',
+    DateTime? scheduledFor,
   }) async {
     final response = await _send(
       () => http.post(
         _uri('/sessions/'),
         headers: _headers(json: true),
-        body: jsonEncode({'name': name, 'notes': notes}),
+        body: jsonEncode({
+          'name': name,
+          'notes': notes,
+          if (scheduledFor != null)
+            'scheduled_for': scheduledFor.toIso8601String().split('T').first,
+        }),
       ),
       method: 'POST',
       path: '/sessions/',
@@ -213,7 +247,8 @@ class ApiClient {
 
   // Update the current user's profile (PATCH /profiles/{id}/). `patch` should
   // contain serializable fields such as onboarding_completed, locale, country, display_name.
-  Future<Map<String, dynamic>> updateProfile(String profileId, Map<String, dynamic> patch) async {
+  Future<Map<String, dynamic>> updateProfile(
+      String profileId, Map<String, dynamic> patch) async {
     final response = await _send(
       () => http.patch(
         _uri('/profiles/$profileId/'),
@@ -226,12 +261,13 @@ class ApiClient {
     return _jsonObject(response, 'profile update');
   }
 
-  Future<void> logWorkoutMetric({
+  Future<Map<String, dynamic>?> logWorkoutMetric({
     required String sessionId,
     required String exerciseName,
     required int setNumber,
     required int reps,
     double? weightKg,
+    int? durationSeconds,
     bool queueOnFailure = true,
   }) async {
     final payload = {
@@ -239,9 +275,10 @@ class ApiClient {
       'set_number': setNumber,
       'reps': reps,
       'weight_kg': weightKg,
+      'duration_seconds': durationSeconds,
     };
     try {
-      await _send(
+      final response = await _send(
         () => http.post(
           _uri('/sessions/$sessionId/log-metric/'),
           headers: _headers(json: true),
@@ -250,12 +287,28 @@ class ApiClient {
         method: 'POST',
         path: '/sessions/$sessionId/log-metric/',
       );
+      return _jsonObject(response, 'workout metric');
     } on ApiException catch (error) {
       if (queueOnFailure && error.statusCode == null) {
         await _enqueue({'sessionId': sessionId, ...payload});
       }
       rethrow;
     }
+  }
+
+  Future<Map<String, dynamic>?> fetchLastMetricForExercise(
+    String exerciseId,
+  ) async {
+    final response = await _send(
+      () => http.get(
+        _uri('/metrics/last-for-exercise/?exercise=$exerciseId'),
+        headers: _headers(),
+      ),
+      method: 'GET',
+      path: '/metrics/last-for-exercise/?exercise=$exerciseId',
+    );
+    final data = _jsonObject(response, 'last exercise metric');
+    return data['result'] as Map<String, dynamic>?;
   }
 
   Future<void> queueWorkout({
@@ -362,9 +415,15 @@ class ApiClient {
   }
 
   /// Fetch global library exercises (admin-managed library).
-  Future<List<Map<String, dynamic>>> fetchLibraryExercises({Map<String, String>? params}) async {
-    final query = (params ?? {}).entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&');
-    final path = query.isEmpty ? '/library/exercises/' : '/library/exercises/?$query';
+  Future<List<Map<String, dynamic>>> fetchLibraryExercises(
+      {Map<String, String>? params}) async {
+    final query = (params ?? {})
+        .entries
+        .map((e) =>
+            '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+    final path =
+        query.isEmpty ? '/library/exercises/' : '/library/exercises/?$query';
     final response = await _send(
       () => http.get(_uri(path), headers: _headers()),
       method: 'GET',
@@ -373,6 +432,38 @@ class ApiClient {
     final data = jsonDecode(response.body);
     final list = data is Map ? data['results'] as List? : data as List?;
     return (list ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchFavoriteExercises() async {
+    final response = await _send(
+      () => http.get(_uri('/favorites/'), headers: _headers()),
+      method: 'GET',
+      path: '/favorites/',
+    );
+    final data = jsonDecode(response.body);
+    final list = data is Map ? data['results'] as List? : data as List?;
+    return (list ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> addFavoriteExercise(String exerciseId) async {
+    final response = await _send(
+      () => http.post(
+        _uri('/favorites/'),
+        headers: _headers(json: true),
+        body: jsonEncode({'exercise': exerciseId}),
+      ),
+      method: 'POST',
+      path: '/favorites/',
+    );
+    return _jsonObject(response, 'favorite');
+  }
+
+  Future<void> removeFavoriteExercise(String favoriteId) async {
+    await _send(
+      () => http.delete(_uri('/favorites/$favoriteId/'), headers: _headers()),
+      method: 'DELETE',
+      path: '/favorites/$favoriteId/',
+    );
   }
 
   Future<Map<String, dynamic>?> fetchCurrentPlan() async {
@@ -398,7 +489,37 @@ class ApiClient {
     final exercises = exerciseData is Map
         ? exerciseData['results'] as List? ?? const []
         : exerciseData as List? ?? const [];
-    return {...plan, 'exercises': exercises};
+    final week = await fetchPlanWeek(plan['id'].toString());
+    return {...plan, 'exercises': exercises, 'week': week};
+  }
+
+  Future<Map<String, dynamic>> fetchPlanWeek(String planId) async {
+    return _jsonObject(
+      await _send(
+        () => http.get(_uri('/plans/$planId/week/'), headers: _headers()),
+        method: 'GET',
+        path: '/plans/$planId/week/',
+      ),
+      'plan week',
+    );
+  }
+
+  Future<Map<String, dynamic>> updatePlanWeek(
+    String planId,
+    List<Map<String, dynamic>> days,
+  ) async {
+    return _jsonObject(
+      await _send(
+        () => http.put(
+          _uri('/plans/$planId/week/'),
+          headers: _headers(json: true),
+          body: jsonEncode({'days': days}),
+        ),
+        method: 'PUT',
+        path: '/plans/$planId/week/',
+      ),
+      'plan week',
+    );
   }
 
   Future<Map<String, dynamic>> fetchSubscription() async {

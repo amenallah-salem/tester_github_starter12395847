@@ -20,8 +20,7 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
       appBar: AppBar(
         title: const Text('Session setup'),
         leading: IconButton(
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go('/'),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
           icon: const Icon(Icons.arrow_back),
         ),
       ),
@@ -96,9 +95,9 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: () => context.push('/run'),
+              onPressed: () => context.push('/freestyle'),
               icon: const Icon(Icons.play_arrow),
-              label: Text('Begin with $_equipment'),
+              label: const Text('Choose freestyle exercises'),
             ),
           ),
         ],

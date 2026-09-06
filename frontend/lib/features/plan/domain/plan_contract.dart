@@ -52,9 +52,8 @@ class OnboardingProfile {
       sessionMinutes: json['sessionMinutes'] as int,
       equipment: equipment,
       focusAreas: focusAreas,
-      limitations: (json['limitations'] as List? ?? [])
-          .map((e) => e as String)
-          .toList(),
+      limitations:
+          (json['limitations'] as List? ?? []).map((e) => e as String).toList(),
       notes: json['notes'] as String?,
     );
   }
@@ -117,9 +116,8 @@ class WorkoutPlan {
       weeklySplit: enumFromString(WeeklySplit.values, json['weeklySplit']),
       days: days,
       progression: json['progression'] as String,
-      safetyNotes: (json['safetyNotes'] as List)
-          .map((e) => e as String)
-          .toList(),
+      safetyNotes:
+          (json['safetyNotes'] as List).map((e) => e as String).toList(),
       disclaimer: json['disclaimer'] as String,
     );
   }
@@ -221,6 +219,7 @@ class PlanExercise {
     required this.sets,
     required this.reps,
     this.weight,
+    this.isTimed = false,
     required this.restSec,
     this.tempo,
     this.notes,
@@ -237,6 +236,7 @@ class PlanExercise {
   /// e.g. "8-10", "12", "to failure".
   final String reps;
   final String? weight;
+  final bool isTimed;
   final int restSec;
   final String? tempo;
   final String? notes;

@@ -15,6 +15,23 @@ from django.db import models
 
 class Profile(models.Model):
     """Extended user profile."""
+
+    # "Gym Bro" social-matching fields (GB-1). Kept on the existing Profile
+    # rather than a parallel model so there is one source of truth per user.
+    GOAL_CHOICES = [
+        ('strength', 'Strength'),
+        ('cardio', 'Cardio'),
+        ('general_fitness', 'General fitness'),
+        ('hypertrophy', 'Hypertrophy'),
+        ('weight_loss', 'Weight loss'),
+        ('flexibility', 'Flexibility & mobility'),
+    ]
+    EXPERIENCE_CHOICES = [
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     display_name = models.CharField(max_length=100, blank=True)
@@ -23,6 +40,22 @@ class Profile(models.Model):
     onboarding_completed_at = models.DateTimeField(null=True, blank=True)
     locale = models.CharField(max_length=20, blank=True)
     country = models.CharField(max_length=4, blank=True)
+
+    # Gym Bro training profile (GB-1)
+    bio = models.TextField(blank=True, help_text='Short intro shown on the Gym Bro discovery card.')
+    training_goals = models.JSONField(
+        blank=True, null=True, default=list,
+        help_text='List of GOAL_CHOICES values, e.g. ["strength", "cardio"].',
+    )
+    experience_level = models.CharField(max_length=20, choices=EXPERIENCE_CHOICES, blank=True)
+    availability = models.CharField(
+        max_length=200, blank=True,
+        help_text='Free-text preferred training times, e.g. "Weekday mornings, Sat afternoons".',
+    )
+    # City/area-level text only — precise geolocation is intentionally never
+    # collected or stored for this feature (see GB-1 privacy note).
+    location = models.CharField(max_length=100, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -32,6 +65,10 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.display_name or self.user.username
+
+    def has_completed_gym_bro_profile(self):
+        """True once there's enough profile data to show in discovery (GB-2)."""
+        return bool(self.bio.strip()) and bool(self.training_goals)
 
 
 class Subscription(models.Model):
@@ -143,6 +180,7 @@ class Exercise(models.Model):
     equipment = models.JSONField(blank=True, null=True, default=list)
     movement_pattern = models.CharField(max_length=50, choices=MOVEMENT_PATTERN_CHOICES, blank=True)
     exercise_type = models.CharField(max_length=50, choices=EXERCISE_TYPE_CHOICES, blank=True)
+    is_timed = models.BooleanField(default=False)
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, blank=True)
 
     instructions = models.TextField(blank=True)
@@ -189,12 +227,50 @@ class Exercise(models.Model):
         return self.name
 
 
+class PlanDay(models.Model):
+    """A weekday assignment within a user's weekly plan."""
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='days')
+    weekday = models.PositiveSmallIntegerField()
+
+    class Meta:
+        db_table = 'plan_days'
+        ordering = ['weekday']
+        constraints = [
+            models.UniqueConstraint(fields=['plan', 'weekday'], name='unique_plan_weekday'),
+            models.CheckConstraint(
+                condition=models.Q(weekday__gte=0, weekday__lte=6),
+                name='plan_day_weekday_range',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.plan.name} – day {self.weekday}'
+
+
+class PlanDayExercise(models.Model):
+    """An ordered exercise assigned to a specific plan weekday."""
+    plan_day = models.ForeignKey(PlanDay, on_delete=models.CASCADE, related_name='assignments')
+    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name='plan_day_assignments')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'plan_day_exercises'
+        ordering = ['order', 'id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['plan_day', 'exercise'],
+                name='unique_exercise_per_plan_day',
+            ),
+        ]
+
+
 class WorkoutSession(models.Model):
     """A concrete workout session instance."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='workout_sessions')
     plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True, related_name='sessions')
     name = models.CharField(max_length=200, blank=True)
+    scheduled_for = models.DateField(null=True, blank=True)
     started_at = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
@@ -232,3 +308,30 @@ class ProgressMetric(models.Model):
 
     def __str__(self):
         return f"{self.exercise.name if self.exercise else '?'} – Set {self.set_number}"
+
+
+class BodyWeightEntry(models.Model):
+    """A body-weight reading belonging to the authenticated user."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='body_weight_entries')
+    weight_kg = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0)])
+    logged_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'body_weight_entries'
+        ordering = ['logged_at']
+
+    def __str__(self):
+        return f'{self.user.username} – {self.weight_kg} kg'
+
+
+class FavoriteExercise(models.Model):
+    """An authenticated user's saved exercise."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorite_exercises')
+    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name='favorited_by')
+
+    class Meta:
+        db_table = 'favorite_exercises'
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'exercise'], name='unique_user_favorite_exercise'),
+        ]

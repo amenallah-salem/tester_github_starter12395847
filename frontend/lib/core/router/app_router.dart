@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:gym_app/features/home/presentation/home_page.dart';
 import 'package:gym_app/features/onboarding/presentation/onboarding_page.dart';
 import 'package:gym_app/features/plan/presentation/plan_page.dart';
+import 'package:gym_app/features/plan/domain/plan_contract.dart';
 import 'package:gym_app/features/plan_runner/presentation/plan_runner_page.dart';
 import 'package:gym_app/features/exercise_library/presentation/exercise_detail_page.dart';
 import 'package:gym_app/features/exercise_library/presentation/muscle_filter_bar.dart';
 import 'package:gym_app/features/exercise_library/domain/exercise.dart';
 import 'package:gym_app/core/di/injection.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
+import 'package:gym_app/services/api_client.dart';
 import 'package:gym_app/features/progress/presentation/progress_page.dart';
 import 'package:gym_app/features/progress/presentation/exercise_history_page.dart';
 import 'package:gym_app/features/progress/presentation/session_detail_page.dart';
@@ -19,9 +21,11 @@ import 'package:gym_app/features/auth/presentation/sign_in_page.dart';
 import 'package:gym_app/features/recovery/presentation/recovery_page.dart';
 import 'package:gym_app/features/recovery/presentation/breathwork_page.dart';
 import 'package:gym_app/features/plan_runner/presentation/workout_setup_page.dart';
+import 'package:gym_app/features/plan_runner/presentation/freestyle_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/form_vault_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/replay_3d_page.dart';
 import 'package:gym_app/features/coach/presentation/coach_page.dart';
+import 'package:gym_app/features/gym_bro/presentation/gym_bro_settings_page.dart';
 import 'package:gym_app/features/progress/domain/workout_session.dart';
 import 'package:gym_app/core/router/redirect.dart';
 import 'package:gym_app/core/state/app_state.dart';
@@ -86,7 +90,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/run',
-        builder: (context, state) => const PlanRunnerPage(),
+        builder: (context, state) => PlanRunnerPage(
+          scheduledDate: state.uri.queryParameters['date'] == null
+              ? null
+              : DateTime.tryParse(state.uri.queryParameters['date']!),
+          initialExercises: state.extra is List<PlanExercise>
+              ? (state.extra! as List<PlanExercise>)
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: '/freestyle',
+        builder: (context, state) => FreestylePage(
+          onStart: (exercises) => context.push(
+            '/run',
+            extra: exercises,
+          ),
+        ),
       ),
       GoRoute(
         path: '/exercise/:id',
@@ -96,6 +116,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/vault',
         builder: (context, state) => const FormVaultPage(),
+      ),
+      GoRoute(
+        path: '/gym-bro/settings',
+        builder: (context, state) => const GymBroSettingsPage(),
       ),
       GoRoute(
         path: '/replay/:id',
@@ -152,23 +176,46 @@ class ExerciseExplorerPage extends ConsumerStatefulWidget {
 class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
   String? _selectedMuscle;
   String _query = '';
+  final Map<String, String> _favoriteRecords = {};
 
-  List<Exercise> _filter(List<Exercise> exercises) {
-    return exercises.where((exercise) {
-      final matchesMuscle = _selectedMuscle == null ||
-          exercise.muscleGroups.contains(_selectedMuscle) ||
-          exercise.muscleGroup == _selectedMuscle;
-      final query = _query.trim().toLowerCase();
-      final matchesQuery = query.isEmpty ||
-          exercise.name.toLowerCase().contains(query) ||
-          exercise.equipment.toLowerCase().contains(query);
-      return matchesMuscle && matchesQuery;
-    }).toList();
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final favorites = await ApiClient.I.fetchFavoriteExercises();
+    if (!mounted) return;
+    setState(() {
+      for (final favorite in favorites) {
+        _favoriteRecords[favorite['exercise'].toString()] =
+            favorite['id'].toString();
+      }
+    });
+  }
+
+  Future<void> _toggleFavorite(Exercise exercise) async {
+    final id = exercise.remoteId;
+    if (id == null) return;
+    final recordId = _favoriteRecords[id];
+    if (recordId != null) {
+      await ApiClient.I.removeFavoriteExercise(recordId);
+      if (mounted) setState(() => _favoriteRecords.remove(id));
+    } else {
+      final favorite = await ApiClient.I.addFavoriteExercise(id);
+      if (mounted) {
+        setState(() => _favoriteRecords[id] = favorite['id'].toString());
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final exercises = ref.watch(exerciseRepositoryProvider).watchAll();
+    final exercises = ref.watch(exerciseRepositoryProvider).watchAll(
+          search: _query,
+          bodyPart: _selectedMuscle,
+        );
     return Scaffold(
       appBar: AppBar(
         title: const Text('Exercise Explorer'),
@@ -183,7 +230,13 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
       body: StreamBuilder<List<Exercise>>(
         stream: exercises,
         builder: (context, snapshot) {
-          final visible = _filter(snapshot.data ?? const []);
+          final visible = [...snapshot.data ?? const <Exercise>[]]
+            ..sort((a, b) {
+              final aFavorite = _favoriteRecords.containsKey(a.remoteId);
+              final bFavorite = _favoriteRecords.containsKey(b.remoteId);
+              if (aFavorite == bFavorite) return 0;
+              return aFavorite ? -1 : 1;
+            });
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
@@ -202,6 +255,13 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
               const SizedBox(height: 16),
               if (snapshot.connectionState == ConnectionState.waiting)
                 const Center(child: CircularProgressIndicator())
+              else if (snapshot.hasError)
+                const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(
+                    child: Text('Unable to load exercises. Try again.'),
+                  ),
+                )
               else if (visible.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(32),
@@ -229,7 +289,28 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
                       subtitle: Text(
                         '${exercise.muscleGroup} · ${exercise.equipment}',
                       ),
-                      trailing: const Icon(Icons.chevron_right),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip:
+                                _favoriteRecords.containsKey(exercise.remoteId)
+                                    ? 'Remove favorite'
+                                    : 'Add favorite',
+                            onPressed: () => _toggleFavorite(exercise),
+                            icon: Icon(
+                              _favoriteRecords.containsKey(exercise.remoteId)
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color: _favoriteRecords
+                                      .containsKey(exercise.remoteId)
+                                  ? Colors.amber
+                                  : null,
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right),
+                        ],
+                      ),
                       onTap: () => context.push(
                         '/exercise/${Uri.encodeComponent(exercise.name)}',
                       ),

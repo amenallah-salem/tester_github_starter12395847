@@ -6,11 +6,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-from django.db import connections
-from django.db.models import F, Sum
+from django.db import connections, models, transaction
+from django.db.models import F, Max, Sum
+from django.db.models.functions import TruncWeek
 from django.db.utils import OperationalError
 
-from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
+from .models import (
+    Profile, Plan, Exercise, PlanDay, PlanDayExercise,
+    WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
+)
 from .serializers import (
     ProfileSerializer,
     PlanSerializer,
@@ -21,6 +25,9 @@ from .serializers import (
     ProgressMetricSerializer,
     RegisterSerializer,
     SubscriptionSerializer,
+    PlanDaySerializer,
+    BodyWeightEntrySerializer,
+    FavoriteExerciseSerializer,
 )
 
 
@@ -56,6 +63,24 @@ class RegisterView(APIView):
         if s.is_valid():
             user = s.save()
             Profile.objects.get_or_create(user=user)
+            starter_plan = Plan.objects.create(
+                user=user,
+                name='Starter Week',
+                description='A simple full-body routine to get started.',
+            )
+            starter_exercises = list(
+                Exercise.objects.filter(is_library=True).order_by('created_at')[:3]
+            )
+            if starter_exercises:
+                starter_day = PlanDay.objects.create(plan=starter_plan, weekday=0)
+                PlanDayExercise.objects.bulk_create([
+                    PlanDayExercise(
+                        plan_day=starter_day,
+                        exercise=exercise,
+                        order=order,
+                    )
+                    for order, exercise in enumerate(starter_exercises)
+                ])
             from rest_framework_simplejwt.tokens import RefreshToken
             refresh = RefreshToken.for_user(user)
             return Response({
@@ -107,6 +132,75 @@ class PlanViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['get', 'put'], url_path='week')
+    def week(self, request, pk=None):
+        plan = self.get_object()
+        if request.method == 'GET':
+            days = plan.days.prefetch_related(
+                'assignments__exercise',
+            )
+            return Response({
+                'plan': str(plan.id),
+                'days': PlanDaySerializer(days, many=True).data,
+            })
+
+        raw_days = request.data.get('days')
+        if not isinstance(raw_days, list):
+            return Response(
+                {'days': 'Expected a list of weekday assignments.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        weekdays = [item.get('weekday') for item in raw_days if isinstance(item, dict)]
+        if len(raw_days) != 7 or sorted(weekdays) != list(range(7)):
+            return Response(
+                {'days': 'Exactly one assignment is required for each weekday 0 through 6.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        assignments = []
+        for item in raw_days:
+            exercise_ids = item.get('exercise_ids')
+            if not isinstance(exercise_ids, list) or not all(
+                isinstance(exercise_id, str) for exercise_id in exercise_ids
+            ):
+                return Response(
+                    {'days': 'Each weekday must include an exercise_ids list.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if len(exercise_ids) != len(set(exercise_ids)):
+                return Response(
+                    {'days': 'An exercise can only appear once per weekday.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            exercises = list(Exercise.objects.filter(
+                id__in=exercise_ids,
+            ).filter(
+                models.Q(user=request.user) | models.Q(is_library=True, user__isnull=True),
+            ))
+            if len(exercises) != len(set(exercise_ids)):
+                return Response(
+                    {'days': 'Each exercise must belong to you or the exercise library.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            exercises_by_id = {str(exercise.id): exercise for exercise in exercises}
+            assignments.append((item['weekday'], [
+                exercises_by_id[exercise_id] for exercise_id in exercise_ids
+            ]))
+
+        with transaction.atomic():
+            PlanDay.objects.filter(plan=plan).delete()
+            for weekday, exercises in assignments:
+                day = PlanDay.objects.create(plan=plan, weekday=weekday)
+                PlanDayExercise.objects.bulk_create([
+                    PlanDayExercise(plan_day=day, exercise=exercise, order=order)
+                    for order, exercise in enumerate(exercises)
+                ])
+        days = plan.days.prefetch_related('assignments__exercise')
+        return Response({
+            'plan': str(plan.id),
+            'days': PlanDaySerializer(days, many=True).data,
+        })
 
 
 class ExerciseViewSet(viewsets.ModelViewSet):
@@ -214,8 +308,19 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
         }
         serializer = ProgressMetricSerializer(data=payload, context={'request': request})
         serializer.is_valid(raise_exception=True)
+        # A PR is strictly heavier than the user's best-ever set for this exercise.
+        best_weight = ProgressMetric.objects.filter(
+            session__user=request.user,
+            exercise=exercise,
+            weight_kg__isnull=False,
+        ).aggregate(max_weight=Max('weight_kg'))['max_weight']
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        data = serializer.data
+        data['is_new_personal_record'] = (
+            payload['weight_kg'] is not None
+            and (best_weight is None or float(payload['weight_kg']) > float(best_weight))
+        )
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 class ProgressMetricViewSet(viewsets.ModelViewSet):
@@ -230,6 +335,26 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save()
+
+    @action(detail=False, methods=['get'], url_path='last-for-exercise')
+    def last_for_exercise(self, request):
+        exercise_id = request.query_params.get('exercise')
+        if not exercise_id:
+            return Response(
+                {'exercise': 'This query parameter is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        metric = self.get_queryset().filter(
+            exercise_id=exercise_id,
+        ).order_by('-logged_at').first()
+        if metric is None:
+            return Response({'result': None}, status=status.HTTP_200_OK)
+        return Response({
+            'result': ProgressMetricSerializer(
+                metric,
+                context={'request': request},
+            ).data,
+        })
 
     @action(detail=False, methods=['get'], url_path='summary')
     def summary(self, request):
@@ -254,6 +379,13 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
             )
             day = metric.logged_at.date().isoformat()
             volume_by_day[day] = volume_by_day.get(day, 0) + weight * metric.reps
+        workout_count_by_week = list(
+            WorkoutSession.objects.filter(user=request.user)
+            .annotate(week=TruncWeek('started_at'))
+            .values('week')
+            .annotate(workout_count=models.Count('id'))
+            .order_by('week')
+        )
         return Response({
             'total_volume_kg': float(volume),
             'estimated_one_rep_max_kg': round(estimated_one_rep_max, 2),
@@ -262,10 +394,41 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
                 {'date': day, 'volume_kg': round(value, 2)}
                 for day, value in sorted(volume_by_day.items())
             ],
+            'workout_count_by_week': [
+                {
+                    'week': item['week'].date().isoformat(),
+                    'workout_count': item['workout_count'],
+                }
+                for item in workout_count_by_week
+            ],
             'trend': 'up' if len(volume_by_day) > 1 and
             list(volume_by_day.values())[-1] >= list(volume_by_day.values())[0]
             else 'steady',
         })
+
+
+class BodyWeightEntryViewSet(viewsets.ModelViewSet):
+    serializer_class = BodyWeightEntrySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def get_queryset(self):
+        return BodyWeightEntry.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class FavoriteExerciseViewSet(viewsets.ModelViewSet):
+    serializer_class = FavoriteExerciseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        return FavoriteExercise.objects.filter(user=self.request.user).select_related('exercise')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class SubscriptionViewSet(viewsets.ModelViewSet):
