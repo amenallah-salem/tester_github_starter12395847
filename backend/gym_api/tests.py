@@ -6,7 +6,10 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APITestCase
 from rest_framework import status
-from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
+from .models import (
+    Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription,
+    FavoriteExercise,
+)
 
 
 class ModelTests(TestCase):
@@ -35,6 +38,22 @@ class APITests(APITestCase):
     def test_profile_me(self):
         resp = self.client.get('/api/profiles/me/')
         self.assertIn(resp.status_code, (200, 201))
+
+    def test_favorites_are_user_scoped_and_reject_foreign_exercises(self):
+        library = Exercise.objects.create(name='Library Press', is_library=True)
+        own = Exercise.objects.create(user=self.user, name='Own Press')
+        foreign = Exercise.objects.create(user=self.other_user, name='Other Press')
+
+        response = self.client.post('/api/favorites/', {'exercise': str(library.id)}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.post('/api/favorites/', {'exercise': str(own.id)}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.post('/api/favorites/', {'exercise': str(foreign.id)}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.get('/api/favorites/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 2)
 
     def test_plan_crud(self):
         # Create

@@ -11,6 +11,7 @@ import 'package:gym_app/features/exercise_library/presentation/muscle_filter_bar
 import 'package:gym_app/features/exercise_library/domain/exercise.dart';
 import 'package:gym_app/core/di/injection.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
+import 'package:gym_app/services/api_client.dart';
 import 'package:gym_app/features/progress/presentation/progress_page.dart';
 import 'package:gym_app/features/progress/presentation/exercise_history_page.dart';
 import 'package:gym_app/features/progress/presentation/session_detail_page.dart';
@@ -156,6 +157,39 @@ class ExerciseExplorerPage extends ConsumerStatefulWidget {
 class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
   String? _selectedMuscle;
   String _query = '';
+  final Map<String, String> _favoriteRecords = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final favorites = await ApiClient.I.fetchFavoriteExercises();
+    if (!mounted) return;
+    setState(() {
+      for (final favorite in favorites) {
+        _favoriteRecords[favorite['exercise'].toString()] =
+            favorite['id'].toString();
+      }
+    });
+  }
+
+  Future<void> _toggleFavorite(Exercise exercise) async {
+    final id = exercise.remoteId;
+    if (id == null) return;
+    final recordId = _favoriteRecords[id];
+    if (recordId != null) {
+      await ApiClient.I.removeFavoriteExercise(recordId);
+      if (mounted) setState(() => _favoriteRecords.remove(id));
+    } else {
+      final favorite = await ApiClient.I.addFavoriteExercise(id);
+      if (mounted) {
+        setState(() => _favoriteRecords[id] = favorite['id'].toString());
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +211,13 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
       body: StreamBuilder<List<Exercise>>(
         stream: exercises,
         builder: (context, snapshot) {
-          final visible = snapshot.data ?? const <Exercise>[];
+          final visible = [...snapshot.data ?? const <Exercise>[]]
+            ..sort((a, b) {
+              final aFavorite = _favoriteRecords.containsKey(a.remoteId);
+              final bFavorite = _favoriteRecords.containsKey(b.remoteId);
+              if (aFavorite == bFavorite) return 0;
+              return aFavorite ? -1 : 1;
+            });
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
@@ -230,7 +270,28 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
                       subtitle: Text(
                         '${exercise.muscleGroup} · ${exercise.equipment}',
                       ),
-                      trailing: const Icon(Icons.chevron_right),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip:
+                                _favoriteRecords.containsKey(exercise.remoteId)
+                                    ? 'Remove favorite'
+                                    : 'Add favorite',
+                            onPressed: () => _toggleFavorite(exercise),
+                            icon: Icon(
+                              _favoriteRecords.containsKey(exercise.remoteId)
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color: _favoriteRecords
+                                      .containsKey(exercise.remoteId)
+                                  ? Colors.amber
+                                  : null,
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right),
+                        ],
+                      ),
                       onTap: () => context.push(
                         '/exercise/${Uri.encodeComponent(exercise.name)}',
                       ),

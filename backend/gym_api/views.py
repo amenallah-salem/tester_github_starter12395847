@@ -13,7 +13,7 @@ from django.db.utils import OperationalError
 
 from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
-    WorkoutSession, ProgressMetric, BodyWeightEntry, Subscription,
+    WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
 )
 from .serializers import (
     ProfileSerializer,
@@ -27,6 +27,7 @@ from .serializers import (
     SubscriptionSerializer,
     PlanDaySerializer,
     BodyWeightEntrySerializer,
+    FavoriteExerciseSerializer,
 )
 
 
@@ -413,6 +414,18 @@ class BodyWeightEntryViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return BodyWeightEntry.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class FavoriteExerciseViewSet(viewsets.ModelViewSet):
+    serializer_class = FavoriteExerciseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        return FavoriteExercise.objects.filter(user=self.request.user).select_related('exercise')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

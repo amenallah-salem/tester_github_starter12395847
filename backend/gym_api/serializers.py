@@ -6,7 +6,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
-    WorkoutSession, ProgressMetric, BodyWeightEntry, Subscription,
+    WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
 )
 
 
@@ -179,6 +179,21 @@ class BodyWeightEntrySerializer(serializers.ModelSerializer):
         model = BodyWeightEntry
         fields = ['id', 'weight_kg', 'logged_at']
         read_only_fields = ['id', 'logged_at']
+
+
+class FavoriteExerciseSerializer(serializers.ModelSerializer):
+    exercise_name = serializers.CharField(source='exercise.name', read_only=True)
+
+    class Meta:
+        model = FavoriteExercise
+        fields = ['id', 'exercise', 'exercise_name']
+        read_only_fields = ['id']
+
+    def validate_exercise(self, exercise):
+        user = self.context['request'].user
+        if exercise.user_id not in (None, user.id) and not exercise.is_library:
+            raise serializers.ValidationError('You can only favorite library or your own exercises.')
+        return exercise
 
 
 class WorkoutSessionSerializer(serializers.ModelSerializer):

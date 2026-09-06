@@ -285,3 +285,15 @@ class BodyWeightEntry(models.Model):
 
     def __str__(self):
         return f'{self.user.username} – {self.weight_kg} kg'
+
+
+class FavoriteExercise(models.Model):
+    """An authenticated user's saved exercise."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorite_exercises')
+    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name='favorited_by')
+
+    class Meta:
+        db_table = 'favorite_exercises'
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'exercise'], name='unique_user_favorite_exercise'),
+        ]

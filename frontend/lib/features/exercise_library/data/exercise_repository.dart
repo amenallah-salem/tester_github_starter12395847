@@ -2,7 +2,8 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gym_app/core/database/app_database.dart';
 import 'package:gym_app/core/database/daos/exercise_dao.dart';
-import 'package:gym_app/features/exercise_library/domain/exercise.dart' as domain;
+import 'package:gym_app/features/exercise_library/domain/exercise.dart'
+    as domain;
 import 'package:gym_app/services/api_client.dart';
 
 /// Reads/writes the exercise library against the local Drift database.
@@ -23,8 +24,8 @@ class ExerciseRepository {
     // Fetch the library from the backend API once and expose as a single-event stream.
     return Stream.fromFuture(
       ApiClient.I.fetchLibraryExercises(params: params).then(
-        (list) => list.map((m) => _fromApi(m)).toList(growable: false),
-      ),
+            (list) => list.map((m) => _fromApi(m)).toList(growable: false),
+          ),
     );
   }
 
@@ -55,7 +56,11 @@ class ExerciseRepository {
       equipment: 'Barbell',
       description: 'Compound lower-body movement for strength and control.',
       muscleGroups: ['Quads', 'Glutes', 'Core'],
-      howTo: ['Rest the bar on your upper back.', 'Descend with control.', 'Drive through the mid-foot to stand.'],
+      howTo: [
+        'Rest the bar on your upper back.',
+        'Descend with control.',
+        'Drive through the mid-foot to stand.'
+      ],
       coachTip: 'Keep your knees tracking over your toes.',
     ),
     domain.Exercise(
@@ -65,7 +70,11 @@ class ExerciseRepository {
       equipment: 'Dumbbell',
       description: 'A friendly lower-body strength movement.',
       muscleGroups: ['Quads', 'Glutes', 'Core'],
-      howTo: ['Hold a dumbbell at your chest.', 'Sit back with your chest tall.', 'Drive through your heels.'],
+      howTo: [
+        'Hold a dumbbell at your chest.',
+        'Sit back with your chest tall.',
+        'Drive through your heels.'
+      ],
       coachTip: 'Move slowly and keep your ribs stacked over your hips.',
     ),
     domain.Exercise(
@@ -75,7 +84,11 @@ class ExerciseRepository {
       equipment: 'Bodyweight',
       description: 'Classic upper-body pressing movement.',
       muscleGroups: ['Chest', 'Shoulders', 'Triceps'],
-      howTo: ['Place hands under your shoulders.', 'Lower your chest as one unit.', 'Press back up.'],
+      howTo: [
+        'Place hands under your shoulders.',
+        'Lower your chest as one unit.',
+        'Press back up.'
+      ],
       coachTip: 'Keep a straight line from your head to your heels.',
     ),
     domain.Exercise(
@@ -85,7 +98,11 @@ class ExerciseRepository {
       equipment: 'Dumbbell',
       description: 'Build upper-back strength with a controlled pull.',
       muscleGroups: ['Back', 'Biceps'],
-      howTo: ['Hinge with a flat back.', 'Pull the dumbbell toward your hip.', 'Lower slowly.'],
+      howTo: [
+        'Hinge with a flat back.',
+        'Pull the dumbbell toward your hip.',
+        'Lower slowly.'
+      ],
       coachTip: 'Lead with your elbow and squeeze your shoulder blade.',
     ),
     domain.Exercise(
@@ -95,7 +112,11 @@ class ExerciseRepository {
       equipment: 'Barbell',
       description: 'Compound pressing movement for the chest and triceps.',
       muscleGroups: ['Chest', 'Shoulders', 'Triceps'],
-      howTo: ['Plant your feet and grip the bar.', 'Lower it to your chest.', 'Press to the start.'],
+      howTo: [
+        'Plant your feet and grip the bar.',
+        'Lower it to your chest.',
+        'Press to the start.'
+      ],
       coachTip: 'Keep your wrists stacked over your elbows.',
     ),
     domain.Exercise(
@@ -105,7 +126,11 @@ class ExerciseRepository {
       equipment: 'Bodyweight',
       description: 'Isometric core stabilization for everyday movement.',
       muscleGroups: ['Core'],
-      howTo: ['Brace your abs and glutes.', 'Keep your body in a straight line.', 'Breathe steadily.'],
+      howTo: [
+        'Brace your abs and glutes.',
+        'Keep your body in a straight line.',
+        'Breathe steadily.'
+      ],
       coachTip: 'Think long and strong rather than squeezing for time.',
     ),
     domain.Exercise(
@@ -115,7 +140,11 @@ class ExerciseRepository {
       equipment: 'Cable Machine',
       description: 'Vertical pulling exercise for the lats and upper back.',
       muscleGroups: ['Back', 'Biceps'],
-      howTo: ['Secure your thighs under the pads.', 'Pull the bar toward your upper chest.', 'Return it slowly without shrugging.'],
+      howTo: [
+        'Secure your thighs under the pads.',
+        'Pull the bar toward your upper chest.',
+        'Return it slowly without shrugging.'
+      ],
       coachTip: 'Keep the bar in front of your body and lead with your elbows.',
     ),
     domain.Exercise(
@@ -125,7 +154,11 @@ class ExerciseRepository {
       equipment: 'Cable Machine',
       description: 'Controlled horizontal pull for the middle back.',
       muscleGroups: ['Back', 'Biceps'],
-      howTo: ['Sit tall with knees softly bent.', 'Pull the handle toward your ribs.', 'Extend your arms without rounding your back.'],
+      howTo: [
+        'Sit tall with knees softly bent.',
+        'Pull the handle toward your ribs.',
+        'Extend your arms without rounding your back.'
+      ],
       coachTip: 'Avoid rocking; let your back do the work.',
     ),
     domain.Exercise(
@@ -135,7 +168,11 @@ class ExerciseRepository {
       equipment: 'Dumbbell',
       description: 'Overhead press that builds shoulder strength.',
       muscleGroups: ['Shoulders', 'Triceps'],
-      howTo: ['Start with weights at shoulder height.', 'Press overhead with wrists stacked.', 'Lower smoothly to the start.'],
+      howTo: [
+        'Start with weights at shoulder height.',
+        'Press overhead with wrists stacked.',
+        'Lower smoothly to the start.'
+      ],
       coachTip: 'Use a load that lets you keep your ribs down.',
     ),
     domain.Exercise(
@@ -145,7 +182,11 @@ class ExerciseRepository {
       equipment: 'Dumbbell',
       description: 'Isolation movement for the side deltoids.',
       muscleGroups: ['Shoulders'],
-      howTo: ['Stand tall with light weights at your sides.', 'Raise your arms to shoulder height.', 'Lower without swinging.'],
+      howTo: [
+        'Stand tall with light weights at your sides.',
+        'Raise your arms to shoulder height.',
+        'Lower without swinging.'
+      ],
       coachTip: 'Keep the movement quiet and controlled.',
     ),
     domain.Exercise(
@@ -155,7 +196,11 @@ class ExerciseRepository {
       equipment: 'Dumbbell',
       description: 'Simple elbow-flexion exercise for the biceps.',
       muscleGroups: ['Biceps'],
-      howTo: ['Stand with elbows close to your sides.', 'Curl the weights without moving your shoulders.', 'Lower fully under control.'],
+      howTo: [
+        'Stand with elbows close to your sides.',
+        'Curl the weights without moving your shoulders.',
+        'Lower fully under control.'
+      ],
       coachTip: 'Choose a weight that does not require body swing.',
     ),
     domain.Exercise(
@@ -165,7 +210,11 @@ class ExerciseRepository {
       equipment: 'Cable Machine',
       description: 'Cable exercise focused on elbow extension.',
       muscleGroups: ['Triceps'],
-      howTo: ['Set the elbows beside your ribs.', 'Press the handle down until arms are nearly straight.', 'Return slowly to the start.'],
+      howTo: [
+        'Set the elbows beside your ribs.',
+        'Press the handle down until arms are nearly straight.',
+        'Return slowly to the start.'
+      ],
       coachTip: 'Keep your upper arms still throughout each rep.',
     ),
     domain.Exercise(
@@ -175,8 +224,13 @@ class ExerciseRepository {
       equipment: 'Barbell',
       description: 'Hip hinge that trains the hamstrings and glutes.',
       muscleGroups: ['Hamstrings', 'Glutes', 'Back'],
-      howTo: ['Hold the bar close with knees softly bent.', 'Push your hips back while keeping a neutral spine.', 'Drive your hips forward to stand.'],
-      coachTip: 'Stop when your hamstrings are taut, not when your back rounds.',
+      howTo: [
+        'Hold the bar close with knees softly bent.',
+        'Push your hips back while keeping a neutral spine.',
+        'Drive your hips forward to stand.'
+      ],
+      coachTip:
+          'Stop when your hamstrings are taut, not when your back rounds.',
     ),
     domain.Exercise(
       id: 14,
@@ -185,7 +239,11 @@ class ExerciseRepository {
       equipment: 'Bodyweight',
       description: 'Single-leg movement for strength and balance.',
       muscleGroups: ['Glutes', 'Quads'],
-      howTo: ['Stand tall with feet hip-width apart.', 'Step one foot back and lower comfortably.', 'Push through the front foot to return.'],
+      howTo: [
+        'Stand tall with feet hip-width apart.',
+        'Step one foot back and lower comfortably.',
+        'Push through the front foot to return.'
+      ],
       coachTip: 'Use a stable support until your balance feels reliable.',
     ),
     domain.Exercise(
@@ -195,7 +253,11 @@ class ExerciseRepository {
       equipment: 'Bodyweight',
       description: 'Raises the heels to strengthen the lower legs.',
       muscleGroups: ['Calves'],
-      howTo: ['Stand near a stable support.', 'Lift your heels slowly.', 'Pause and lower with control.'],
+      howTo: [
+        'Stand near a stable support.',
+        'Lift your heels slowly.',
+        'Pause and lower with control.'
+      ],
       coachTip: 'Avoid bouncing and use a comfortable range of motion.',
     ),
     domain.Exercise(
@@ -205,7 +267,11 @@ class ExerciseRepository {
       equipment: 'Bodyweight',
       description: 'Core-control exercise using opposite arm and leg movement.',
       muscleGroups: ['Core'],
-      howTo: ['Lie on your back with arms up and knees bent.', 'Extend the opposite arm and leg slowly.', 'Return and alternate sides.'],
+      howTo: [
+        'Lie on your back with arms up and knees bent.',
+        'Extend the opposite arm and leg slowly.',
+        'Return and alternate sides.'
+      ],
       coachTip: 'Keep your lower back gently connected to the floor.',
     ),
     domain.Exercise(
@@ -213,9 +279,14 @@ class ExerciseRepository {
       name: 'Treadmill Walk',
       muscleGroup: 'Cardio',
       equipment: 'Treadmill',
-      description: 'Adjustable, low-impact cardio for building aerobic capacity.',
+      description:
+          'Adjustable, low-impact cardio for building aerobic capacity.',
       muscleGroups: ['Cardio', 'Legs'],
-      howTo: ['Start at an easy pace.', 'Increase speed until breathing is elevated but conversational.', 'Slow down gradually before stopping.'],
+      howTo: [
+        'Start at an easy pace.',
+        'Increase speed until breathing is elevated but conversational.',
+        'Slow down gradually before stopping.'
+      ],
       coachTip: 'Stay upright and avoid leaning heavily on the rails.',
     ),
     domain.Exercise(
@@ -225,7 +296,11 @@ class ExerciseRepository {
       equipment: 'Exercise Bike',
       description: 'Low-impact cardio with adjustable resistance.',
       muscleGroups: ['Cardio', 'Quads', 'Glutes'],
-      howTo: ['Set the seat so your knee stays slightly bent.', 'Pedal smoothly at easy resistance.', 'Build time or resistance gradually.'],
+      howTo: [
+        'Set the seat so your knee stays slightly bent.',
+        'Pedal smoothly at easy resistance.',
+        'Build time or resistance gradually.'
+      ],
       coachTip: 'Keep your knees tracking in line with your feet.',
     ),
   ];
@@ -271,14 +346,20 @@ domain.Exercise _fromApi(Map<String, dynamic> m) {
   final howTo = <String>[];
   if (setup.isNotEmpty) howTo.addAll(_splitSentences(setup));
   if (execution.isNotEmpty) howTo.addAll(_splitSentences(execution));
-  if (howTo.isEmpty && instructions.isNotEmpty) howTo.addAll(_splitSentences(instructions));
+  if (howTo.isEmpty && instructions.isNotEmpty)
+    howTo.addAll(_splitSentences(instructions));
 
   return domain.Exercise(
     id: null,
+    remoteId: m['id']?.toString(),
     name: name,
-    muscleGroup: bodyPart.isNotEmpty ? bodyPart : (primary.isNotEmpty ? primary.first : 'Unknown'),
+    muscleGroup: bodyPart.isNotEmpty
+        ? bodyPart
+        : (primary.isNotEmpty ? primary.first : 'Unknown'),
     equipment: equipmentList.isNotEmpty ? equipmentList.first : 'Bodyweight',
-    description: instructions.isNotEmpty ? instructions : (howTo.isNotEmpty ? howTo.first : ''),
+    description: instructions.isNotEmpty
+        ? instructions
+        : (howTo.isNotEmpty ? howTo.first : ''),
     muscleGroups: muscleGroups,
     howTo: howTo,
     coachTip: commonMistakes.isNotEmpty ? commonMistakes.first : '',
@@ -310,7 +391,8 @@ List<ExercisesCompanion> _defaultExercises() {
         'Sit back with chest up, weight in heels.',
         'Drive through heels to stand tall.',
       ],
-      coachTip: 'Keep your core tight and move with control — quality over speed.',
+      coachTip:
+          'Keep your core tight and move with control — quality over speed.',
     ),
     _Seed(
       name: 'Push-Up',
@@ -380,10 +462,10 @@ List<ExercisesCompanion> _defaultExercises() {
   ];
   return seeds
       .map(
-            (s) => ExercisesCompanion.insert(
-              name: s.name,
-              muscleGroup: s.muscleGroup,
-              equipment: Value(s.equipment),
+        (s) => ExercisesCompanion.insert(
+          name: s.name,
+          muscleGroup: s.muscleGroup,
+          equipment: Value(s.equipment),
           description: Value(s.description),
           muscleGroups: Value(s.muscleGroups.join(',')),
           howTo: Value(s.howTo.join(',')),

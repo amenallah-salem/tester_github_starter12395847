@@ -30,7 +30,10 @@
   - backend: strict heavier-than-best-ever weight flag returned from log-metric
   - frontend: runner shows a new personal record indicator after the set is saved
   - tested: all 24 backend tests, Flutter analyzer, Flutter web build
-[TODO] 2.2 Favorite exercises
+[DONE] 2.2 Favorite exercises
+  - backend: authenticated FavoriteExercise relation, scoped list/create/delete API, and ownership validation
+  - frontend: star toggle in the exercise explorer with favorites sorted first
+  - tested: all 25 backend tests, Flutter analyzer, Flutter web build
 [TODO] 2.3 Freestyle sessions
 [TODO] 2.4 Screen-stays-awake during a workout
 [TODO] 2.5 Timed exercises
