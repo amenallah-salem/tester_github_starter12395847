@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.db import connections, models, transaction
-from django.db.models import F, Sum
+from django.db.models import F, Max, Sum
 from django.db.models.functions import TruncWeek
 from django.db.utils import OperationalError
 
@@ -307,8 +307,19 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
         }
         serializer = ProgressMetricSerializer(data=payload, context={'request': request})
         serializer.is_valid(raise_exception=True)
+        # A PR is strictly heavier than the user's best-ever set for this exercise.
+        best_weight = ProgressMetric.objects.filter(
+            session__user=request.user,
+            exercise=exercise,
+            weight_kg__isnull=False,
+        ).aggregate(max_weight=Max('weight_kg'))['max_weight']
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        data = serializer.data
+        data['is_new_personal_record'] = (
+            payload['weight_kg'] is not None
+            and (best_weight is None or float(payload['weight_kg']) > float(best_weight))
+        )
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 class ProgressMetricViewSet(viewsets.ModelViewSet):

@@ -178,6 +178,13 @@ class APITests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertEqual(session.metrics.count(), 1)
         self.assertEqual(resp.data['reps'], 8)
+        self.assertTrue(resp.data['is_new_personal_record'])
+
+        resp = self.client.post(
+            f'/api/sessions/{session.id}/log-metric/',
+            {'exercise_name': 'Squat', 'set_number': 2, 'reps': 8, 'weight_kg': 70},
+        )
+        self.assertFalse(resp.data['is_new_personal_record'])
 
     def test_session_log_metric_requires_exercise_name(self):
         session = WorkoutSession.objects.create(user=self.user, name='Leg Day')

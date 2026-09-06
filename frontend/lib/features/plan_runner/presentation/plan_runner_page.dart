@@ -211,13 +211,18 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       if (sessionId == null) {
         throw StateError('The workout session could not be created.');
       }
-      await ApiClient.I.logWorkoutMetric(
+      final result = await ApiClient.I.logWorkoutMetric(
         sessionId: sessionId,
         exerciseName: set['exercise']! as String,
         setNumber: set['set']! as int,
         reps: set['reps']! as int,
         weightKg: set['weight'] as double?,
       );
+      if (result?['is_new_personal_record'] == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('New personal record!')),
+        );
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

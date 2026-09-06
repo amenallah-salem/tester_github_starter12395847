@@ -260,7 +260,7 @@ class ApiClient {
     return _jsonObject(response, 'profile update');
   }
 
-  Future<void> logWorkoutMetric({
+  Future<Map<String, dynamic>?> logWorkoutMetric({
     required String sessionId,
     required String exerciseName,
     required int setNumber,
@@ -275,7 +275,7 @@ class ApiClient {
       'weight_kg': weightKg,
     };
     try {
-      await _send(
+      final response = await _send(
         () => http.post(
           _uri('/sessions/$sessionId/log-metric/'),
           headers: _headers(json: true),
@@ -284,6 +284,7 @@ class ApiClient {
         method: 'POST',
         path: '/sessions/$sessionId/log-metric/',
       );
+      return _jsonObject(response, 'workout metric');
     } on ApiException catch (error) {
       if (queueOnFailure && error.statusCode == null) {
         await _enqueue({'sessionId': sessionId, ...payload});
