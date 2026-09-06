@@ -170,6 +170,34 @@ class ApiClient {
     return _jsonObject(response, 'progress summary');
   }
 
+  Future<List<Map<String, dynamic>>> fetchBodyWeight() async {
+    final data = _jsonObject(
+      await _send(
+        () => http.get(_uri('/body-weight/'), headers: _headers()),
+        method: 'GET',
+        path: '/body-weight/',
+      ),
+      'body weight',
+    );
+    return ((data['results'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> logBodyWeight(double weightKg) async {
+    return _jsonObject(
+      await _send(
+        () => http.post(
+          _uri('/body-weight/'),
+          headers: _headers(json: true),
+          body: jsonEncode({'weight_kg': weightKg}),
+        ),
+        method: 'POST',
+        path: '/body-weight/',
+      ),
+      'body weight',
+    );
+  }
+
   Future<Map<String, dynamic>> createWorkout({
     required String notes,
     String name = 'Workout',

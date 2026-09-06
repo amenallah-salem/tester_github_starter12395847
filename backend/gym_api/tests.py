@@ -229,6 +229,23 @@ class APITests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('exercise', resp.data)
 
+    def test_body_weight_can_be_logged_and_listed_for_current_user(self):
+        resp = self.client.post('/api/body-weight/', {'weight_kg': '82.50'})
+
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['weight_kg'], '82.50')
+
+        resp = self.client.get('/api/body-weight/')
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['results']), 1)
+
+    def test_body_weight_rejects_negative_values(self):
+        resp = self.client.post('/api/body-weight/', {'weight_kg': '-1'})
+
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('weight_kg', resp.data)
+
     def test_related_objects_must_belong_to_current_user(self):
         other_plan = Plan.objects.create(user=self.other_user, name='Private plan')
         resp = self.client.post('/api/exercises/', {'name': 'Leaked', 'plan': str(other_plan.id)})

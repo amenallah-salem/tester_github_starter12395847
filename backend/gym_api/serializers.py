@@ -6,7 +6,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
-    WorkoutSession, ProgressMetric, Subscription,
+    WorkoutSession, ProgressMetric, BodyWeightEntry, Subscription,
 )
 
 
@@ -172,6 +172,13 @@ class ProgressMetricSerializer(serializers.ModelSerializer):
         if session and exercise and exercise.plan_id and session.plan_id != exercise.plan_id:
             raise serializers.ValidationError({'exercise': 'The exercise must belong to the session plan.'})
         return attrs
+
+
+class BodyWeightEntrySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BodyWeightEntry
+        fields = ['id', 'weight_kg', 'logged_at']
+        read_only_fields = ['id', 'logged_at']
 
 
 class WorkoutSessionSerializer(serializers.ModelSerializer):

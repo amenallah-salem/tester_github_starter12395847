@@ -270,3 +270,18 @@ class ProgressMetric(models.Model):
 
     def __str__(self):
         return f"{self.exercise.name if self.exercise else '?'} – Set {self.set_number}"
+
+
+class BodyWeightEntry(models.Model):
+    """A body-weight reading belonging to the authenticated user."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='body_weight_entries')
+    weight_kg = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0)])
+    logged_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'body_weight_entries'
+        ordering = ['logged_at']
+
+    def __str__(self):
+        return f'{self.user.username} – {self.weight_kg} kg'

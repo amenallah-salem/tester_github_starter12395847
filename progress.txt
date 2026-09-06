@@ -18,7 +18,10 @@
   - backend: workout sessions accept an independent scheduled_for date
   - frontend: selected weekly day has a Start this day action that passes its date to the runner
   - tested: all 22 backend tests, Flutter analyzer, Flutter web build
-[TODO] 1.6 Body-weight tracking
+[DONE] 1.6 Body-weight tracking
+  - backend: BodyWeightEntry model, migration, authenticated log/list endpoint
+  - frontend: progress provider, log dialog, and real-data line chart
+  - tested: all 24 backend tests, Flutter analyzer, Flutter web build
 [TODO] 1.7 Basic stats
 [TODO] 2.1 PR detection
 [TODO] 2.2 Favorite exercises

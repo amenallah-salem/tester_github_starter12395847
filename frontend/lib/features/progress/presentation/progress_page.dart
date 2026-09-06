@@ -68,6 +68,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     final sessions = ref.watch(workoutSessionsProvider);
     final metrics = ref.watch(progressMetricsProvider).value ?? const [];
     final summary = ref.watch(progressSummaryProvider).value ?? const {};
+    final bodyWeights = ref.watch(bodyWeightProvider).value ?? const [];
     final visible = _visible(sessions);
 
     return mobileWrap(
@@ -182,6 +183,11 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                         selected: {_range},
                         onSelectionChanged: (s) =>
                             setState(() => _range = s.first),
+                      ),
+                      const SizedBox(height: 12),
+                      _BodyWeightCard(
+                       entries: bodyWeights,
+                       onLogged: () => ref.invalidate(bodyWeightProvider),
                       ),
                       const SizedBox(height: 12),
                       if (metrics.isNotEmpty) ...[
@@ -351,6 +357,128 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
         : kg.toStringAsFixed(1);
     return '$formatted kg';
   }
+}
+
+class _BodyWeightCard extends StatelessWidget {
+  const _BodyWeightCard({
+    required this.entries,
+    required this.onLogged,
+  });
+
+  final List<Map<String, dynamic>> entries;
+  final VoidCallback onLogged;
+
+  Future<void> _log(BuildContext context) async {
+    final controller = TextEditingController();
+    final value = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log body weight'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'Weight (kg)'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(
+              context,
+              double.tryParse(controller.text.trim()),
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null || value < 0 || !context.mounted) return;
+    await ApiClient.I.logBodyWeight(value);
+    onLogged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final values = entries
+        .map((entry) => (entry['weight_kg'] as num?)?.toDouble())
+        .whereType<double>()
+        .toList();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Body weight',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _log(context),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Log'),
+                ),
+              ],
+            ),
+            if (values.isEmpty)
+              const Text('No readings yet.')
+            else ...[
+              Text('${values.last.toStringAsFixed(1)} kg'),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 70,
+                child: CustomPaint(
+                  painter: _WeightChartPainter(values),
+                  size: Size.infinite,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WeightChartPainter extends CustomPainter {
+  _WeightChartPainter(this.values);
+
+  final List<double> values;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.length < 2) return;
+    final min = values.reduce((a, b) => a < b ? a : b);
+    final max = values.reduce((a, b) => a > b ? a : b);
+    final range = (max - min).abs() < .01 ? 1 : max - min;
+    final paint = Paint()
+      ..color = AppTheme.primary
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+    final path = Path();
+    for (var i = 0; i < values.length; i++) {
+      final x = size.width * i / (values.length - 1);
+      final y = size.height - ((values[i] - min) / range * size.height);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _WeightChartPainter oldDelegate) =>
+      oldDelegate.values != values;
 }
 
 class _LiftProgressCard extends StatelessWidget {

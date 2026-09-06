@@ -12,7 +12,7 @@ from django.db.utils import OperationalError
 
 from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
-    WorkoutSession, ProgressMetric, Subscription,
+    WorkoutSession, ProgressMetric, BodyWeightEntry, Subscription,
 )
 from .serializers import (
     ProfileSerializer,
@@ -25,6 +25,7 @@ from .serializers import (
     RegisterSerializer,
     SubscriptionSerializer,
     PlanDaySerializer,
+    BodyWeightEntrySerializer,
 )
 
 
@@ -377,6 +378,18 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
             list(volume_by_day.values())[-1] >= list(volume_by_day.values())[0]
             else 'steady',
         })
+
+
+class BodyWeightEntryViewSet(viewsets.ModelViewSet):
+    serializer_class = BodyWeightEntrySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def get_queryset(self):
+        return BodyWeightEntry.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class SubscriptionViewSet(viewsets.ModelViewSet):
