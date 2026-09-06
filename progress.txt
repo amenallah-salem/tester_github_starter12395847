@@ -14,7 +14,10 @@
   - backend: log-metric endpoint tests cover creating a set and missing exercise failure
   - frontend: each completed set posts immediately; remote session is finalized on workout completion
   - tested: all 21 backend tests, Flutter analyzer, Flutter web build
-[TODO] 1.5 Reschedule a day
+[DONE] 1.5 Reschedule a day
+  - backend: workout sessions accept an independent scheduled_for date
+  - frontend: selected weekly day has a Start this day action that passes its date to the runner
+  - tested: all 22 backend tests, Flutter analyzer, Flutter web build
 [TODO] 1.6 Body-weight tracking
 [TODO] 1.7 Basic stats
 [TODO] 2.1 PR detection

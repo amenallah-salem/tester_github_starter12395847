@@ -141,6 +141,15 @@ class APITests(APITestCase):
         resp = self.client.post('/api/sessions/', {'name': 'Morning Workout'})
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
+    def test_session_can_be_scheduled_for_another_day(self):
+        resp = self.client.post(
+            '/api/sessions/',
+            {'name': 'Rescheduled Workout', 'scheduled_for': '2026-09-10'},
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['scheduled_for'], '2026-09-10')
+
     def test_metric_crud(self):
         # Create session first
         sess_resp = self.client.post('/api/sessions/', {'name': 'Leg Day'})

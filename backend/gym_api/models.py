@@ -232,6 +232,7 @@ class WorkoutSession(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='workout_sessions')
     plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True, related_name='sessions')
     name = models.CharField(max_length=200, blank=True)
+    scheduled_for = models.DateField(null=True, blank=True)
     started_at = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)

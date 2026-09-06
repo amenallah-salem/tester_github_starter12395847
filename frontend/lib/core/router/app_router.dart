@@ -86,7 +86,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/run',
-        builder: (context, state) => const PlanRunnerPage(),
+        builder: (context, state) => PlanRunnerPage(
+          scheduledDate: state.uri.queryParameters['date'] == null
+              ? null
+              : DateTime.tryParse(state.uri.queryParameters['date']!),
+        ),
       ),
       GoRoute(
         path: '/exercise/:id',

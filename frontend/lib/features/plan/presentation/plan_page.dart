@@ -355,6 +355,7 @@ class _WeeklyPlanEditorState extends State<_WeeklyPlanEditor> {
                           } else {
                             selected.remove(id);
                           }
+
                         }),
                       );
                     }).toList(),
@@ -389,6 +390,12 @@ class _WeeklyPlanEditorState extends State<_WeeklyPlanEditor> {
     if (mounted) {
       setState(() => _weekFuture = _loadWeek());
     }
+  }
+
+  DateTime get _selectedDate {
+    final today = DateTime.now();
+    final monday = today.subtract(Duration(days: today.weekday - 1));
+    return DateTime(monday.year, monday.month, monday.day + _selectedDay);
   }
 
   @override
@@ -449,10 +456,22 @@ class _WeeklyPlanEditorState extends State<_WeeklyPlanEditor> {
                   ),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () => _editDay(context, week, selected),
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Edit day'),
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => _editDay(context, week, selected),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Edit day'),
+                      ),
+                      FilledButton.icon(
+                        onPressed: () => context.push(
+                          '/run?date=${_selectedDate.toIso8601String().split('T').first}',
+                        ),
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Start this day'),
+                      ),
+                    ],
                   ),
                 ),
               ],

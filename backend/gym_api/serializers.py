@@ -184,7 +184,7 @@ class WorkoutSessionSerializer(serializers.ModelSerializer):
         model = WorkoutSession
         fields = [
             'id', 'user', 'plan', 'name',
-            'started_at', 'finished_at', 'notes', 'metrics',
+            'scheduled_for', 'started_at', 'finished_at', 'notes', 'metrics',
             'duration_seconds', 'total_volume_kg',
         ]
         read_only_fields = ['id', 'started_at']
@@ -216,7 +216,7 @@ class WorkoutSessionListSerializer(serializers.ModelSerializer):
         model = WorkoutSession
         fields = [
             'id', 'plan', 'name', 'started_at',
-            'finished_at', 'metric_count', 'exercise_names',
+            'scheduled_for', 'finished_at', 'metric_count', 'exercise_names',
             'duration_seconds', 'total_volume_kg',
         ]
         read_only_fields = ['id', 'started_at']

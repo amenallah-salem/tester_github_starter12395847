@@ -20,7 +20,9 @@ enum _Phase { work, rest, finished }
 /// Hides the tab bar (it is a top-level route) and disables system back
 /// mid-set to avoid accidental exits.
 class PlanRunnerPage extends ConsumerStatefulWidget {
-  const PlanRunnerPage({super.key});
+  const PlanRunnerPage({this.scheduledDate, super.key});
+
+  final DateTime? scheduledDate;
 
   @override
   ConsumerState<PlanRunnerPage> createState() => _PlanRunnerPageState();
@@ -203,6 +205,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
             .todaySession
             .dayLabel,
         notes: 'Workout in progress.',
+        scheduledFor: widget.scheduledDate,
       ))['id']?.toString();
       final sessionId = _remoteSessionId;
       if (sessionId == null) {
@@ -296,6 +299,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       final session = await ApiClient.I.createWorkout(
         name: plan.todaySession.dayLabel,
         notes: 'Completed in the workout runner.',
+        scheduledFor: widget.scheduledDate,
       );
       final sessionId = session['id']?.toString();
       if (sessionId == null) return;

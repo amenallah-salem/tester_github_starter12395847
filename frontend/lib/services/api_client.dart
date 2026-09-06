@@ -173,12 +173,18 @@ class ApiClient {
   Future<Map<String, dynamic>> createWorkout({
     required String notes,
     String name = 'Workout',
+    DateTime? scheduledFor,
   }) async {
     final response = await _send(
       () => http.post(
         _uri('/sessions/'),
         headers: _headers(json: true),
-        body: jsonEncode({'name': name, 'notes': notes}),
+        body: jsonEncode({
+          'name': name,
+          'notes': notes,
+          if (scheduledFor != null)
+            'scheduled_for': scheduledFor.toIso8601String().split('T').first,
+        }),
       ),
       method: 'POST',
       path: '/sessions/',
