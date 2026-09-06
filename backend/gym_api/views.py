@@ -6,7 +6,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.db import connections
 from django.db.models import F, Sum
+from django.db.utils import OperationalError
 
 from .models import Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription
 from .serializers import (
@@ -20,6 +22,31 @@ from .serializers import (
     RegisterSerializer,
     SubscriptionSerializer,
 )
+
+
+class HealthCheckView(APIView):
+    """
+    Lightweight, unauthenticated readiness probe for use by Docker/CI startup
+    scripts and orchestrators. Unlike the DRF router root ("/api/"), this view
+    does not require authentication (the router root inherits the project's
+    default IsAuthenticated permission, so it returns 401 even when Django and
+    the database are perfectly healthy).
+
+    Returns 200 with {"status": "ok"} once Django can reach the database, or
+    503 with {"status": "error"} if the database connection is not usable.
+    """
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        try:
+            connections['default'].ensure_connection()
+        except OperationalError as exc:
+            return Response(
+                {'status': 'error', 'detail': str(exc)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response({'status': 'ok'}, status=status.HTTP_200_OK)
 
 
 class RegisterView(APIView):
