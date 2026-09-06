@@ -167,6 +167,18 @@ class _YouPageState extends ConsumerState<YouPage> {
             ),
           ),
           const SizedBox(height: 12),
+          _SectionCard(
+            title: 'Gym Bro',
+            child: _SettingRow(
+              icon: Icons.diversity_3_outlined,
+              label: 'Training profile & matching',
+              trailing: TextButton(
+                onPressed: () => context.push('/gym-bro/settings'),
+                child: const Text('Edit'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           FilledButton.tonalIcon(
             onPressed: () async {
               ref.read(accessTokenProvider.notifier).state = null;
@@ -246,8 +258,8 @@ class _YouPageState extends ConsumerState<YouPage> {
                   themeMode == ThemeMode.light
                       ? 'Bright cream with forest-green accents.'
                       : themeMode == ThemeMode.dark
-                      ? 'Deep forest, easy on the eyes at night.'
-                      : 'Matches your device setting.',
+                          ? 'Deep forest, easy on the eyes at night.'
+                          : 'Matches your device setting.',
                   style: const TextStyle(color: AppTheme.mut, fontSize: 13),
                 ),
               ],
@@ -388,9 +400,9 @@ class _YouPageState extends ConsumerState<YouPage> {
 }
 
 ShapeBorder _cardShape() => RoundedRectangleBorder(
-  borderRadius: BorderRadius.circular(20),
-  side: const BorderSide(color: AppTheme.outlineVariant),
-);
+      borderRadius: BorderRadius.circular(20),
+      side: const BorderSide(color: AppTheme.outlineVariant),
+    );
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.title, required this.child});

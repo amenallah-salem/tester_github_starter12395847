@@ -39,8 +39,20 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'display_name', 'created_at', 'updated_at',
             'onboarding_completed', 'onboarding_completed_at', 'locale', 'country',
+            'bio', 'training_goals', 'experience_level', 'availability', 'location',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_training_goals(self, value):
+        if value in (None, ''):
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError('training_goals must be a list.')
+        valid_goals = {choice for choice, _ in Profile.GOAL_CHOICES}
+        invalid = [goal for goal in value if goal not in valid_goals]
+        if invalid:
+            raise serializers.ValidationError(f'Invalid goal(s): {invalid}')
+        return value
 
 
 class ExerciseSerializer(serializers.ModelSerializer):

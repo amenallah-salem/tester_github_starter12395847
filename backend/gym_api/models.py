@@ -15,6 +15,23 @@ from django.db import models
 
 class Profile(models.Model):
     """Extended user profile."""
+
+    # "Gym Bro" social-matching fields (GB-1). Kept on the existing Profile
+    # rather than a parallel model so there is one source of truth per user.
+    GOAL_CHOICES = [
+        ('strength', 'Strength'),
+        ('cardio', 'Cardio'),
+        ('general_fitness', 'General fitness'),
+        ('hypertrophy', 'Hypertrophy'),
+        ('weight_loss', 'Weight loss'),
+        ('flexibility', 'Flexibility & mobility'),
+    ]
+    EXPERIENCE_CHOICES = [
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     display_name = models.CharField(max_length=100, blank=True)
@@ -23,6 +40,22 @@ class Profile(models.Model):
     onboarding_completed_at = models.DateTimeField(null=True, blank=True)
     locale = models.CharField(max_length=20, blank=True)
     country = models.CharField(max_length=4, blank=True)
+
+    # Gym Bro training profile (GB-1)
+    bio = models.TextField(blank=True, help_text='Short intro shown on the Gym Bro discovery card.')
+    training_goals = models.JSONField(
+        blank=True, null=True, default=list,
+        help_text='List of GOAL_CHOICES values, e.g. ["strength", "cardio"].',
+    )
+    experience_level = models.CharField(max_length=20, choices=EXPERIENCE_CHOICES, blank=True)
+    availability = models.CharField(
+        max_length=200, blank=True,
+        help_text='Free-text preferred training times, e.g. "Weekday mornings, Sat afternoons".',
+    )
+    # City/area-level text only — precise geolocation is intentionally never
+    # collected or stored for this feature (see GB-1 privacy note).
+    location = models.CharField(max_length=100, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -32,6 +65,10 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.display_name or self.user.username
+
+    def has_completed_gym_bro_profile(self):
+        """True once there's enough profile data to show in discovery (GB-2)."""
+        return bool(self.bio.strip()) and bool(self.training_goals)
 
 
 class Subscription(models.Model):

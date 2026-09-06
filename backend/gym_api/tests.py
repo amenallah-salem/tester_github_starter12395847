@@ -18,6 +18,15 @@ class ModelTests(TestCase):
         profile = Profile.objects.create(user=user, display_name='Test User')
         self.assertEqual(str(profile), 'Test User')
 
+    def test_profile_completed_gym_bro_profile_requires_bio_and_goals(self):
+        user = User.objects.create_user('gbuser', 'gb@example.com', 'gbpass123')
+        profile = Profile.objects.create(user=user)
+        self.assertFalse(profile.has_completed_gym_bro_profile())
+        profile.bio = 'I love squats.'
+        self.assertFalse(profile.has_completed_gym_bro_profile())
+        profile.training_goals = ['strength']
+        self.assertTrue(profile.has_completed_gym_bro_profile())
+
     def test_plan_str(self):
         user = User.objects.create_user('planuser', 'plan@example.com', 'pass1234')
         plan = Plan.objects.create(user=user, name='Push Day')
@@ -38,6 +47,35 @@ class APITests(APITestCase):
     def test_profile_me(self):
         resp = self.client.get('/api/profiles/me/')
         self.assertIn(resp.status_code, (200, 201))
+
+    def test_profile_can_be_patched_with_gym_bro_fields(self):
+        resp = self.client.get('/api/profiles/me/')
+        profile_id = resp.data['id']
+
+        resp = self.client.patch(f'/api/profiles/{profile_id}/', {
+            'bio': 'Looking for a squat partner.',
+            'training_goals': ['strength', 'cardio'],
+            'experience_level': 'intermediate',
+            'availability': 'Weekday evenings',
+            'location': 'Austin, TX',
+        }, format='json')
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['bio'], 'Looking for a squat partner.')
+        self.assertEqual(resp.data['training_goals'], ['strength', 'cardio'])
+        self.assertEqual(resp.data['experience_level'], 'intermediate')
+        self.assertEqual(resp.data['location'], 'Austin, TX')
+
+    def test_profile_rejects_invalid_training_goal(self):
+        resp = self.client.get('/api/profiles/me/')
+        profile_id = resp.data['id']
+
+        resp = self.client.patch(f'/api/profiles/{profile_id}/', {
+            'training_goals': ['not_a_real_goal'],
+        }, format='json')
+
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('training_goals', resp.data)
 
     def test_favorites_are_user_scoped_and_reject_foreign_exercises(self):
         library = Exercise.objects.create(name='Library Press', is_library=True)

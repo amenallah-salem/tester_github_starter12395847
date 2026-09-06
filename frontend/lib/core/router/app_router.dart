@@ -25,6 +25,7 @@ import 'package:gym_app/features/plan_runner/presentation/freestyle_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/form_vault_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/replay_3d_page.dart';
 import 'package:gym_app/features/coach/presentation/coach_page.dart';
+import 'package:gym_app/features/gym_bro/presentation/gym_bro_settings_page.dart';
 import 'package:gym_app/features/progress/domain/workout_session.dart';
 import 'package:gym_app/core/router/redirect.dart';
 import 'package:gym_app/core/state/app_state.dart';
@@ -115,6 +116,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/vault',
         builder: (context, state) => const FormVaultPage(),
+      ),
+      GoRoute(
+        path: '/gym-bro/settings',
+        builder: (context, state) => const GymBroSettingsPage(),
       ),
       GoRoute(
         path: '/replay/:id',
