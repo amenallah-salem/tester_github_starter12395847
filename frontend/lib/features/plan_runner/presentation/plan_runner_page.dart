@@ -20,9 +20,10 @@ enum _Phase { work, rest, finished }
 /// Hides the tab bar (it is a top-level route) and disables system back
 /// mid-set to avoid accidental exits.
 class PlanRunnerPage extends ConsumerStatefulWidget {
-  const PlanRunnerPage({this.scheduledDate, super.key});
+  const PlanRunnerPage({this.scheduledDate, this.initialExercises, super.key});
 
   final DateTime? scheduledDate;
+  final List<PlanExercise>? initialExercises;
 
   @override
   ConsumerState<PlanRunnerPage> createState() => _PlanRunnerPageState();
@@ -62,7 +63,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   void initState() {
     super.initState();
     final plan = ref.read(planNotifierProvider).value ?? samplePlan;
-    _exercises = plan.todaySession.exercises;
+    _exercises = widget.initialExercises ?? plan.todaySession.exercises;
     _sessionStartedAt = DateTime.now();
     _enterExercise(announce: true);
     _startTimer();
@@ -90,7 +91,8 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   Future<void> _prefillWeight() async {
     if (ApiClient.I.accessToken == null || _ex.exerciseId.isEmpty) return;
     try {
-      final metric = await ApiClient.I.fetchLastMetricForExercise(_ex.exerciseId);
+      final metric =
+          await ApiClient.I.fetchLastMetricForExercise(_ex.exerciseId);
       if (!mounted || metric == null) return;
       final weight = metric['weight_kg'];
       if (weight != null) {
@@ -206,7 +208,8 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
             .dayLabel,
         notes: 'Workout in progress.',
         scheduledFor: widget.scheduledDate,
-      ))['id']?.toString();
+      ))['id']
+          ?.toString();
       final sessionId = _remoteSessionId;
       if (sessionId == null) {
         throw StateError('The workout session could not be created.');

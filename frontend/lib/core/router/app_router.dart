@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gym_app/features/home/presentation/home_page.dart';
 import 'package:gym_app/features/onboarding/presentation/onboarding_page.dart';
 import 'package:gym_app/features/plan/presentation/plan_page.dart';
+import 'package:gym_app/features/plan/domain/plan_contract.dart';
 import 'package:gym_app/features/plan_runner/presentation/plan_runner_page.dart';
 import 'package:gym_app/features/exercise_library/presentation/exercise_detail_page.dart';
 import 'package:gym_app/features/exercise_library/presentation/muscle_filter_bar.dart';
@@ -20,6 +21,7 @@ import 'package:gym_app/features/auth/presentation/sign_in_page.dart';
 import 'package:gym_app/features/recovery/presentation/recovery_page.dart';
 import 'package:gym_app/features/recovery/presentation/breathwork_page.dart';
 import 'package:gym_app/features/plan_runner/presentation/workout_setup_page.dart';
+import 'package:gym_app/features/plan_runner/presentation/freestyle_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/form_vault_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/replay_3d_page.dart';
 import 'package:gym_app/features/coach/presentation/coach_page.dart';
@@ -91,6 +93,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           scheduledDate: state.uri.queryParameters['date'] == null
               ? null
               : DateTime.tryParse(state.uri.queryParameters['date']!),
+          initialExercises: state.extra is List<PlanExercise>
+              ? (state.extra! as List<PlanExercise>)
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: '/freestyle',
+        builder: (context, state) => FreestylePage(
+          onStart: (exercises) => context.push(
+            '/run',
+            extra: exercises,
+          ),
         ),
       ),
       GoRoute(

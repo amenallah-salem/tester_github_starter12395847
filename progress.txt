@@ -34,6 +34,9 @@
   - backend: authenticated FavoriteExercise relation, scoped list/create/delete API, and ownership validation
   - frontend: star toggle in the exercise explorer with favorites sorted first
   - tested: all 25 backend tests, Flutter analyzer, Flutter web build
-[TODO] 2.3 Freestyle sessions
+[DONE] 2.3 Freestyle sessions
+  - frontend: freestyle picker starts the runner with ad hoc library exercises
+  - frontend: runner reuses last-set lookup to prefill each selected exercise
+  - tested: Flutter web build
 [TODO] 2.4 Screen-stays-awake during a workout
 [TODO] 2.5 Timed exercises
