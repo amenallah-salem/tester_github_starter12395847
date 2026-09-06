@@ -258,6 +258,21 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>?> fetchLastMetricForExercise(
+    String exerciseId,
+  ) async {
+    final response = await _send(
+      () => http.get(
+        _uri('/metrics/last-for-exercise/?exercise=$exerciseId'),
+        headers: _headers(),
+      ),
+      method: 'GET',
+      path: '/metrics/last-for-exercise/?exercise=$exerciseId',
+    );
+    final data = _jsonObject(response, 'last exercise metric');
+    return data['result'] as Map<String, dynamic>?;
+  }
+
   Future<void> queueWorkout({
     required String name,
     required String notes,
@@ -398,7 +413,8 @@ class ApiClient {
     final exercises = exerciseData is Map
         ? exerciseData['results'] as List? ?? const []
         : exerciseData as List? ?? const [];
-    return {...plan, 'exercises': exercises};
+    final week = await fetchPlanWeek(plan['id'].toString());
+    return {...plan, 'exercises': exercises, 'week': week};
   }
 
   Future<Map<String, dynamic>> fetchPlanWeek(String planId) async {

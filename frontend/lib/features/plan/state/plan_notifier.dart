@@ -96,8 +96,26 @@ class PlanNotifier extends Notifier<AsyncValue<WorkoutPlan?>> {
     try {
       final remote = await ApiClient.I.fetchCurrentPlan();
       if (remote == null) return;
-      final exercises = (remote['exercises'] as List? ?? const [])
+      final week = remote['week'] as Map<String, dynamic>?;
+      final todayIndex = DateTime.now().weekday - 1;
+      final days = (week?['days'] as List? ?? const [])
           .cast<Map<String, dynamic>>();
+      final today = days.cast<Map<String, dynamic>?>().firstWhere(
+            (day) => day?['weekday'] == todayIndex,
+            orElse: () => null,
+          );
+      final assignments = (today?['assignments'] as List? ?? const [])
+          .cast<Map<String, dynamic>>();
+      final exercises = assignments
+          .map(
+            (assignment) => <String, dynamic>{
+              'id': assignment['exercise'],
+              'name': assignment['exercise_name'],
+              'target_sets': 3,
+              'target_reps': 10,
+            },
+          )
+          .toList();
       if (exercises.isEmpty) return;
       final dayExercises = exercises
           .map(

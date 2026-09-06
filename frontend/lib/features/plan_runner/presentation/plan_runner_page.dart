@@ -77,8 +77,23 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     _workRemaining = _workSeconds(_ex);
     _repsAdj = _parseReps(_ex.reps);
     _weightController.clear();
+    _prefillWeight();
     if (announce) {
       _coach = ref.read(coachingStringsProvider).startCue(_ex.name, _setIndex);
+    }
+  }
+
+  Future<void> _prefillWeight() async {
+    if (ApiClient.I.accessToken == null || _ex.exerciseId.isEmpty) return;
+    try {
+      final metric = await ApiClient.I.fetchLastMetricForExercise(_ex.exerciseId);
+      if (!mounted || metric == null) return;
+      final weight = metric['weight_kg'];
+      if (weight != null) {
+        _weightController.text = weight.toString();
+      }
+    } on ApiException catch (error) {
+      debugPrint('Unable to prefill last set: $error');
     }
   }
 

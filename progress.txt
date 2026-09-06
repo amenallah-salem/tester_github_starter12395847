@@ -6,7 +6,10 @@
   - backend: PlanDay and ordered PlanDayExercise models, migration, /plans/{id}/week/ read/write endpoint
   - frontend: home 7-day strip with day exercise lists and library-backed edit sheet
   - tested: all 17 backend tests, live registration/week endpoint, Flutter analyzer, Flutter web build
-[TODO] 1.3 Guided workout session
+[DONE] 1.3 Guided workout session
+  - backend: latest-set lookup endpoint scoped to the current user
+  - frontend: today's weekday assignments hydrate the runner; last logged weight prefills each exercise
+  - tested: all 19 backend tests, Flutter analyzer, Flutter web build
 [TODO] 1.4 Set logging
 [TODO] 1.5 Reschedule a day
 [TODO] 1.6 Body-weight tracking

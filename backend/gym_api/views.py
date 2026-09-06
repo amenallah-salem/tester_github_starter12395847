@@ -322,6 +322,26 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 
+    @action(detail=False, methods=['get'], url_path='last-for-exercise')
+    def last_for_exercise(self, request):
+        exercise_id = request.query_params.get('exercise')
+        if not exercise_id:
+            return Response(
+                {'exercise': 'This query parameter is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        metric = self.get_queryset().filter(
+            exercise_id=exercise_id,
+        ).order_by('-logged_at').first()
+        if metric is None:
+            return Response({'result': None}, status=status.HTTP_200_OK)
+        return Response({
+            'result': ProgressMetricSerializer(
+                metric,
+                context={'request': request},
+            ).data,
+        })
+
     @action(detail=False, methods=['get'], url_path='summary')
     def summary(self, request):
         """Return derived lifting insights for the authenticated user."""

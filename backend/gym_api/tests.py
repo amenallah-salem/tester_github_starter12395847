@@ -168,6 +168,30 @@ class APITests(APITestCase):
         self.assertEqual(resp.data['estimated_one_rep_max_kg'], 93.33)
         self.assertEqual(resp.data['personal_records'], 1)
 
+    def test_last_metric_for_exercise_returns_latest_user_set(self):
+        session = WorkoutSession.objects.create(user=self.user, name='Strength')
+        exercise = Exercise.objects.create(user=self.user, name='Squat')
+        ProgressMetric.objects.create(
+            session=session, exercise=exercise, reps=5, weight_kg=60
+        )
+        latest = ProgressMetric.objects.create(
+            session=session, exercise=exercise, reps=3, weight_kg=80
+        )
+
+        resp = self.client.get(
+            f'/api/metrics/last-for-exercise/?exercise={exercise.id}'
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['result']['id'], str(latest.id))
+        self.assertEqual(float(resp.data['result']['weight_kg']), 80.0)
+
+    def test_last_metric_for_exercise_requires_an_exercise(self):
+        resp = self.client.get('/api/metrics/last-for-exercise/')
+
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('exercise', resp.data)
+
     def test_related_objects_must_belong_to_current_user(self):
         other_plan = Plan.objects.create(user=self.other_user, name='Private plan')
         resp = self.client.post('/api/exercises/', {'name': 'Leaked', 'plan': str(other_plan.id)})
