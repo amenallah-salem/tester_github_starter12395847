@@ -204,6 +204,7 @@ class APITests(APITestCase):
         self.assertEqual(resp.data['total_volume_kg'], 1000.0)
         self.assertEqual(resp.data['estimated_one_rep_max_kg'], 93.33)
         self.assertEqual(resp.data['personal_records'], 1)
+        self.assertEqual(resp.data['workout_count_by_week'][0]['workout_count'], 1)
 
     def test_last_metric_for_exercise_returns_latest_user_set(self):
         session = WorkoutSession.objects.create(user=self.user, name='Strength')

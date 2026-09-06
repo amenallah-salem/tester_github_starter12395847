@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.db import connections, models, transaction
 from django.db.models import F, Sum
+from django.db.models.functions import TruncWeek
 from django.db.utils import OperationalError
 
 from .models import (
@@ -366,6 +367,13 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
             )
             day = metric.logged_at.date().isoformat()
             volume_by_day[day] = volume_by_day.get(day, 0) + weight * metric.reps
+        workout_count_by_week = list(
+            WorkoutSession.objects.filter(user=request.user)
+            .annotate(week=TruncWeek('started_at'))
+            .values('week')
+            .annotate(workout_count=models.Count('id'))
+            .order_by('week')
+        )
         return Response({
             'total_volume_kg': float(volume),
             'estimated_one_rep_max_kg': round(estimated_one_rep_max, 2),
@@ -373,6 +381,13 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
             'volume_by_day': [
                 {'date': day, 'volume_kg': round(value, 2)}
                 for day, value in sorted(volume_by_day.items())
+            ],
+            'workout_count_by_week': [
+                {
+                    'week': item['week'].date().isoformat(),
+                    'workout_count': item['workout_count'],
+                }
+                for item in workout_count_by_week
             ],
             'trend': 'up' if len(volume_by_day) > 1 and
             list(volume_by_day.values())[-1] >= list(volume_by_day.values())[0]

@@ -47,6 +47,25 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     }).toList();
   }
 
+  List<double> _rhythmValues(Map<String, dynamic> summary) {
+    final byDay = <String, double>{
+      for (final item
+          in (summary['volume_by_day'] as List? ?? const []).cast<Map>())
+        item['date'].toString(): (item['volume_kg'] as num).toDouble(),
+    };
+    final today = DateTime.now();
+    final values = List<double>.generate(7, (index) {
+      final day = today.subtract(Duration(days: today.weekday - 1 - index));
+      return byDay[DateTime(day.year, day.month, day.day)
+              .toIso8601String()
+              .split('T')
+              .first] ??
+          0;
+    });
+    final max = values.fold<double>(0, (current, value) => value > current ? value : current);
+    return max == 0 ? values : values.map((value) => value / max).toList();
+  }
+
   int get _streak {
     final dates = ref
         .read(workoutSessionsProvider)
@@ -232,7 +251,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(12),
-                          child: RhythmBarChart(),
+                          child: RhythmBarChart(values: _rhythmValues(summary)),
                         ),
                       ),
                       const SizedBox(height: 12),

@@ -22,7 +22,10 @@
   - backend: BodyWeightEntry model, migration, authenticated log/list endpoint
   - frontend: progress provider, log dialog, and real-data line chart
   - tested: all 24 backend tests, Flutter analyzer, Flutter web build
-[TODO] 1.7 Basic stats
+[DONE] 1.7 Basic stats
+  - backend: summary now includes workout_count_by_week and volume_by_day
+  - frontend: weekly rhythm chart uses real volume data from progress summary
+  - tested: all 24 backend tests, Flutter analyzer, Flutter web build
 [TODO] 2.1 PR detection
 [TODO] 2.2 Favorite exercises
 [TODO] 2.3 Freestyle sessions
