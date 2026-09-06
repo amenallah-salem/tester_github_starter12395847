@@ -50,6 +50,7 @@ fi
 
 BACKEND_FILE="$ROOT_DIR/docker-compose.backend.dev.yml"
 FRONTEND_FILE="$ROOT_DIR/docker-compose.frontend.dev.yml"
+ENV_FILE="$ROOT_DIR/.env.dev"
 
 if [ ! -f "$BACKEND_FILE" ]; then
   echo "Error: backend compose file not found: $BACKEND_FILE" >&2
@@ -60,7 +61,17 @@ if [ ! -f "$FRONTEND_FILE" ]; then
   exit 4
 fi
 
-COMPOSE=(docker compose -f "$BACKEND_FILE" -f "$FRONTEND_FILE")
+# NOTE: Docker Compose only auto-loads a file literally named ".env" in the
+# project directory for ${VAR} substitution *inside the compose YAML itself*.
+# The service-level "env_file: .env.dev" only injects variables into the
+# *container's* runtime environment. Passing --env-file here makes any
+# overrides in .env.dev (e.g. a custom POSTGRES_PASSWORD) apply consistently
+# to both the compose-time substitution and the container environment.
+COMPOSE=(docker compose)
+if [ -f "$ENV_FILE" ]; then
+  COMPOSE+=(--env-file "$ENV_FILE")
+fi
+COMPOSE+=(-f "$BACKEND_FILE" -f "$FRONTEND_FILE")
 
 echo "Using files:"
 echo "  $BACKEND_FILE"
