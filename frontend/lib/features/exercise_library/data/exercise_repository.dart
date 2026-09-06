@@ -22,10 +22,18 @@ class ExerciseRepository {
       if (bodyPart != null && bodyPart.isNotEmpty) 'body_part': bodyPart,
     };
     // Fetch the library from the backend API once and expose as a single-event stream.
+    // On failure (network error, API down, CORS, etc.) fall back to the bundled
+    // starter list so the screen still shows something usable.
     return Stream.fromFuture(
-      ApiClient.I.fetchLibraryExercises(params: params).then(
+      ApiClient.I
+          .fetchLibraryExercises(params: params)
+          .then(
             (list) => list.map((m) => _fromApi(m)).toList(growable: false),
-          ),
+          )
+          .catchError((Object error, StackTrace stackTrace) {
+        debugPrint('Unable to load exercise library from API: $error');
+        return _webExercises;
+      }),
     );
   }
 
