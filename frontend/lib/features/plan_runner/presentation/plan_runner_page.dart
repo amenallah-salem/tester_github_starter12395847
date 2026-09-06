@@ -41,6 +41,8 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   final List<Map<String, Object?>> _loggedSets = [];
   final _weightController = TextEditingController();
   late final DateTime _sessionStartedAt;
+  String? _remoteSessionId;
+  bool _loggingSet = false;
 
   PlanExercise get _ex => _exercises[_exIndex];
 
@@ -163,17 +165,25 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     }
   }
 
-  void _doneSet() {
+  Future<void> _doneSet() async {
     if (_finished) return;
     final completedSet = _setIndex + 1;
     final weight = double.tryParse(_weightController.text.trim());
     if (weight != null && weight < 0) return;
-    _loggedSets.add({
+    final completed = <String, Object?>{
       'exercise': _ex.name,
       'set': completedSet,
       'reps': _repsAdj,
       'weight': weight,
-    });
+    };
+    setState(() => _loggingSet = true);
+    try {
+      await _logSetRemotely(completed);
+    } finally {
+      if (mounted) setState(() => _loggingSet = false);
+    }
+    if (!mounted) return;
+    _loggedSets.add(completed);
     setState(() {
       if (_phase == _Phase.work) {
         _enterRest();
@@ -183,6 +193,36 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     });
     final s = ref.read(coachingStringsProvider);
     _coach = s.setDoneCue(completedSet, _setIndex);
+  }
+
+  Future<void> _logSetRemotely(Map<String, Object?> set) async {
+    if (ApiClient.I.accessToken == null) return;
+    try {
+      _remoteSessionId ??= (await ApiClient.I.createWorkout(
+        name: (ref.read(planNotifierProvider).value ?? samplePlan)
+            .todaySession
+            .dayLabel,
+        notes: 'Workout in progress.',
+      ))['id']?.toString();
+      final sessionId = _remoteSessionId;
+      if (sessionId == null) {
+        throw StateError('The workout session could not be created.');
+      }
+      await ApiClient.I.logWorkoutMetric(
+        sessionId: sessionId,
+        exerciseName: set['exercise']! as String,
+        setNumber: set['set']! as int,
+        reps: set['reps']! as int,
+        weightKg: set['weight'] as double?,
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Set was not saved: $error')),
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<void> _skip() async {
@@ -245,6 +285,13 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   Future<void> _persistWorkout(DateTime finishedAt) async {
     if (ApiClient.I.accessToken == null) return;
     try {
+      if (_remoteSessionId != null) {
+        await ApiClient.I.finishWorkout(
+          sessionId: _remoteSessionId!,
+          finishedAt: finishedAt,
+        );
+        return;
+      }
       final plan = ref.read(planNotifierProvider).value ?? samplePlan;
       final session = await ApiClient.I.createWorkout(
         name: plan.todaySession.dayLabel,
@@ -418,7 +465,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
             ),
             const SizedBox(height: 10),
             FilledButton(
-              onPressed: _doneSet,
+              onPressed: _loggingSet ? null : _doneSet,
               child: Text(strings.doneSet),
             ),
             const SizedBox(height: 10),

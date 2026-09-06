@@ -153,6 +153,34 @@ class APITests(APITestCase):
         })
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
+    def test_session_log_metric_creates_a_set(self):
+        session = WorkoutSession.objects.create(user=self.user, name='Leg Day')
+
+        resp = self.client.post(
+            f'/api/sessions/{session.id}/log-metric/',
+            {
+                'exercise_name': 'Squat',
+                'set_number': 1,
+                'reps': 8,
+                'weight_kg': 80,
+            },
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(session.metrics.count(), 1)
+        self.assertEqual(resp.data['reps'], 8)
+
+    def test_session_log_metric_requires_exercise_name(self):
+        session = WorkoutSession.objects.create(user=self.user, name='Leg Day')
+
+        resp = self.client.post(
+            f'/api/sessions/{session.id}/log-metric/',
+            {'set_number': 1, 'reps': 8},
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('exercise_name', resp.data)
+
     def test_metric_summary_is_scoped_and_derived(self):
         session = WorkoutSession.objects.create(user=self.user, name='Strength')
         exercise = Exercise.objects.create(user=self.user, name='Squat')

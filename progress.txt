@@ -10,7 +10,10 @@
   - backend: latest-set lookup endpoint scoped to the current user
   - frontend: today's weekday assignments hydrate the runner; last logged weight prefills each exercise
   - tested: all 19 backend tests, Flutter analyzer, Flutter web build
-[TODO] 1.4 Set logging
+[DONE] 1.4 Set logging
+  - backend: log-metric endpoint tests cover creating a set and missing exercise failure
+  - frontend: each completed set posts immediately; remote session is finalized on workout completion
+  - tested: all 21 backend tests, Flutter analyzer, Flutter web build
 [TODO] 1.5 Reschedule a day
 [TODO] 1.6 Body-weight tracking
 [TODO] 1.7 Basic stats
