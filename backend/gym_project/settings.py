@@ -13,6 +13,9 @@ ALLOWED_HOSTS = [host.strip() for host in os.getenv(
 ).split(',') if host.strip()]
 
 INSTALLED_APPS = [
+    # Must be listed before django.contrib.admin so it can override the
+    # built-in admin templates/static assets.
+    'unfold',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -27,6 +30,72 @@ INSTALLED_APPS = [
     # Project apps
     'gym_api',
 ]
+
+# Admin theme (django-unfold). Kept minimal/functional rather than
+# heavily branded — see backend/gym_api/admin.py for the actual
+# ModelAdmin configuration this skins.
+UNFOLD = {
+    'SITE_TITLE': 'WELLAURA Admin',
+    'SITE_HEADER': 'WELLAURA',
+    'SITE_SYMBOL': 'fitness_center',
+    'SHOW_HISTORY': True,
+    'SHOW_VIEW_ON_SITE': True,
+    'SIDEBAR': {
+        'show_search': True,
+        'navigation': [
+            {
+                'title': 'Content',
+                'items': [
+                    {
+                        'title': 'Exercise library',
+                        'icon': 'exercise',
+                        'link': '/admin/gym_api/exercise/',
+                    },
+                    {
+                        'title': 'Plans',
+                        'icon': 'calendar_month',
+                        'link': '/admin/gym_api/plan/',
+                    },
+                ],
+            },
+            {
+                'title': 'People',
+                'items': [
+                    {
+                        'title': 'Users',
+                        'icon': 'person',
+                        'link': '/admin/auth/user/',
+                    },
+                    {
+                        'title': 'Profiles',
+                        'icon': 'badge',
+                        'link': '/admin/gym_api/profile/',
+                    },
+                ],
+            },
+            {
+                'title': 'Activity',
+                'items': [
+                    {
+                        'title': 'Workout sessions',
+                        'icon': 'exercise',
+                        'link': '/admin/gym_api/workoutsession/',
+                    },
+                    {
+                        'title': 'Progress metrics',
+                        'icon': 'monitoring',
+                        'link': '/admin/gym_api/progressmetric/',
+                    },
+                    {
+                        'title': 'Body weight log',
+                        'icon': 'monitor_weight',
+                        'link': '/admin/gym_api/bodyweightentry/',
+                    },
+                ],
+            },
+        ],
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -34,6 +34,8 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
+    volumes:
+      - media_data:/app/media
     ports:
       - "8000:8000"
     depends_on:
@@ -45,6 +47,7 @@ services:
 
 volumes:
   postgres_data:
+  media_data:
 
 networks:
   gym_network:

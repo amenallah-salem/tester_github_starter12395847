@@ -114,6 +114,15 @@ class ExerciseMinimalSerializer(serializers.ModelSerializer):
 
 class ExerciseSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(read_only=True)
+    # Either upload a file (video/animation) or set a plain link
+    # (video_url/animation_url) — both are writable through the API. On
+    # output, an uploaded file takes priority over the link field, so
+    # callers only ever need to read one URL regardless of which the
+    # exercise was authored with (see to_representation below).
+    video = serializers.FileField(required=False, allow_null=True)
+    animation = serializers.FileField(required=False, allow_null=True)
+    video_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
+    animation_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
     alternatives_detail = ExerciseMinimalSerializer(source='alternatives', many=True, read_only=True)
     progression_exercises_detail = ExerciseMinimalSerializer(
         source='progression_exercises', many=True, read_only=True,
@@ -131,7 +140,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
             'instructions', 'setup', 'execution', 'breathing', 'common_mistakes',
             'alternatives', 'progression_exercises', 'regression_exercises',
             'alternatives_detail', 'progression_exercises_detail', 'regression_exercises_detail',
-            'video_url', 'animation_url', 'image',
+            'video_url', 'animation_url', 'video', 'animation', 'image',
             'target_sets', 'target_reps', 'target_weight_kg',
             'order', 'is_library', 'created_at',
         ]
@@ -145,11 +154,21 @@ class ExerciseSerializer(serializers.ModelSerializer):
             'alternatives': {'required': False},
             'progression_exercises': {'required': False},
             'regression_exercises': {'required': False},
-            'video_url': {'required': False, 'allow_null': True},
-            'animation_url': {'required': False, 'allow_null': True},
             'image': {'required': False, 'allow_null': True},
         }
 
+    def _absolute_or_raw_url(self, file_field, fallback_url):
+        if file_field:
+            request = self.context.get('request')
+            url = file_field.url
+            return request.build_absolute_uri(url) if request else url
+        return fallback_url
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['video_url'] = self._absolute_or_raw_url(instance.video, instance.video_url)
+        data['animation_url'] = self._absolute_or_raw_url(instance.animation, instance.animation_url)
+        return data
 
     def validate_plan(self, plan):
         user = self.context['request'].user

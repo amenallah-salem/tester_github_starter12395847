@@ -212,10 +212,16 @@ class Exercise(models.Model):
     progression_exercises = models.ManyToManyField('self', blank=True, symmetrical=False, related_name='progression_for')
     regression_exercises = models.ManyToManyField('self', blank=True, symmetrical=False, related_name='regression_for')
 
+    # External links (e.g. a YouTube demo) — kept for exercises that only
+    # ever had a link, never an uploaded file.
     video_url = models.URLField(blank=True, null=True)
     animation_url = models.URLField(blank=True, null=True)
     # Image illustrating the exercise (auto-generated if not provided)
     image = models.ImageField(upload_to='exercises/', blank=True, null=True)
+    # Directly uploaded demo video / looping form animation. Preferred over
+    # the *_url fields above when both are present (see ExerciseSerializer).
+    video = models.FileField(upload_to='exercises/videos/', blank=True, null=True)
+    animation = models.FileField(upload_to='exercises/animations/', blank=True, null=True)
 
     # Preserve original targets for per-user plan exercises
     target_sets = models.PositiveIntegerField(default=3, validators=[MinValueValidator(1)])
@@ -394,6 +400,7 @@ class Match(models.Model):
             models.UniqueConstraint(fields=['user_low', 'user_high'], name='unique_gym_bro_match_pair'),
         ]
         ordering = ['-created_at']
+        verbose_name_plural = 'Matches'
 
     def __str__(self):
         return f'Match({self.user_low_id}, {self.user_high_id})'
