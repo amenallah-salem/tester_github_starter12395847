@@ -7,6 +7,7 @@ from rest_framework import serializers
 from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
     WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
+    Swipe, Match, GymBroMessage,
 )
 
 
@@ -53,6 +54,54 @@ class ProfileSerializer(serializers.ModelSerializer):
         if invalid:
             raise serializers.ValidationError(f'Invalid goal(s): {invalid}')
         return value
+
+
+class SwipeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Swipe
+        fields = ['id', 'to_user', 'direction', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate_to_user(self, value):
+        request_user = self.context['request'].user
+        if value.id == request_user.id:
+            raise serializers.ValidationError("You can't swipe on your own profile.")
+        return value
+
+    def validate_direction(self, value):
+        if value not in (Swipe.LIKE, Swipe.PASS):
+            raise serializers.ValidationError('direction must be "like" or "pass".')
+        return value
+
+
+class GymBroMessageSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)
+
+    class Meta:
+        model = GymBroMessage
+        fields = ['id', 'match', 'sender', 'text', 'created_at']
+        read_only_fields = ['id', 'match', 'sender', 'created_at']
+
+    def validate_text(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Message text cannot be empty.')
+        return value
+
+
+class MatchSerializer(serializers.ModelSerializer):
+    """A Gym Bro match, including the *other* participant's profile."""
+    profile = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Match
+        fields = ['id', 'profile', 'created_at']
+
+    def get_profile(self, obj):
+        request_user = self.context['request'].user
+        other = obj.other_user(request_user)
+        profile, _ = Profile.objects.get_or_create(user=other)
+        return ProfileSerializer(profile, context=self.context).data
 
 
 class ExerciseSerializer(serializers.ModelSerializer):

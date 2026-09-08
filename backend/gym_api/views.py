@@ -1,19 +1,22 @@
 """
 REST views for the Gym Planner API.
 """
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, mixins
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.db import connections, models, transaction
-from django.db.models import F, Max, Sum
+from django.db.models import F, Max, Sum, Q
 from django.db.models.functions import TruncWeek
 from django.db.utils import OperationalError
+from django.shortcuts import get_object_or_404
 
 from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
     WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
+    Swipe, Match, GymBroMessage,
 )
 from .serializers import (
     ProfileSerializer,
@@ -28,6 +31,9 @@ from .serializers import (
     PlanDaySerializer,
     BodyWeightEntrySerializer,
     FavoriteExerciseSerializer,
+    SwipeSerializer,
+    MatchSerializer,
+    GymBroMessageSerializer,
 )
 
 
@@ -116,6 +122,94 @@ class ProfileViewSet(viewsets.ModelViewSet):
         profile, _ = Profile.objects.get_or_create(user=request.user)
         serializer = self.get_serializer(profile)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='discover')
+    def discover(self, request):
+        """GET /profiles/discover – Gym Bro candidates (GB-2).
+
+        Excludes the requester, anyone already swiped on, and profiles that
+        haven't finished the Gym Bro fields (see Profile.has_completed_gym_bro_profile).
+        """
+        user = request.user
+        already_swiped_ids = Swipe.objects.filter(from_user=user).values_list('to_user_id', flat=True)
+        candidates = (
+            Profile.objects
+            .exclude(user=user)
+            .exclude(user_id__in=already_swiped_ids)
+            .select_related('user')
+            .order_by('-created_at')
+        )
+        completed = [p for p in candidates if p.has_completed_gym_bro_profile()][:50]
+        serializer = self.get_serializer(completed, many=True)
+        return Response(serializer.data)
+
+
+class SwipeViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """POST /swipes/ – record a like/pass and detect mutual matches (GB-3)."""
+    serializer_class = SwipeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Swipe.objects.none()
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        to_user = serializer.validated_data['to_user']
+        direction = serializer.validated_data['direction']
+
+        with transaction.atomic():
+            swipe, _ = Swipe.objects.update_or_create(
+                from_user=request.user,
+                to_user=to_user,
+                defaults={'direction': direction},
+            )
+            match = None
+            if direction == Swipe.LIKE:
+                mutual = Swipe.objects.filter(
+                    from_user=to_user, to_user=request.user, direction=Swipe.LIKE,
+                ).exists()
+                if mutual:
+                    low_id, high_id = Match.ordered_pair(request.user.id, to_user.id)
+                    match, _ = Match.objects.get_or_create(
+                        user_low_id=low_id, user_high_id=high_id,
+                    )
+
+        data = SwipeSerializer(swipe, context={'request': request}).data
+        data['matched'] = match is not None
+        data['match_id'] = str(match.id) if match else None
+        return Response(data, status=status.HTTP_201_CREATED)
+
+
+class MatchViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    """List/retrieve Gym Bro matches and their chat messages (GB-4)."""
+    serializer_class = MatchSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Match.objects.filter(Q(user_low=user) | Q(user_high=user))
+
+    def get_object(self):
+        # Deliberately look up against the *unfiltered* Match table so an
+        # unauthorized user gets 403 (not part of the match) rather than 404
+        # (which would leak whether the match id even exists).
+        match = get_object_or_404(Match, pk=self.kwargs['pk'])
+        if not match.has_participant(self.request.user):
+            raise PermissionDenied('You are not part of this match.')
+        return match
+
+    @action(detail=True, methods=['get', 'post'], url_path='messages')
+    def messages(self, request, pk=None):
+        match = self.get_object()
+        if request.method == 'GET':
+            qs = match.messages.select_related('sender').all()
+            return Response(GymBroMessageSerializer(qs, many=True).data)
+
+        serializer = GymBroMessageSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        message = serializer.save(match=match, sender=request.user)
+        return Response(
+            GymBroMessageSerializer(message).data, status=status.HTTP_201_CREATED,
+        )
 
 
 class PlanViewSet(viewsets.ModelViewSet):

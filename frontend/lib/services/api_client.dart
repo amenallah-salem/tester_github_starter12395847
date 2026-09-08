@@ -544,6 +544,79 @@ class ApiClient {
     return _jsonObject(response, 'subscription upgrade');
   }
 
+  // Gym Bro discovery feed (GB-2): candidate profiles not yet swiped on.
+  Future<List<Map<String, dynamic>>> fetchGymBroDiscovery() async {
+    final response = await _send(
+      () => http.get(_uri('/profiles/discover/'), headers: _headers()),
+      method: 'GET',
+      path: '/profiles/discover/',
+    );
+    final data = jsonDecode(response.body);
+    return (data as List? ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  // Record a like/pass (GB-3). Returns {matched, match_id, ...}.
+  Future<Map<String, dynamic>> sendGymBroSwipe({
+    required String toUserId,
+    required bool like,
+  }) async {
+    final response = await _send(
+      () => http.post(
+        _uri('/swipes/'),
+        headers: _headers(json: true),
+        body: jsonEncode({
+          'to_user': toUserId,
+          'direction': like ? 'like' : 'pass',
+        }),
+      ),
+      method: 'POST',
+      path: '/swipes/',
+    );
+    return _jsonObject(response, 'swipe');
+  }
+
+  Future<List<Map<String, dynamic>>> fetchGymBroMatches() async {
+    final data = _jsonObject(
+      await _send(
+        () => http.get(_uri('/gym-bro/matches/'), headers: _headers()),
+        method: 'GET',
+        path: '/gym-bro/matches/',
+      ),
+      'matches',
+    );
+    final list = (data['results'] as List?) ?? const [];
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchGymBroMessages(String matchId) async {
+    final response = await _send(
+      () => http.get(
+        _uri('/gym-bro/matches/$matchId/messages/'),
+        headers: _headers(),
+      ),
+      method: 'GET',
+      path: '/gym-bro/matches/$matchId/messages/',
+    );
+    final data = jsonDecode(response.body);
+    return (data as List? ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> sendGymBroMessage({
+    required String matchId,
+    required String text,
+  }) async {
+    final response = await _send(
+      () => http.post(
+        _uri('/gym-bro/matches/$matchId/messages/'),
+        headers: _headers(json: true),
+        body: jsonEncode({'text': text}),
+      ),
+      method: 'POST',
+      path: '/gym-bro/matches/$matchId/messages/',
+    );
+    return _jsonObject(response, 'message');
+  }
+
   Map<String, dynamic> _jsonObject(http.Response response, String operation) {
     try {
       final data = jsonDecode(response.body);

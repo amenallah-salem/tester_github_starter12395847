@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from .models import (
     Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription,
-    FavoriteExercise,
+    FavoriteExercise, Swipe, Match, GymBroMessage,
 )
 
 
@@ -363,3 +363,117 @@ class APITests(APITestCase):
         self.assertIn('username', resp.data)
         self.assertIn('email', resp.data)
         self.assertIn('password', resp.data)
+
+
+class GymBroTests(APITestCase):
+    def setUp(self):
+        self.user_a = User.objects.create_user('bro_a', 'a@example.com', 'pass12345')
+        self.user_b = User.objects.create_user('bro_b', 'b@example.com', 'pass12345')
+        self.user_c = User.objects.create_user('bro_c', 'c@example.com', 'pass12345')
+        for user, bio in ((self.user_a, 'A bio'), (self.user_b, 'B bio'), (self.user_c, 'C bio')):
+            Profile.objects.create(user=user, bio=bio, training_goals=['strength'])
+
+    def _login(self, user):
+        self.client.force_authenticate(user=user)
+
+    def test_discover_excludes_self_and_incomplete_profiles(self):
+        incomplete_user = User.objects.create_user('incomplete', 'inc@example.com', 'pass12345')
+        Profile.objects.create(user=incomplete_user)  # no bio/goals
+        self._login(self.user_a)
+        resp = self.client.get('/api/profiles/discover/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        usernames = {row['user']['username'] for row in resp.data}
+        self.assertNotIn('bro_a', usernames)
+        self.assertNotIn('incomplete', usernames)
+        self.assertIn('bro_b', usernames)
+
+    def test_discover_excludes_already_swiped(self):
+        self._login(self.user_a)
+        self.client.post('/api/swipes/', {'to_user': self.user_b.id, 'direction': 'pass'}, format='json')
+        resp = self.client.get('/api/profiles/discover/')
+        usernames = {row['user']['username'] for row in resp.data}
+        self.assertNotIn('bro_b', usernames)
+        self.assertIn('bro_c', usernames)
+
+    def test_swipe_cannot_target_self(self):
+        self._login(self.user_a)
+        resp = self.client.post('/api/swipes/', {'to_user': self.user_a.id, 'direction': 'like'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_one_sided_like_does_not_match(self):
+        self._login(self.user_a)
+        resp = self.client.post('/api/swipes/', {'to_user': self.user_b.id, 'direction': 'like'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(resp.data['matched'])
+        self.assertEqual(Match.objects.count(), 0)
+
+    def test_mutual_like_creates_match(self):
+        self._login(self.user_a)
+        self.client.post('/api/swipes/', {'to_user': self.user_b.id, 'direction': 'like'}, format='json')
+        self._login(self.user_b)
+        resp = self.client.post('/api/swipes/', {'to_user': self.user_a.id, 'direction': 'like'}, format='json')
+        self.assertTrue(resp.data['matched'])
+        self.assertEqual(Match.objects.count(), 1)
+
+        # Re-swiping the same pair must not create a duplicate match.
+        resp2 = self.client.post('/api/swipes/', {'to_user': self.user_a.id, 'direction': 'like'}, format='json')
+        self.assertTrue(resp2.data['matched'])
+        self.assertEqual(Match.objects.count(), 1)
+
+    def test_swipe_is_idempotent_per_pair(self):
+        self._login(self.user_a)
+        self.client.post('/api/swipes/', {'to_user': self.user_b.id, 'direction': 'like'}, format='json')
+        self.client.post('/api/swipes/', {'to_user': self.user_b.id, 'direction': 'pass'}, format='json')
+        self.assertEqual(Swipe.objects.filter(from_user=self.user_a, to_user=self.user_b).count(), 1)
+        swipe = Swipe.objects.get(from_user=self.user_a, to_user=self.user_b)
+        self.assertEqual(swipe.direction, 'pass')
+
+    def test_matches_list_shows_other_users_profile(self):
+        self._login(self.user_a)
+        self.client.post('/api/swipes/', {'to_user': self.user_b.id, 'direction': 'like'}, format='json')
+        self._login(self.user_b)
+        self.client.post('/api/swipes/', {'to_user': self.user_a.id, 'direction': 'like'}, format='json')
+
+        resp = self.client.get('/api/gym-bro/matches/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['results']), 1)
+        self.assertEqual(resp.data['results'][0]['profile']['user']['username'], 'bro_a')
+
+    def test_chat_send_and_list_messages(self):
+        self._login(self.user_a)
+        self.client.post('/api/swipes/', {'to_user': self.user_b.id, 'direction': 'like'}, format='json')
+        self._login(self.user_b)
+        match_resp = self.client.post('/api/swipes/', {'to_user': self.user_a.id, 'direction': 'like'}, format='json')
+        match_id = match_resp.data['match_id']
+
+        resp = self.client.post(f'/api/gym-bro/matches/{match_id}/messages/', {'text': 'Hey!'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+        self._login(self.user_a)
+        resp = self.client.get(f'/api/gym-bro/matches/{match_id}/messages/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data), 1)
+        self.assertEqual(resp.data[0]['text'], 'Hey!')
+
+    def test_chat_rejects_unauthorized_user(self):
+        self._login(self.user_a)
+        self.client.post('/api/swipes/', {'to_user': self.user_b.id, 'direction': 'like'}, format='json')
+        self._login(self.user_b)
+        match_resp = self.client.post('/api/swipes/', {'to_user': self.user_a.id, 'direction': 'like'}, format='json')
+        match_id = match_resp.data['match_id']
+
+        self._login(self.user_c)
+        resp = self.client.get(f'/api/gym-bro/matches/{match_id}/messages/')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        resp = self.client.post(f'/api/gym-bro/matches/{match_id}/messages/', {'text': 'hi'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_empty_message_rejected(self):
+        self._login(self.user_a)
+        self.client.post('/api/swipes/', {'to_user': self.user_b.id, 'direction': 'like'}, format='json')
+        self._login(self.user_b)
+        match_resp = self.client.post('/api/swipes/', {'to_user': self.user_a.id, 'direction': 'like'}, format='json')
+        match_id = match_resp.data['match_id']
+
+        resp = self.client.post(f'/api/gym-bro/matches/{match_id}/messages/', {'text': '   '}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)

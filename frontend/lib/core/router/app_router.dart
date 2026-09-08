@@ -26,6 +26,9 @@ import 'package:gym_app/features/biomechanics/presentation/form_vault_page.dart'
 import 'package:gym_app/features/biomechanics/presentation/replay_3d_page.dart';
 import 'package:gym_app/features/coach/presentation/coach_page.dart';
 import 'package:gym_app/features/gym_bro/presentation/gym_bro_settings_page.dart';
+import 'package:gym_app/features/gym_bro/presentation/gym_bro_discover_page.dart';
+import 'package:gym_app/features/gym_bro/presentation/gym_bro_matches_page.dart';
+import 'package:gym_app/features/gym_bro/presentation/gym_bro_chat_page.dart';
 import 'package:gym_app/features/progress/domain/workout_session.dart';
 import 'package:gym_app/core/router/redirect.dart';
 import 'package:gym_app/core/state/app_state.dart';
@@ -120,6 +123,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/gym-bro/settings',
         builder: (context, state) => const GymBroSettingsPage(),
+      ),
+      GoRoute(
+        path: '/gym-bro/discover',
+        builder: (context, state) => const GymBroDiscoverPage(),
+      ),
+      GoRoute(
+        path: '/gym-bro/matches',
+        builder: (context, state) => const GymBroMatchesPage(),
+      ),
+      GoRoute(
+        path: '/gym-bro/matches/:id/chat',
+        builder: (context, state) => GymBroChatPage(
+          matchId: state.pathParameters['id']!,
+          title: state.extra is String ? state.extra as String : null,
+        ),
       ),
       GoRoute(
         path: '/replay/:id',

@@ -17,6 +17,8 @@ from .views import (
     RegisterView,
     SubscriptionViewSet,
     HealthCheckView,
+    SwipeViewSet,
+    MatchViewSet,
 )
 
 router = DefaultRouter()
@@ -29,6 +31,8 @@ router.register(r'metrics', ProgressMetricViewSet, basename='metric')
 router.register(r'body-weight', BodyWeightEntryViewSet, basename='body-weight')
 router.register(r'favorites', FavoriteExerciseViewSet, basename='favorite')
 router.register(r'billing', SubscriptionViewSet, basename='subscription')
+router.register(r'swipes', SwipeViewSet, basename='swipe')
+router.register(r'gym-bro/matches', MatchViewSet, basename='gym-bro-match')
 
 urlpatterns = [
     # Unauthenticated readiness probe (used by docker.dev.sh / orchestrators)

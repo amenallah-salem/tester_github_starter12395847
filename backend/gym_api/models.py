@@ -335,3 +335,72 @@ class FavoriteExercise(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['user', 'exercise'], name='unique_user_favorite_exercise'),
         ]
+
+
+class Swipe(models.Model):
+    """A like/pass recorded by one user against another's Gym Bro profile (GB-3)."""
+    LIKE = 'like'
+    PASS = 'pass'
+    DIRECTION_CHOICES = [(LIKE, 'Like'), (PASS, 'Pass')]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gym_bro_swipes_made')
+    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gym_bro_swipes_received')
+    direction = models.CharField(max_length=10, choices=DIRECTION_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'gym_bro_swipes'
+        constraints = [
+            models.UniqueConstraint(fields=['from_user', 'to_user'], name='unique_gym_bro_swipe_pair'),
+        ]
+
+    def __str__(self):
+        return f'{self.from_user_id} {self.direction} {self.to_user_id}'
+
+
+class Match(models.Model):
+    """A mutual like between two users (GB-3). Also doubles as the chat thread."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # Stored as an ordered pair (user_low.id < user_high.id) so a mutual like
+    # can never create two rows for the same pair of users.
+    user_low = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gym_bro_matches_low')
+    user_high = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gym_bro_matches_high')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'gym_bro_matches'
+        constraints = [
+            models.UniqueConstraint(fields=['user_low', 'user_high'], name='unique_gym_bro_match_pair'),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Match({self.user_low_id}, {self.user_high_id})'
+
+    @staticmethod
+    def ordered_pair(user_a_id, user_b_id):
+        return (user_a_id, user_b_id) if user_a_id < user_b_id else (user_b_id, user_a_id)
+
+    def has_participant(self, user):
+        return user.id in (self.user_low_id, self.user_high_id)
+
+    def other_user(self, user):
+        return self.user_high if user.id == self.user_low_id else self.user_low
+
+
+class GymBroMessage(models.Model):
+    """A persisted chat message within a Gym Bro match (GB-4)."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    match = models.ForeignKey(Match, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gym_bro_messages')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'gym_bro_messages'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.sender_id}@{self.match_id}: {self.text[:30]}'

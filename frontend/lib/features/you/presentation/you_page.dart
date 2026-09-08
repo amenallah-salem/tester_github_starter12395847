@@ -169,13 +169,33 @@ class _YouPageState extends ConsumerState<YouPage> {
           const SizedBox(height: 12),
           _SectionCard(
             title: 'Gym Bro',
-            child: _SettingRow(
-              icon: Icons.diversity_3_outlined,
-              label: 'Training profile & matching',
-              trailing: TextButton(
-                onPressed: () => context.push('/gym-bro/settings'),
-                child: const Text('Edit'),
-              ),
+            child: Column(
+              children: [
+                _SettingRow(
+                  icon: Icons.diversity_3_outlined,
+                  label: 'Training profile & matching',
+                  trailing: TextButton(
+                    onPressed: () => context.push('/gym-bro/settings'),
+                    child: const Text('Edit'),
+                  ),
+                ),
+                _SettingRow(
+                  icon: Icons.swipe_outlined,
+                  label: 'Discover gym bros',
+                  trailing: TextButton(
+                    onPressed: () => context.push('/gym-bro/discover'),
+                    child: const Text('Browse'),
+                  ),
+                ),
+                _SettingRow(
+                  icon: Icons.forum_outlined,
+                  label: 'Your matches',
+                  trailing: TextButton(
+                    onPressed: () => context.push('/gym-bro/matches'),
+                    child: const Text('Open'),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
