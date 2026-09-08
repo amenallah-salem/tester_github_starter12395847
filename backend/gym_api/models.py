@@ -56,6 +56,8 @@ class Profile(models.Model):
     # collected or stored for this feature (see GB-1 privacy note).
     location = models.CharField(max_length=100, blank=True)
 
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, max_length=255)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

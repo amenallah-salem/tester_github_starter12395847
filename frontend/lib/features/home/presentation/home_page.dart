@@ -14,6 +14,7 @@ class HomePage extends StatelessWidget {
   static const _tabs = [
     _Tab('/', Icons.home_outlined, 'Home'),
     _Tab('/explorer', Icons.fitness_center_outlined, 'Workouts'),
+    _Tab('/gym-bro', Icons.diversity_3_outlined, 'Gym Bro'),
     _Tab('/progress', Icons.show_chart_outlined, 'Progress'),
     _Tab('/you', Icons.person_outline, 'Profile'),
   ];

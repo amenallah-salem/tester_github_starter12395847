@@ -41,6 +41,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             'id', 'user', 'display_name', 'created_at', 'updated_at',
             'onboarding_completed', 'onboarding_completed_at', 'locale', 'country',
             'bio', 'training_goals', 'experience_level', 'availability', 'location',
+            'avatar',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

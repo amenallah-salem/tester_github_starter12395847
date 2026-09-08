@@ -7,8 +7,14 @@ import 'package:gym_app/features/gym_bro/domain/gym_bro_profile.dart';
 import 'package:gym_app/services/api_client.dart';
 
 /// GB-2/GB-3: Gym Bro discovery feed with swipe-to-like/pass.
+///
+/// When [isTab] is true this renders as a bottom-nav destination (no back
+/// button; the leading action opens matches/messages instead) rather than a
+/// page pushed on top of another screen.
 class GymBroDiscoverPage extends StatefulWidget {
-  const GymBroDiscoverPage({super.key});
+  const GymBroDiscoverPage({this.isTab = false, super.key});
+
+  final bool isTab;
 
   @override
   State<GymBroDiscoverPage> createState() => _GymBroDiscoverPageState();
@@ -98,11 +104,27 @@ class _GymBroDiscoverPageState extends State<GymBroDiscoverPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Discover'),
-        leading: IconButton(
-          onPressed: () => context.canPop() ? context.pop() : context.go('/you'),
-          icon: const Icon(Icons.arrow_back),
-        ),
+        title: Text(widget.isTab ? 'Gym Bro' : 'Discover'),
+        leading: widget.isTab
+            ? IconButton(
+                tooltip: 'Messages',
+                onPressed: () => context.push('/gym-bro/matches'),
+                icon: const Icon(Icons.forum_outlined),
+              )
+            : IconButton(
+                onPressed: () =>
+                    context.canPop() ? context.pop() : context.go('/you'),
+                icon: const Icon(Icons.arrow_back),
+              ),
+        actions: widget.isTab
+            ? [
+                IconButton(
+                  tooltip: 'Gym Bro settings',
+                  onPressed: () => context.push('/gym-bro/settings'),
+                  icon: const Icon(Icons.tune),
+                ),
+              ]
+            : null,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

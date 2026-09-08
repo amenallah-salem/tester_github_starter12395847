@@ -31,7 +31,6 @@ import 'package:gym_app/features/gym_bro/presentation/gym_bro_settings_page.dart
 import 'package:gym_app/features/gym_bro/presentation/gym_bro_discover_page.dart';
 import 'package:gym_app/features/gym_bro/presentation/gym_bro_matches_page.dart';
 import 'package:gym_app/features/gym_bro/presentation/gym_bro_chat_page.dart';
-import 'package:gym_app/features/gym_bro/presentation/gym_bro_explorer_section.dart';
 import 'package:gym_app/features/progress/domain/workout_session.dart';
 import 'package:gym_app/core/router/redirect.dart';
 import 'package:gym_app/core/state/app_state.dart';
@@ -94,6 +93,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/explorer',
             builder: (context, state) => const ExerciseExplorerPage(),
+          ),
+          // Bottom-nav tab: must live inside the shell so navigation stays.
+          GoRoute(
+            path: '/gym-bro',
+            builder: (context, state) => const GymBroDiscoverPage(isTab: true),
           ),
           GoRoute(
             path: '/plans',
@@ -394,10 +398,6 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
                           : () => context.push('/exercise/${exercise.id}'),
                     ),
                   ),
-              const SizedBox(height: 28),
-              const Divider(),
-              const SizedBox(height: 12),
-              const GymBroExplorerSection(),
             ],
           );
         },

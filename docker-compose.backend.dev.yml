@@ -35,6 +35,7 @@ services:
       DB_PORT: 5432
     volumes:
       - ./backend:/app
+      - ./asserts:/asserts:ro
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:

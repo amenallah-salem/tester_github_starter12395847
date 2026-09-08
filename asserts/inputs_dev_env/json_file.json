@@ -1,0 +1,578 @@
+{
+  "users": [
+    {
+      "id": "alex_strength",
+      "username": "alex_strength",
+      "email": "alex.strength@example.com",
+      "password": "Test12345!",
+      "first_name": "Alex",
+      "last_name": "Martin",
+      "is_staff": false,
+      "is_superuser": false,
+      "profile": {
+        "display_name": "Alex Martin",
+        "bio": "Powerlifting-focused lifter chasing a 200kg deadlift.",
+        "training_goals": ["strength", "hypertrophy"],
+        "experience_level": "intermediate",
+        "availability": "Weekday mornings, Sat afternoons",
+        "location": "Lyon, FR",
+        "onboarding_completed": true,
+        "avatar": "27hzn4yPqIvOsG0_bvnlbR-S4NjRptPLnSfFK88qYVvN2YW9AJ4o-QUQh9C4I9WYYhKqeraHTiCm-m3_lgMA-A_9TzmJs03erlatKUmxolWbPAmsxFfjzOKPNVIG1EZI6OPzbEp3PKk6HpVjkvgNZGci85C-CQX9HRRQ1CcvZZvA-xhkokCixv6KOgPHpMr6.jpeg"
+      },
+      "favorite_exercises": ["barbell_bench_press", "deadlift"],
+      "body_weight_log": [
+        { "weight_kg": 82.4, "logged_at": "2026-08-11T07:00:00Z" },
+        { "weight_kg": 82.0, "logged_at": "2026-08-25T07:00:00Z" },
+        { "weight_kg": 81.6, "logged_at": "2026-09-06T07:00:00Z" }
+      ]
+    },
+    {
+      "id": "sam_cardio",
+      "username": "sam_cardio",
+      "email": "sam.cardio@example.com",
+      "password": "Test12345!",
+      "first_name": "Sam",
+      "last_name": "Okafor",
+      "is_staff": false,
+      "is_superuser": false,
+      "profile": {
+        "display_name": "Sam Okafor",
+        "bio": "Training for a half-marathon, runs most weekday evenings.",
+        "training_goals": ["cardio", "weight_loss"],
+        "experience_level": "beginner",
+        "availability": "Weekday evenings",
+        "location": "Marseille, FR",
+        "onboarding_completed": true,
+        "avatar": "Bex6M98PjuZu5XLzEvj9DzQOqXvaN4f-OyqyNriAhNLqBg1Nwal1CB32zqemOqbYmkt5oHWvR9K5RhAkwo67LY_aT8t7HkhxgRSfWzVFbwxedW4UFo3N7MBQ_2WKdoOqDY1OG42yhDl5aInMmJ4i8JElH_ruNCBjojCggxHJcyjeMXFcE6CWxAwjvB376wqr.jpeg"
+      },
+      "favorite_exercises": ["jump_rope"],
+      "body_weight_log": [
+        { "weight_kg": 68.2, "logged_at": "2026-08-11T07:00:00Z" },
+        { "weight_kg": 67.5, "logged_at": "2026-09-01T07:00:00Z" }
+      ]
+    },
+    {
+      "id": "maria_beginner",
+      "username": "maria_beginner",
+      "email": "maria.beginner@example.com",
+      "password": "Test12345!",
+      "first_name": "Maria",
+      "last_name": "Gomez",
+      "is_staff": false,
+      "is_superuser": false,
+      "profile": {
+        "display_name": "Maria Gomez",
+        "bio": "New to the gym, doing a beginner full-body routine 3x/week.",
+        "training_goals": ["general_fitness"],
+        "experience_level": "beginner",
+        "availability": "Weekend mornings",
+        "location": "Toulouse, FR",
+        "onboarding_completed": true,
+        "avatar": "cP-Oj_bN2WNQns3lYvIG9NJYaBNX9Ghaulvz8ctStnLa10ZuziD88d-Ov3TN-y-pL25cJyy9qBNn5U-hR1U_deqKtUzHcJG_CReedIjZUlOgr9BX-ee16tC6g-R2eTHOMN378mAGOoczDdQUhk3U1OuOaa4ol1nioZoXU0WRHeMb-AuP2tFOxA5t_xROFdOg.jpeg"
+      },
+      "favorite_exercises": [],
+      "body_weight_log": [
+        { "weight_kg": 59.0, "logged_at": "2026-08-18T07:00:00Z" }
+      ]
+    },
+    {
+      "id": "jordan_allrounder",
+      "username": "jordan_allrounder",
+      "email": "jordan.allrounder@example.com",
+      "password": "Test12345!",
+      "first_name": "Jordan",
+      "last_name": "Lee",
+      "is_staff": false,
+      "is_superuser": false,
+      "profile": {
+        "display_name": "Jordan Lee",
+        "bio": "Mixes strength days with easy cardio for general fitness.",
+        "training_goals": ["general_fitness", "cardio"],
+        "experience_level": "intermediate",
+        "availability": "Flexible",
+        "location": "Nantes, FR",
+        "onboarding_completed": true,
+        "avatar": "i0cg5nT4T5Pm52la0Yr26ZV7dXeWYuU9qmh33ag3D_lrgplDxnx_cml8I-Z0wUFw2_IxwCRGB0YjJ8OZKOO7lBiVzIEKRTLLcLHEzshjYJus9Eyj8p-EMMIOdtFcHTk_APsGZDlQLU3QtrH4qFnTxAUFl3bm9lHDp6fZmyyu0rXpoMO3Q4tfm4cYQxVE2p_K.jpeg"
+      },
+      "favorite_exercises": ["pull_up"],
+      "body_weight_log": []
+    },
+    {
+      "id": "chris_coach",
+      "username": "chris_coach",
+      "email": "chris.coach@example.com",
+      "password": "Test12345!",
+      "first_name": "Chris",
+      "last_name": "Dubois",
+      "is_staff": true,
+      "is_superuser": false,
+      "profile": {
+        "display_name": "Chris Dubois",
+        "bio": "In-house coach account used to review test data.",
+        "training_goals": ["strength"],
+        "experience_level": "advanced",
+        "availability": "N/A",
+        "location": "Paris, FR",
+        "onboarding_completed": true,
+        "avatar": "LV7NR4CE1ZceLMyH49QrjG-jbVvb8olCk726HgnlUVFUUHquEzPugUMf3jurDkdFBWyRJ46wsxxfsk0dW69mQbeYYlLKLsbkOvff4acocpqS_apJcovWptdvEq9Myb4RI3PE5i3eXyU2NJiQnsPbFxPy51UBs-yDZ8-Nw0DvMW-v57UZodjDns0Oftgb-VRg.jpeg"
+      },
+      "favorite_exercises": [],
+      "body_weight_log": []
+    }
+  ],
+
+  "exercises": [
+    {
+      "id": "barbell_bench_press",
+      "name": "Barbell Bench Press",
+      "body_part": "Chest",
+      "primary_muscles": ["Chest"],
+      "secondary_muscles": ["Triceps", "Shoulders"],
+      "equipment": ["Barbell", "Bench"],
+      "movement_pattern": "Horizontal Push",
+      "exercise_type": "Compound",
+      "difficulty": "Intermediate",
+      "is_timed": false,
+      "target_sets": 4,
+      "target_reps": 8,
+      "instructions": "Lie on a flat bench, lower the bar to mid-chest, then press up to lockout.",
+      "is_library": true
+    },
+    {
+      "id": "incline_dumbbell_press",
+      "name": "Incline Dumbbell Press",
+      "body_part": "Chest",
+      "primary_muscles": ["Chest"],
+      "secondary_muscles": ["Shoulders", "Triceps"],
+      "equipment": ["Dumbbell", "Bench"],
+      "movement_pattern": "Horizontal Push",
+      "exercise_type": "Compound",
+      "difficulty": "Intermediate",
+      "is_timed": false,
+      "target_sets": 4,
+      "target_reps": 10,
+      "instructions": "On an incline bench, press dumbbells up and slightly inward, then lower under control.",
+      "is_library": true
+    },
+    {
+      "id": "barbell_overhead_press",
+      "name": "Barbell Overhead Press",
+      "body_part": "Shoulders",
+      "primary_muscles": ["Shoulders"],
+      "secondary_muscles": ["Triceps"],
+      "equipment": ["Barbell"],
+      "movement_pattern": "Vertical Push",
+      "exercise_type": "Compound",
+      "difficulty": "Intermediate",
+      "is_timed": false,
+      "target_sets": 4,
+      "target_reps": 8,
+      "instructions": "Press the bar overhead from shoulder height until arms are locked out, then lower with control.",
+      "is_library": true
+    },
+    {
+      "id": "triceps_pushdown",
+      "name": "Triceps Pushdown",
+      "body_part": "Triceps",
+      "primary_muscles": ["Triceps"],
+      "secondary_muscles": [],
+      "equipment": ["Cable Machine"],
+      "movement_pattern": "Isolation",
+      "exercise_type": "Isolation",
+      "difficulty": "Beginner",
+      "is_timed": false,
+      "target_sets": 3,
+      "target_reps": 12,
+      "instructions": "Push the cable attachment down until arms are extended, keeping elbows tucked.",
+      "is_library": true
+    },
+    {
+      "id": "pull_up",
+      "name": "Pull-up",
+      "body_part": "Back",
+      "primary_muscles": ["Back"],
+      "secondary_muscles": ["Biceps", "Forearms"],
+      "equipment": ["Pull-up Bar"],
+      "movement_pattern": "Vertical Pull",
+      "exercise_type": "Bodyweight",
+      "difficulty": "Advanced",
+      "is_timed": false,
+      "target_sets": 4,
+      "target_reps": 8,
+      "instructions": "Hang from the bar and pull your chin above it, then lower with control.",
+      "is_library": true
+    },
+    {
+      "id": "bent_over_barbell_row",
+      "name": "Bent Over Barbell Row",
+      "body_part": "Back",
+      "primary_muscles": ["Back"],
+      "secondary_muscles": ["Biceps", "Traps"],
+      "equipment": ["Barbell"],
+      "movement_pattern": "Horizontal Pull",
+      "exercise_type": "Compound",
+      "difficulty": "Intermediate",
+      "is_timed": false,
+      "target_sets": 4,
+      "target_reps": 8,
+      "instructions": "Hinge forward, row the bar to your lower ribs, and squeeze the shoulder blades together.",
+      "is_library": true
+    },
+    {
+      "id": "barbell_curl",
+      "name": "Barbell Curl",
+      "body_part": "Biceps",
+      "primary_muscles": ["Biceps"],
+      "secondary_muscles": ["Forearms"],
+      "equipment": ["Barbell"],
+      "movement_pattern": "Isolation",
+      "exercise_type": "Isolation",
+      "difficulty": "Beginner",
+      "is_timed": false,
+      "target_sets": 3,
+      "target_reps": 12,
+      "instructions": "Curl the bar up while keeping elbows pinned to your sides, then lower slowly.",
+      "is_library": true
+    },
+    {
+      "id": "barbell_back_squat",
+      "name": "Barbell Back Squat",
+      "body_part": "Quadriceps",
+      "primary_muscles": ["Quadriceps"],
+      "secondary_muscles": ["Glutes", "Hamstrings"],
+      "equipment": ["Barbell", "Squat Rack"],
+      "movement_pattern": "Squat",
+      "exercise_type": "Compound",
+      "difficulty": "Intermediate",
+      "is_timed": false,
+      "target_sets": 4,
+      "target_reps": 8,
+      "instructions": "Squat down until thighs are parallel to the floor, then drive up through the heels.",
+      "is_library": true
+    },
+    {
+      "id": "deadlift",
+      "name": "Deadlift",
+      "body_part": "Back",
+      "primary_muscles": ["Lower Back"],
+      "secondary_muscles": ["Hamstrings", "Glutes", "Traps"],
+      "equipment": ["Barbell"],
+      "movement_pattern": "Hinge",
+      "exercise_type": "Compound",
+      "difficulty": "Advanced",
+      "is_timed": false,
+      "target_sets": 4,
+      "target_reps": 5,
+      "instructions": "Hinge at the hips, keep the bar close to the shins, and stand up tall while keeping a neutral spine.",
+      "is_library": true
+    },
+    {
+      "id": "walking_lunge",
+      "name": "Walking Lunge",
+      "body_part": "Quadriceps",
+      "primary_muscles": ["Quadriceps"],
+      "secondary_muscles": ["Glutes", "Hamstrings"],
+      "equipment": ["Dumbbell"],
+      "movement_pattern": "Lunge",
+      "exercise_type": "Compound",
+      "difficulty": "Intermediate",
+      "is_timed": false,
+      "target_sets": 3,
+      "target_reps": 12,
+      "instructions": "Step forward into a lunge, lower the back knee toward the floor, then push off to the next step.",
+      "is_library": true
+    },
+    {
+      "id": "standing_calf_raise",
+      "name": "Standing Calf Raise",
+      "body_part": "Calves",
+      "primary_muscles": ["Calves"],
+      "secondary_muscles": [],
+      "equipment": ["Machine"],
+      "movement_pattern": "Isolation",
+      "exercise_type": "Isolation",
+      "difficulty": "Beginner",
+      "is_timed": false,
+      "target_sets": 4,
+      "target_reps": 15,
+      "instructions": "Rise onto the toes as high as possible, then lower the heels below the platform.",
+      "is_library": true
+    },
+    {
+      "id": "push_up",
+      "name": "Push-up",
+      "body_part": "Chest",
+      "primary_muscles": ["Chest"],
+      "secondary_muscles": ["Triceps", "Shoulders", "Abdominals"],
+      "equipment": ["Bodyweight"],
+      "movement_pattern": "Horizontal Push",
+      "exercise_type": "Bodyweight",
+      "difficulty": "Beginner",
+      "is_timed": false,
+      "target_sets": 3,
+      "target_reps": 15,
+      "instructions": "Keep a straight body line, lower chest to the floor, and press back up.",
+      "is_library": true
+    },
+    {
+      "id": "front_plank",
+      "name": "Front Plank",
+      "body_part": "Abdominals",
+      "primary_muscles": ["Abdominals"],
+      "secondary_muscles": ["Lower Back"],
+      "equipment": ["Bodyweight"],
+      "movement_pattern": "Core Stabilization",
+      "exercise_type": "Bodyweight",
+      "difficulty": "Beginner",
+      "is_timed": true,
+      "target_sets": 3,
+      "target_reps": 45,
+      "instructions": "Hold a straight body line supported on forearms and toes, bracing the core.",
+      "is_library": true
+    },
+    {
+      "id": "treadmill_running",
+      "name": "Treadmill Running",
+      "body_part": "Cardio",
+      "primary_muscles": ["Full Body"],
+      "secondary_muscles": [],
+      "equipment": ["Treadmill"],
+      "movement_pattern": "Other",
+      "exercise_type": "Cardio",
+      "difficulty": "Beginner",
+      "is_timed": true,
+      "target_sets": 1,
+      "target_reps": 20,
+      "instructions": "Maintain a steady running pace for the target duration, adjusting incline and speed as needed.",
+      "is_library": true
+    },
+    {
+      "id": "jump_rope",
+      "name": "Jump Rope",
+      "body_part": "Cardio",
+      "primary_muscles": ["Calves"],
+      "secondary_muscles": ["Full Body"],
+      "equipment": ["Jump Rope"],
+      "movement_pattern": "Other",
+      "exercise_type": "Cardio",
+      "difficulty": "Beginner",
+      "is_timed": true,
+      "target_sets": 3,
+      "target_reps": 60,
+      "instructions": "Jump rope at a steady rhythm, keeping jumps low and using the wrists to turn the rope.",
+      "is_library": true
+    }
+  ],
+
+  "plans": [
+    {
+      "id": "push_pull_legs",
+      "name": "Push Pull Legs",
+      "description": "Classic 3-way body-part split run across the working week.",
+      "is_active": true,
+      "days": [
+        { "weekday": 0, "exercises": ["barbell_bench_press", "incline_dumbbell_press", "barbell_overhead_press", "triceps_pushdown"] },
+        { "weekday": 2, "exercises": ["pull_up", "bent_over_barbell_row", "barbell_curl"] },
+        { "weekday": 4, "exercises": ["barbell_back_squat", "deadlift", "walking_lunge", "standing_calf_raise"] }
+      ]
+    },
+    {
+      "id": "full_body_beginner",
+      "name": "Full Body Beginner (3-day)",
+      "description": "Beginner-friendly full body routine performed three times a week.",
+      "is_active": true,
+      "days": [
+        { "weekday": 0, "exercises": ["barbell_back_squat", "push_up", "front_plank"] },
+        { "weekday": 2, "exercises": ["walking_lunge", "incline_dumbbell_press", "front_plank"] },
+        { "weekday": 4, "exercises": ["barbell_back_squat", "barbell_overhead_press", "front_plank"] }
+      ]
+    },
+    {
+      "id": "cardio_conditioning",
+      "name": "Cardio Conditioning",
+      "description": "Two weekly conditioning sessions mixing steady-state and interval-style cardio.",
+      "is_active": true,
+      "days": [
+        { "weekday": 1, "exercises": ["treadmill_running"] },
+        { "weekday": 3, "exercises": ["jump_rope"] }
+      ]
+    }
+  ],
+
+  "user_plans": [
+    { "user_id": "alex_strength", "plan_id": "push_pull_legs" },
+    { "user_id": "maria_beginner", "plan_id": "full_body_beginner" },
+    { "user_id": "sam_cardio", "plan_id": "cardio_conditioning" },
+    { "user_id": "jordan_allrounder", "plan_id": "push_pull_legs" },
+    { "user_id": "jordan_allrounder", "plan_id": "cardio_conditioning" }
+  ],
+
+  "workout_history": [
+    {
+      "user_id": "alex_strength",
+      "plan_id": "push_pull_legs",
+      "name": "Push Day",
+      "scheduled_for": "2026-09-01",
+      "started_at": "2026-09-01T07:00:00Z",
+      "finished_at": "2026-09-01T08:05:00Z",
+      "notes": "Felt strong on bench today.",
+      "exercises": [
+        {
+          "exercise_id": "barbell_bench_press",
+          "sets": [
+            { "set_number": 1, "reps": 8, "weight_kg": 70 },
+            { "set_number": 2, "reps": 8, "weight_kg": 75 },
+            { "set_number": 3, "reps": 6, "weight_kg": 80 },
+            { "set_number": 4, "reps": 6, "weight_kg": 80 }
+          ]
+        },
+        {
+          "exercise_id": "barbell_overhead_press",
+          "sets": [
+            { "set_number": 1, "reps": 8, "weight_kg": 40 },
+            { "set_number": 2, "reps": 8, "weight_kg": 42.5 },
+            { "set_number": 3, "reps": 6, "weight_kg": 45 }
+          ]
+        }
+      ]
+    },
+    {
+      "user_id": "alex_strength",
+      "plan_id": "push_pull_legs",
+      "name": "Pull Day",
+      "scheduled_for": "2026-09-03",
+      "started_at": "2026-09-03T07:00:00Z",
+      "finished_at": "2026-09-03T08:00:00Z",
+      "notes": "",
+      "exercises": [
+        {
+          "exercise_id": "pull_up",
+          "sets": [
+            { "set_number": 1, "reps": 10, "weight_kg": null },
+            { "set_number": 2, "reps": 9, "weight_kg": null },
+            { "set_number": 3, "reps": 8, "weight_kg": null }
+          ]
+        },
+        {
+          "exercise_id": "bent_over_barbell_row",
+          "sets": [
+            { "set_number": 1, "reps": 8, "weight_kg": 60 },
+            { "set_number": 2, "reps": 8, "weight_kg": 65 },
+            { "set_number": 3, "reps": 6, "weight_kg": 70 }
+          ]
+        }
+      ]
+    },
+    {
+      "user_id": "maria_beginner",
+      "plan_id": "full_body_beginner",
+      "name": "Full Body A",
+      "scheduled_for": "2026-09-02",
+      "started_at": "2026-09-02T09:00:00Z",
+      "finished_at": "2026-09-02T09:50:00Z",
+      "notes": "First real session, kept the weights light.",
+      "exercises": [
+        {
+          "exercise_id": "barbell_back_squat",
+          "sets": [
+            { "set_number": 1, "reps": 10, "weight_kg": 20 },
+            { "set_number": 2, "reps": 10, "weight_kg": 20 },
+            { "set_number": 3, "reps": 10, "weight_kg": 22.5 }
+          ]
+        },
+        {
+          "exercise_id": "push_up",
+          "sets": [
+            { "set_number": 1, "reps": 8, "weight_kg": null },
+            { "set_number": 2, "reps": 6, "weight_kg": null }
+          ]
+        },
+        {
+          "exercise_id": "front_plank",
+          "sets": [
+            { "set_number": 1, "reps": 0, "weight_kg": null, "duration_seconds": 30 }
+          ]
+        }
+      ]
+    },
+    {
+      "user_id": "sam_cardio",
+      "plan_id": "cardio_conditioning",
+      "name": "Evening Run",
+      "scheduled_for": "2026-09-04",
+      "started_at": "2026-09-04T18:00:00Z",
+      "finished_at": "2026-09-04T18:32:00Z",
+      "notes": "Easy pace, 5km.",
+      "exercises": [
+        {
+          "exercise_id": "treadmill_running",
+          "sets": [
+            { "set_number": 1, "reps": 0, "weight_kg": null, "duration_seconds": 1800 }
+          ]
+        }
+      ]
+    },
+    {
+      "user_id": "sam_cardio",
+      "plan_id": "cardio_conditioning",
+      "name": "Jump Rope Intervals",
+      "scheduled_for": "2026-09-06",
+      "started_at": "2026-09-06T18:00:00Z",
+      "finished_at": "2026-09-06T18:20:00Z",
+      "notes": "",
+      "exercises": [
+        {
+          "exercise_id": "jump_rope",
+          "sets": [
+            { "set_number": 1, "reps": 0, "weight_kg": null, "duration_seconds": 300 },
+            { "set_number": 2, "reps": 0, "weight_kg": null, "duration_seconds": 300 },
+            { "set_number": 3, "reps": 0, "weight_kg": null, "duration_seconds": 300 }
+          ]
+        }
+      ]
+    },
+    {
+      "user_id": "jordan_allrounder",
+      "plan_id": "push_pull_legs",
+      "name": "Leg Day",
+      "scheduled_for": "2026-09-05",
+      "started_at": "2026-09-05T07:30:00Z",
+      "finished_at": "2026-09-05T08:20:00Z",
+      "notes": "",
+      "exercises": [
+        {
+          "exercise_id": "barbell_back_squat",
+          "sets": [
+            { "set_number": 1, "reps": 8, "weight_kg": 60 },
+            { "set_number": 2, "reps": 8, "weight_kg": 65 },
+            { "set_number": 3, "reps": 6, "weight_kg": 70 }
+          ]
+        },
+        {
+          "exercise_id": "deadlift",
+          "sets": [
+            { "set_number": 1, "reps": 5, "weight_kg": 90 },
+            { "set_number": 2, "reps": 5, "weight_kg": 100 }
+          ]
+        }
+      ]
+    },
+    {
+      "user_id": "jordan_allrounder",
+      "plan_id": "cardio_conditioning",
+      "name": "Recovery Jog",
+      "scheduled_for": "2026-09-07",
+      "started_at": "2026-09-07T07:00:00Z",
+      "finished_at": "2026-09-07T07:25:00Z",
+      "notes": "",
+      "exercises": [
+        {
+          "exercise_id": "treadmill_running",
+          "sets": [
+            { "set_number": 1, "reps": 0, "weight_kg": null, "duration_seconds": 1500 }
+          ]
+        }
+      ]
+    }
+  ]
+}
