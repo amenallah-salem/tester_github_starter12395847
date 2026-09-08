@@ -1,4 +1,22 @@
-# Gym Planner — Ready to Go / Ready to Monetize
+# WELLAURA — Ready to Go / Ready to Monetize
+
+Professional brand positioning
+
+WELLAURA
+Your AI-powered fitness & wellness companion.
+
+WELLAURA is an intelligent fitness and wellness platform designed to help people train efficiently, achieve their goals, improve their mental well-being, and build healthier lifestyles.
+
+The idea behind the name is simple:
+
+WELL + AURA = the state of well-being you create around yourself.
+
+The platform brings together fitness, personalized training, goals, meditation, recovery, and lifestyle recommendations, supported by an AI assistant that adapts to each user's journey.
+
+## WELLAURA
+
+Train well. Live well.
+
 - Backend: docker compose up --build -d && docker compose -f docker-compose.frontend.yml up --build -d
 
 Status: production-scaffold with CI (GitHub Actions), mobile builds (Android APK + iOS archive), auth + billing stub.
@@ -27,6 +45,10 @@ Status: production-scaffold with CI (GitHub Actions), mobile builds (Android APK
 14. [Verification (this session)](#verification-this-session)
 
 ---
+## Quickstart
+To run in development mode use `./docker.dev.sh up`
+
+For prod environement use `./docker.prod.sh up`
 
 ## Overview
 
@@ -80,7 +102,6 @@ No Python, Flutter, Node, or PostgreSQL installations are required on the host.
 .
 ├── backend/                       # Django + DRF service
 │   ├── Dockerfile                 # python:3.13-slim, gunicorn
-│   ├── docker-compose.local.yml   # standalone backend stack
 │   ├── requirements.txt
 │   ├── manage.py
 │   ├── gym_api/                   # app: models, views, serializers, fixtures
@@ -90,15 +111,13 @@ No Python, Flutter, Node, or PostgreSQL installations are required on the host.
 │   ├── pubspec.yaml
 │   ├── lib/                       # Dart source
 │   └── web/                       # web entrypoint
-├── docker-compose.yml             # backend stack (db + backend)
-├── docker-compose.frontend.yml    # frontend-only stack
+├── docker-compose.backend.dev.yml   
+├── docker-compose.frontend.dev.yml
 ├── .github/workflows/             # CI (flutter analyze, test, build)
 └── README.md
 ```
 
-Two compose files exist on purpose:
-- `docker-compose.yml` → `db` + `backend` (production-shape stack with healthchecks)
-- `docker-compose.frontend.yml` → `frontend` only (run after the backend is up)
+4 compose files exist on purpose:
 
 ---
 
