@@ -1,1 +1,0 @@
-./docker.dev.sh up  

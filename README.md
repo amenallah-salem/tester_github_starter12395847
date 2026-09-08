@@ -117,7 +117,8 @@ WELLAURA is split into a Flutter frontend and a Django REST backend backed by Po
 - PostgreSQL 16
 - Gunicorn
 - Pillow
-
+## Fill data in the DB , by training exercices 
+`scripts/seed-dev-data.sh`
 ### Infrastructure
 
 - Docker

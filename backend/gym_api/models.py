@@ -135,6 +135,25 @@ class Exercise(models.Model):
         ('Arms', 'Arms'),
         ('Legs', 'Legs'),
         ('Core', 'Core'),
+        # Expanded, more granular body parts (kept alongside the broader
+        # groups above for backward compatibility with existing data/UI).
+        ('Biceps', 'Biceps'),
+        ('Triceps', 'Triceps'),
+        ('Forearms', 'Forearms'),
+        ('Quadriceps', 'Quadriceps'),
+        ('Hamstrings', 'Hamstrings'),
+        ('Glutes', 'Glutes'),
+        ('Calves', 'Calves'),
+        ('Abdominals', 'Abdominals'),
+        ('Obliques', 'Obliques'),
+        ('Lower Back', 'Lower Back'),
+        ('Hip Flexors', 'Hip Flexors'),
+        ('Adductors', 'Adductors'),
+        ('Abductors', 'Abductors'),
+        ('Traps', 'Traps'),
+        ('Neck', 'Neck'),
+        ('Full Body', 'Full Body'),
+        ('Cardio', 'Cardio'),
         ('Other', 'Other'),
     ]
     MOVEMENT_PATTERN_CHOICES = [
