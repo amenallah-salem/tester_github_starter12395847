@@ -1,408 +1,727 @@
-# WELLAURA — Ready to Go / Ready to Monetize
+# WELLAURA
 
-Professional brand positioning
+> **Your AI-powered fitness & wellness companion.**  
+> **Train well. Live well.**
 
-WELLAURA
-Your AI-powered fitness & wellness companion.
+WELLAURA is a full-stack fitness and wellness application designed to help people train with more structure, understand their progress, and build healthier routines.
 
-WELLAURA is an intelligent fitness and wellness platform designed to help people train efficiently, achieve their goals, improve their mental well-being, and build healthier lifestyles.
-
-The idea behind the name is simple:
-
-WELL + AURA = the state of well-being you create around yourself.
-
-The platform brings together fitness, personalized training, goals, meditation, recovery, and lifestyle recommendations, supported by an AI assistant that adapts to each user's journey.
-
-## WELLAURA
-
-Train well. Live well.
-
-- Backend: docker compose up --build -d && docker compose -f docker-compose.frontend.yml up --build -d
-
-Status: production-scaffold with CI (GitHub Actions), mobile builds (Android APK + iOS archive), auth + billing stub.
-
-## Earn money with this
-- Subscriptions: `frontend/lib/services/api_client.dart` → `/billing/subscription`; backend stub at `backend/gym_api/billing.py`
-- Lock features behind `checkSubscription()`; upgrade with `upgradeSubscription('premium')`
-- Add Stripe webhook endpoint to `backend/`; put fee logic in `SubscriptionViewSet`
+The product combines workout planning and execution with an exercise library, progress tracking, recovery and breathwork experiences, personalized onboarding, and an in-app coaching experience. The current repository is an active development/MVP codebase rather than a finished production SaaS.
 
 ---
 
-## Table of Contents
-1. [Overview](#overview)
-2. [Architecture](#architecture)
-3. [Prerequisites](#prerequisites)
-4. [Project Structure](#project-structure)
-5. [Running the Backend with Docker](#running-the-backend-with-docker)
-6. [Running the Frontend with Docker](#running-the-frontend-with-docker)
-7. [Running the Full Stack (Backend + Frontend)](#running-the-full-stack-backend--frontend)
-8. [Environment Variables](#environment-variables)
-9. [Database & Migrations](#database--migrations)
-10. [API Endpoints](#api-endpoints)
-11. [Useful Docker Commands](#useful-docker-commands)
-12. [Troubleshooting](#troubleshooting)
-13. [Deploy](#deploy)
-14. [Verification (this session)](#verification-this-session)
+## ✨ What WELLAURA Includes
+
+### Training
+- Personalized training plans and plan-day organization
+- Guided workout sessions
+- Freestyle workouts
+- Set/repetition/weight tracking
+- Workout timer
+- Scheduled workout dates
+- Exercise history
+
+### Exercise Library
+- Searchable exercise library
+- Muscle/body-part filtering
+- Exercise details and instructions
+- Equipment, movement pattern, difficulty, and exercise type metadata
+- Exercise alternatives, progressions, and regressions
+- Favorites
+- Exercise images, video URLs, and animation URLs where available
+
+### Progress
+- Workout session history
+- Per-exercise history
+- Progress metrics
+- Body-weight tracking
+- Progress visualization
+
+### Wellness & Recovery
+- Post-workout recovery experience
+- Guided breathwork
+- Recovery reminders
+- Mindful training/recovery concepts
+
+### Coaching & Form
+- In-app coach experience
+- Form Vault / biomechanics-oriented screens
+- 3D replay interface
+- Coach-oriented workout feedback UI
+
+> **Current-state note:** Some coaching, biomechanics, and recovery experiences currently use mock/static data and UI flows. They are structured to be connected to real services as the product evolves.
+
+### Account & Profile
+- JWT authentication
+- Persistent application authentication state
+- User profile and onboarding data
+- Locale and country fields
+- Training goals, experience level, availability, and profile information
+
+### Subscription Foundation
+The backend contains a subscription model and billing abstraction that can be extended with a payment provider such as Stripe. Payment processing/webhooks are **not yet a complete production billing integration**.
 
 ---
-## Quickstart
-To run in development mode use `./docker.dev.sh up`
 
-For prod environement use `./docker.prod.sh up`
+# 🏗️ Architecture
 
-## Overview
+WELLAURA is split into a Flutter frontend and a Django REST backend backed by PostgreSQL.
 
-Gym Planner is a full-stack fitness application composed of:
-- **Backend** — Django 5 + Django REST Framework + PostgreSQL 16, served via Gunicorn on port `8000`
-- **Frontend** — Flutter 3.24 web build, served via Nginx on port `8080` (container port `80`)
-- **Database** — PostgreSQL 16 (Alpine) running in a Docker container, persistent volume `pg_data`
-
-Everything is containerized and orchestrated through Docker Compose. No host-level Python or Flutter installation is required to run the app.
-
----
-
-## Architecture
-
+```text
+                         ┌──────────────────────────┐
+                         │      WELLAURA App        │
+                         │     Flutter / Dart       │
+                         │                          │
+                         │  Auth · Plans · Workout  │
+                         │  Exercises · Progress    │
+                         │  Coach · Recovery       │
+                         └────────────┬─────────────┘
+                                      │ HTTP / JSON
+                                      │ JWT
+                                      ▼
+                         ┌──────────────────────────┐
+                         │       Django API         │
+                         │ Django 5 + DRF           │
+                         │ SimpleJWT                │
+                         │                          │
+                         │ Profiles · Plans         │
+                         │ Exercises · Sessions     │
+                         │ Metrics · Billing        │
+                         └────────────┬─────────────┘
+                                      │
+                                      │ PostgreSQL
+                                      ▼
+                         ┌──────────────────────────┐
+                         │       PostgreSQL 16       │
+                         │      persistent data      │
+                         └──────────────────────────┘
 ```
-┌────────────────────────┐      HTTP      ┌────────────────────────┐
-│  Frontend (Flutter Web)│ ─────────────► │  Backend (Django/DRF)  │
-│  Nginx :8080 → :80     │   /api/*       │  Gunicorn :8000        │
-└────────────────────────┘                └──────────┬─────────────┘
-                                                     │ SQL
-                                                     ▼
-                                          ┌────────────────────────┐
-                                          │  PostgreSQL 16         │
-                                          │  :5432 (volume: pg_data)│
-                                          └────────────────────────┘
-```
 
-The frontend and backend communicate over HTTP. The Flutter app's `api_client.dart` targets the backend at `http://localhost:8000/api/` by default.
+### Frontend
+
+- Flutter 3.24.x
+- Dart 3.5+
+- Riverpod
+- GoRouter
+- Drift / SQLite for local persistence
+- HTTP client for API communication
+- Shared Preferences for local state/queues
+- Wakelock support for workout sessions
+
+### Backend
+
+- Python 3.13
+- Django 5.1
+- Django REST Framework
+- SimpleJWT
+- drf-spectacular
+- PostgreSQL 16
+- Gunicorn
+- Pillow
+
+### Infrastructure
+
+- Docker
+- Docker Compose
+- Nginx for the production Flutter web build
+- GitHub Actions
+- Android release automation
 
 ---
 
-## Prerequisites
+# 📁 Project Structure
 
-You only need:
-- **Docker Engine** ≥ 20.10
-- **Docker Compose** v2 (the modern `docker compose` CLI — `docker compose` works; the older `docker-compose` v1 syntax in the files is also accepted by Docker)
-
-Verify your setup:
-```bash
-docker --version
-docker compose version
-```
-
-No Python, Flutter, Node, or PostgreSQL installations are required on the host.
-
----
-
-## Project Structure
-
-```
+```text
 .
-├── backend/                       # Django + DRF service
-│   ├── Dockerfile                 # python:3.13-slim, gunicorn
+├── backend/
+│   ├── gym_api/
+│   │   ├── migrations/
+│   │   ├── management/
+│   │   ├── fixtures/
+│   │   ├── models.py
+│   │   ├── serializers.py
+│   │   ├── views.py
+│   │   ├── urls.py
+│   │   └── billing.py
+│   ├── gym_project/
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   ├── asgi.py
+│   │   └── wsgi.py
+│   ├── Dockerfile
 │   ├── requirements.txt
-│   ├── manage.py
-│   ├── gym_api/                   # app: models, views, serializers, fixtures
-│   └── gym_project/               # settings, urls, wsgi
-├── frontend/                      # Flutter web app
-│   ├── Dockerfile                 # multi-stage: flutter build → nginx
+│   └── manage.py
+│
+├── frontend/
+│   ├── lib/
+│   │   ├── core/
+│   │   ├── features/
+│   │   │   ├── auth/
+│   │   │   ├── biomechanics/
+│   │   │   ├── coach/
+│   │   │   ├── exercise_library/
+│   │   │   ├── gym_bro/
+│   │   │   ├── home/
+│   │   │   ├── onboarding/
+│   │   │   ├── plan/
+│   │   │   ├── plan_runner/
+│   │   │   ├── progress/
+│   │   │   └── recovery/
+│   │   ├── services/
+│   │   └── main.dart
+│   ├── assets/
+│   ├── android/
+│   ├── ios/
+│   ├── web/
 │   ├── pubspec.yaml
-│   ├── lib/                       # Dart source
-│   └── web/                       # web entrypoint
-├── docker-compose.backend.dev.yml   
+│   └── Dockerfile
+│
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── android-release.yml
+│
+├── .claude/
+│   └── skills/
+│
+├── asserts/
+├── docker-compose.backend.dev.yml
+├── docker-compose.backend.prod.yml
 ├── docker-compose.frontend.dev.yml
-├── .github/workflows/             # CI (flutter analyze, test, build)
+├── docker-compose.frontend.prod.yml
+├── docker.dev.sh
+├── docker.prod.sh
+├── RUN.md
 └── README.md
 ```
 
-4 compose files exist on purpose:
+---
+
+# 🚀 Quick Start
+
+## Prerequisites
+
+For the Docker workflow, install:
+
+- Docker Engine
+- Docker Compose v2
+- Git
+
+Verify:
+
+```bash
+docker --version
+docker compose version
+git --version
+```
+
+You do **not** need Python, PostgreSQL, or Flutter installed on the host to use the Docker development stack.
 
 ---
 
-## Running the Backend with Docker
+# 🐳 Development with Docker
 
-The backend stack spins up **PostgreSQL** and the **Django/Gunicorn** service.
-
-### 1. From the project root, start the stack
+The recommended development entry point is:
 
 ```bash
-cd /home/amen/Desktop/tester_github_starter12395847
-docker compose up --build
+./docker.dev.sh up
 ```
 
-What happens:
-1. `db` (Postgres 16 Alpine) starts; the healthcheck (`pg_isready -U aigym -d aigym`) waits until it accepts connections.
-2. `backend` waits for `db` to be healthy, then:
-   - runs `python manage.py migrate`
-   - loads seed data from `gym_api/fixtures/seed.json` (failure is tolerated)
-   - starts Gunicorn on `0.0.0.0:8000`
-
-### 2. Verify
-
-- API root: <http://localhost:8000/api/>
-- Django admin: <http://localhost:8000/admin/>
-- Postgres: `localhost:5432` (user `aigym`, password `aigym`, db `aigym`)
-
-### 3. Create a superuser (optional)
-
-Open a second terminal:
-```bash
-docker compose exec backend python manage.py createsuperuser
-```
-
-### 4. Run backend tests
+If the script is not executable:
 
 ```bash
-docker compose exec backend python manage.py test gym_api
+chmod +x docker.dev.sh docker.prod.sh
 ```
 
-### 5. Stop the stack
+The development script:
+
+1. Validates the Docker Compose configuration
+2. Builds the backend and frontend images
+3. Starts PostgreSQL
+4. Waits for PostgreSQL health
+5. Starts Django
+6. Waits for the backend health endpoint
+7. Starts the frontend
+
+### Build only
 
 ```bash
-docker compose down            # stop containers, keep pg_data volume
-docker compose down -v         # stop containers AND delete the pg_data volume
+./docker.dev.sh build
 ```
+
+### Development services
+
+| Service | URL |
+|---|---|
+| WELLAURA web app | http://127.0.0.1:8080 |
+| Django API | http://127.0.0.1:8000 |
+| Django admin | http://127.0.0.1:8000/admin/ |
+| PostgreSQL | 127.0.0.1:5432 |
+
+The exact host ports can be changed through the environment configuration.
 
 ---
 
-## Running the Frontend with Docker
+# 🖥️ Run the Services Manually
 
-The frontend uses a **multi-stage build**:
-- **Builder stage** (`ubuntu:24.04`) — installs Flutter 3.24, runs `flutter pub get`, then `flutter build web --release`
-- **Runtime stage** (`nginx:alpine`) — copies the built `/build/web` to Nginx's html root and serves on port `80`
+If you prefer to control each Compose stack yourself:
 
-### 1. Start the frontend
-
-The frontend compose file is a **standalone service** — it does NOT include the backend or database. Make sure the backend is already running (see above), then:
+### Backend + PostgreSQL
 
 ```bash
-cd /home/amen/Desktop/tester_github_starter12395847
-docker compose -f docker-compose.frontend.yml up --build
+docker compose --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  up --build
 ```
 
-What happens:
-1. The builder image compiles the Flutter app for web in release mode (this takes several minutes the first time).
-2. The Nginx image starts and serves the compiled assets.
-3. The app is available at <http://localhost:8080>.
+### Frontend
 
-### 2. Verify
-
-Open <http://localhost:8080> in your browser. The Flutter web app should load.
-
-### 3. Stop the frontend
+In another terminal:
 
 ```bash
-docker compose -f docker-compose.frontend.yml down
-```
-
-### 4. Rebuild from scratch (no cache)
-
-If you change `pubspec.yaml` or need a clean build:
-```bash
-docker compose -f docker-compose.frontend.yml build --no-cache
-docker compose -f docker-compose.frontend.yml up
-```
-
----
-
-## Running the Full Stack (Backend + Frontend)
-
-You need **two terminals** because the two compose files are separate. This is intentional — the frontend compose only contains the frontend service, so the backend stack owns Postgres + Django and the frontend stack owns Nginx + Flutter.
-
-### Terminal 1 — Backend (DB + API)
-```bash
-cd /home/amen/Desktop/tester_github_starter12395847
-docker compose up --build
-```
-Wait until you see Gunicorn boot and the migrate step complete.
-
-### Terminal 2 — Frontend
-```bash
-cd /home/amen/Desktop/tester_github_starter12395847
-docker compose -f docker-compose.frontend.yml up --build
-```
-
-Or use the helper script which builds, brings up DB+backend, waits for readiness, then starts frontend:
-
-```bash
-./docker.dev.sh
-```
-
-This script performs the following steps:
-- Builds frontend and backend development images
-- Starts `db` and `backend` and waits for Postgres to report healthy and the backend to respond on `http://localhost:8000/`
-- Starts `frontend` after the backend is reachable
-
-This ordering avoids Nginx failing at startup because it cannot resolve or reach the backend service.
-
-### Access
-- **App (web UI)**: <http://localhost:8080>
-- **API**: <http://localhost:8000/api/>
-- **Admin**: <http://localhost:8000/admin/>
-- **Postgres**: `localhost:5432`
-
-### Tear down everything
-```bash
-docker compose down -v                                  # backend + db volume
-docker compose -f docker-compose.frontend.yml down       # frontend
+docker compose --env-file .env.dev \
+  -f docker-compose.frontend.dev.yml \
+  up --build
 ```
 
 ---
 
-## Environment Variables
+# ⚙️ Environment Configuration
+
+Environment templates are provided for development and production:
+
+```text
+.env.dev
+.env.prod
+```
+
+The frontend uses:
+
+```text
+API_BASE_URL
+```
+
+to determine which backend API it should communicate with.
+
+Typical backend variables include:
+
+```text
+DJANGO_DEBUG
+DJANGO_SECRET_KEY
+DJANGO_ALLOWED_HOSTS
+
+POSTGRES_DB
+POSTGRES_USER
+POSTGRES_PASSWORD
+POSTGRES_PORT
+
+API_BASE_URL
+```
+
+## Security
+
+**Never commit real production credentials or API secrets to Git.**
+
+Use environment variables or your deployment platform's secret manager for production secrets.
+
+If an environment file already exists locally, verify that it contains no credentials before publishing the repository.
+
+---
+
+# 🗄️ Database & Django
+
+The development and production Compose stacks automatically run Django migrations when the backend starts.
+
+To run migrations manually:
+
+```bash
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  exec backend python manage.py migrate
+```
+
+Create migrations after model changes:
+
+```bash
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  exec backend python manage.py makemigrations
+```
+
+Create a Django admin user:
+
+```bash
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  exec backend python manage.py createsuperuser
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000/admin/
+```
+
+---
+
+# 🔐 Authentication
+
+The API uses JWT authentication through `djangorestframework-simplejwt`.
+
+### Obtain access token
+
+```http
+POST /api/auth/token/
+```
+
+### Refresh access token
+
+```http
+POST /api/auth/token/refresh/
+```
+
+Authenticated requests use:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+The Flutter client handles API authentication and maintains local authentication state.
+
+---
+
+# 🔌 API Overview
+
+The backend exposes REST endpoints for the main application domains.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/auth/token/` | Obtain JWT |
+| POST | `/api/auth/token/refresh/` | Refresh JWT |
+| GET / PATCH | `/api/profiles/me/` | Current user profile |
+| PATCH | `/api/profiles/<id>/` | Update profile |
+| GET / POST | `/api/plans/` | Training plans |
+| GET / POST | `/api/exercises/` | Exercises |
+| GET / POST | `/api/sessions/` | Workout sessions |
+| PATCH | `/api/sessions/<id>/` | Update workout session |
+| POST | `/api/sessions/<id>/log-metric/` | Log workout metric |
+| GET / POST | `/api/metrics/` | Progress metrics |
+| GET | `/api/metrics/last-for-exercise/` | Latest exercise metric |
+| GET | `/api/library/exercises/` | Global exercise library |
+| GET | `/api/favorites/` | Favorite exercises |
+| GET / POST | `/api/billing/subscription/` | Subscription state |
+
+Authenticated endpoints require a valid JWT unless explicitly stated otherwise.
+
+---
+
+# 📱 Flutter Application
+
+The Flutter application is organized by feature rather than by screen type.
+
+Important areas include:
+
+```text
+features/auth
+features/onboarding
+features/home
+features/plan
+features/plan_runner
+features/exercise_library
+features/progress
+features/coach
+features/recovery
+features/biomechanics
+features/gym_bro
+```
+
+This structure keeps product functionality isolated and makes it easier to evolve individual domains independently.
+
+---
+
+# 💾 Offline & Local Persistence
+
+The frontend includes local persistence using:
+
+- Drift
+- SQLite
+- Shared Preferences
+
+Workout information can be queued locally when network communication fails and synchronized when connectivity is restored.
+
+This architecture is intended to make workout logging more resilient to temporary network problems.
+
+---
+
+# 🧪 Testing
 
 ### Backend
-Defined inline in `docker-compose.yml`. Override at runtime with shell env or an `.env` file at the project root.
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `DJANGO_SECRET_KEY` | `change-me-in-prod` | **Set this in production** |
-| `DJANGO_DEBUG` | `1` | Set to `0` in production |
-| `DB_ENGINE` | `postgres` | Set to `sqlite` to bypass Postgres (local-only) |
-| `POSTGRES_DB` | `aigym` | Database name |
-| `POSTGRES_USER` | `aigym` | DB user |
-| `POSTGRES_PASSWORD` | `aigym` | DB password |
-| `POSTGRES_HOST` | `db` | Service name in compose network |
-| `POSTGRES_PORT` | `5432` | DB port |
+Run Django tests inside the backend container:
 
-Override example:
 ```bash
-DJANGO_SECRET_KEY=$(openssl rand -hex 32) DJANGO_DEBUG=0 docker compose up --build
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  exec backend python manage.py test gym_api
 ```
+
+### Flutter
+
+From the `frontend` directory:
+
+```bash
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter analyze
+flutter test
+```
+
+The CI workflow runs Flutter dependency installation, Drift code generation, static analysis, and Flutter tests.
 
 ---
 
-## Database & Migrations
+# 🔄 CI/CD
 
-Migrations run automatically on `docker compose up` via the `command` block in the backend service. To run migrations manually:
+GitHub Actions currently provides:
 
-```bash
-docker compose exec backend python manage.py migrate
+### Pull Request CI
+
+`.github/workflows/ci.yml`
+
+Runs:
+
+- Flutter dependency installation
+- Drift code generation
+- Flutter analysis
+- Flutter tests
+
+### Android Release
+
+`.github/workflows/android-release.yml`
+
+On pushes to `main`, the workflow can:
+
+1. Install Java 17
+2. Install the configured Flutter version
+3. Generate Drift code
+4. Analyze the Flutter project
+5. Run tests
+6. Configure Android release signing from GitHub Secrets
+7. Build the APK
+8. Build the Android App Bundle
+9. Create a semantic release tag
+10. Create/update a GitHub Release
+11. Upload the Android artifacts
+
+### Required Android Secrets
+
+For signed Android releases, configure the appropriate GitHub Actions secrets:
+
+```text
+ANDROID_KEYSTORE_BASE64
+ANDROID_KEYSTORE_PASSWORD
+ANDROID_KEY_ALIAS
+ANDROID_KEY_PASSWORD
 ```
 
-To create new migrations after model changes:
-```bash
-docker compose exec backend python manage.py makemigrations
-```
-
-Seed data is loaded from `backend/gym_api/fixtures/seed.json` automatically (errors are ignored so the stack still boots if the fixture is missing).
+If signing credentials are not supplied, the workflow's signing step does not create the release keystore.
 
 ---
 
-## API Endpoints
+# 🏭 Production Docker Stack
 
-Base URL: `http://localhost:8000/api/`
+The production stack uses separate Compose files for the backend and frontend.
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/auth/token/` | none | Obtain JWT (`username` + `password`) |
-| POST | `/auth/token/refresh/` | none | Refresh JWT |
-| GET / POST | `/profiles/me/` | Bearer | Current user profile |
-| GET / POST | `/plans/` | Bearer | List / create training plans |
-| GET / POST | `/exercises/` | Bearer | List / create exercises |
-| GET / POST | `/sessions/` | Bearer | List / create workout sessions |
-| GET / POST | `/metrics/` | Bearer | List / create progress metrics |
+Start it with:
 
-All endpoints except `/auth/token/*` require `Authorization: Bearer <access_token>`.
+```bash
+./docker.prod.sh up
+```
+
+Build only:
+
+```bash
+./docker.prod.sh build
+```
+
+The production backend uses Gunicorn, while the Flutter web application is built into an Nginx image.
+
+> Before deploying publicly, configure real production secrets, HTTPS/reverse proxy infrastructure, allowed hosts, database security, backups, monitoring, and a production-grade PostgreSQL setup.
 
 ---
 
-## Useful Docker Commands
+# 🧹 Useful Docker Commands
+
+### View services
 
 ```bash
-# Logs (follow)
-docker compose logs -f backend
-docker compose logs -f db
-
-# Shell into backend
-docker compose exec backend sh
-
-# Django management
-docker compose exec backend python manage.py createsuperuser
-docker compose exec backend python manage.py shell
-docker compose exec backend python manage.py test gym_api
-
-# Postgres shell
-docker compose exec db psql -U aigym -d aigym
-
-# Frontend logs
-docker compose -f docker-compose.frontend.yml logs -f frontend
-
-# List running containers
 docker compose ps
-
-# Full reset (delete data)
-docker compose down -v
 ```
 
----
+### Backend logs
 
-## Troubleshooting
-
-**Port 8000 or 8080 already in use**
-Stop the conflicting process or change the host port mapping in the compose file (e.g. `"9000:8000"`).
-
-**`db` is unhealthy / backend exits immediately**
-Check Postgres logs: `docker compose logs db`. Most often a stale volume — run `docker compose down -v` to clear it.
-
-**Frontend build fails on first run**
-The Flutter SDK is cloned inside the image, so the first build downloads ~700 MB and takes 5–10 minutes. Watch the builder stage: `docker compose -f docker-compose.frontend.yml logs -f frontend`.
-
-**API calls from the browser fail with CORS / network errors**
-Make sure the backend is running on `:8000` and the Flutter `api_client.dart` base URL points to `http://localhost:8000/api/`. If you change ports, update both sides.
-
-**Changes to `pubspec.yaml` not picked up**
-Rebuild without cache:
 ```bash
-docker compose -f docker-compose.frontend.yml build --no-cache
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  logs -f backend
 ```
 
-**Permission errors on Linux with bind-mounted volumes**
-The `docker-compose.yml` bind-mounts `./backend:/app`. If you hit permission issues, remove that line and rebuild — the image is self-contained.
+### Database logs
+
+```bash
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  logs -f db
+```
+
+### Open a backend shell
+
+```bash
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  exec backend sh
+```
+
+### Stop development services
+
+```bash
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  -f docker-compose.frontend.dev.yml \
+  down
+```
+
+### Stop and delete the database volume
+
+```bash
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  -f docker-compose.frontend.dev.yml \
+  down -v
+```
+
+> `down -v` deletes the local PostgreSQL volume and therefore destroys the local database data.
 
 ---
 
-## Deploy
-- Docker: `docker compose up --build` (port 80 / 8080 mapped)
-- Mobile releases: CI publishes prerelease on every `push` to `main` + tag `v*`
-- Signing: see `frontend/signing-reference.md` + `key.properties.example`
+# 🩺 Troubleshooting
+
+## Port already in use
+
+If port `8000`, `8080`, or `5432` is occupied:
+
+```bash
+ss -ltnp | grep -E ':8000|:8080|:5432'
+```
+
+Then stop the conflicting process/container or change the corresponding host port.
+
+## Backend does not become ready
+
+Check:
+
+```bash
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  logs --tail=200 backend
+```
+
+Then check PostgreSQL:
+
+```bash
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.backend.dev.yml \
+  logs --tail=200 db
+```
+
+The development startup script uses:
+
+```text
+/api/health/
+```
+
+as its backend readiness endpoint.
+
+## Frontend cannot reach the API
+
+Check `API_BASE_URL`.
+
+For a browser running on the same machine, a typical development value is:
+
+```text
+http://127.0.0.1:8000/api/
+```
+
+If the application is accessed from another device on your local network, `localhost` points to that device itself. Use the development machine's LAN IP instead and make sure Django's allowed hosts/CORS configuration permits the connection.
+
+## Flutter generated files
+
+If Drift-generated files become inconsistent:
+
+```bash
+cd frontend
+dart run build_runner build --delete-conflicting-outputs
+```
 
 ---
 
-## Verification (this session)
-- CI rebuilt from `amenallah-salem/gym_app_starter_2548596354` reference (flutter-actions/setup-flutter@v4, upload-artifact@v4, prerelease)
-- Push confirmed (`f6f921a` → `main`, 0 unpushed)
-- Ad-hoc scripts run and cleaned (`hermes-*` temp, exit 0)
-- Honest limits: no SDK/macOS/keystore in this env; no actual `flutter build` executed; release artifacts unsigned; billing is stub only
+# 🛣️ Product Direction
 
-Branch: `main` (merged T-09 + T-17 + CI + improvements).
+WELLAURA is being developed toward a broader wellness platform where training is only one part of the experience.
+
+Potential product evolution includes:
+
+- AI-powered personalized training
+- Adaptive workout programming
+- Intelligent progress analysis
+- Deeper biomechanics and form analysis
+- Recovery recommendations
+- Meditation and breathwork programs
+- Lifestyle and habit recommendations
+- Music/workout integrations
+- Smarter reminders and scheduling
+- Premium subscription features
+- Social/community experiences
+
+Some of these concepts are represented in the current UI, while others remain roadmap items.
 
 ---
 
-# Simple guide (beginner-friendly)
+# 🤝 Development Philosophy
 
-If you prefer an extra-simple guide, follow these short steps.
+The project is intended to evolve as a modular product rather than a collection of isolated screens.
 
-1. Install Docker (https://www.docker.com/get-started).
-2. Open a terminal and go to the project folder.
-3. Start backend only (database + API):
+Key principles:
 
-   docker compose -f docker-compose.backend.dev.yml up --build
+- **Feature-oriented architecture**
+- **API-first backend**
+- **Offline-aware workout experience**
+- **Reusable domain models**
+- **Automated validation through CI**
+- **Containerized development**
+- **Production-minded configuration**
+- **Privacy-conscious user data handling**
 
-4. In another terminal, start frontend only (website):
+---
 
-   docker compose -f docker-compose.frontend.dev.yml up --build
+# 📄 License
 
-5. Open your browser:
-   - backend API: http://127.0.0.1:8000/api/
-   - frontend app: http://127.0.0.1:8080
+No open-source license has been declared yet.
 
-6. Stop everything when done:
+If this repository will be publicly distributed, add a `LICENSE` file and update this section with the selected license.
 
-   docker compose -f docker-compose.backend.dev.yml down -v
-   docker compose -f docker-compose.frontend.dev.yml down
+---
 
+## WELLAURA
 
-If you want me to replace `.env.prod` with `.env.prod.example` and add `.env.prod` to `.gitignore` (recommended), say "Yes, secure .env.prod" and I will make that change.
+**Train well. Live well.**
