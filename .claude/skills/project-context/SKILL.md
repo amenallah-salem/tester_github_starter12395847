@@ -5,6 +5,96 @@ Use this skill whenever you need to understand the repository before coding.
 ## Goal
 Build a compact mental model without scanning the whole repository.
 
+## App Concept
+WELLAURA ("welora" in the UI) is a mobile-first fitness/well-being app: a
+solo training coach (plan generation, a library-backed exercise browser,
+workout logging, progress tracking) plus a social layer ("Gym Bro" matching)
+and a lightweight mindfulness layer (breathwork, recovery). It's a single
+Flutter codebase (`frontend/`) talking to one Django REST API (`backend/`),
+no separate services. Below is the shape of each piece, not just its file
+path — enough to hold a real conversation about how the app works.
+
+**The five bottom-nav tabs** (`frontend/lib/features/home/presentation/home_page.dart`),
+each a `ShellRoute` child so the nav bar persists:
+- **Home** (`/`, `PlanPage`) — the daily dashboard: greeting, weekly-rhythm
+  bento cards, a category grid (Strength/Mobility/Cardio/Recovery, all of
+  which just deep-link into the Explorer filtered by that category), an
+  editable weekly schedule ("Your week" — pick a weekday, assign exercises,
+  "Start this day"), and the AI-generated plan's *today* session with a
+  "Start workout" CTA. Also carries the entry point into the AI Coach chat.
+- **Workouts** (`/explorer`, `ExerciseExplorerPage`) — the exercise library:
+  search + muscle-group filter chips, a card per exercise (image thumbnail,
+  difficulty/type badges, favorite star), tapping pushes the exercise detail
+  page. Also has entry points to My Plans, Form Vault, and the AI Coach.
+- **Progress** (`/progress`, `ProgressPage`) — history and analytics: streak,
+  lift volume, personal records, week/month toggle, body-weight log with a
+  hand-drawn trend line, per-exercise lift-progress cards, a rhythm bar chart,
+  a muscle-load chart, a recovery indicator, and the raw session/set history
+  (tap a logged set to see its exercise history, tap a session for detail).
+- **Profile** (`/you`, `YouPage`) — account/profile settings.
+- (No literal "Train" tab — Train/AI-Coach is reached *from* Home and
+  Workouts, not from the bottom nav; see the gotcha below if this ever
+  regresses.)
+
+**Two overlapping "plan" systems** — see the gotcha below for the full
+explanation; in short, the Home dashboard runs on an AI-generated
+`WorkoutPlan` contract, while `/plans` is the real backend-CRUD `Plan` model
+with a weekly schedule, and `PlanNotifier` bridges the two.
+
+**Exercise library** — `Exercise` (`backend/gym_api/models.py`) is a rich,
+mostly admin-authored reference record: name/aliases, body part, primary +
+secondary muscles, equipment, movement pattern, exercise type, difficulty,
+instructions split into setup/execution/breathing, common mistakes, an
+optional demo image/animation/video, and self-referential
+alternatives/progressions/regressions (easier/harder variants — the exercise
+detail page renders these as tappable chips that push a new detail route,
+so browsing the library is partly a graph walk). The same `Exercise` model
+doubles as a per-plan-day assignment row (`is_library=False`, tied to a
+`user`/`plan`) versus a shared catalog entry (`is_library=True`, `user=None`)
+— one table, two roles, disambiguated by `is_library`.
+
+**Running a workout** — `WorkoutSession` (start/finish timestamps, optional
+link to a `Plan`) groups `ProgressMetric` rows (one row per logged set: reps,
+weight, duration, which exercise). `frontend/lib/features/plan_runner/` is
+the live workout screen (set-by-set logging, rest timers, freestyle mode for
+an unplanned session); finishing feeds `WorkoutSessions`/`ProgressMetric`
+providers that the Progress tab reads back.
+
+**AI Coach ("Kaori")** — `frontend/lib/features/coach/` (route `/coach`,
+outside the shell so it gets its own back button) is a chat-style assistant:
+post-workout check-ins, conversational Q&A, and inline "form analysis" cards
+with a percentage score and a "Review biomechanical replay" action that opens
+`frontend/lib/features/biomechanics/` (`FormVaultPage` — saved form-check
+history; `replay_3d_page.dart` — a mocked 3D rep replay). This is currently
+UI/mock-data driven (`biomechanics/data/biomechanics_mock.dart`), not backed
+by a real pose-estimation pipeline yet.
+
+**Gym Bro** (`frontend/lib/features/gym_bro/`, backend `Swipe`/`Match`/
+`GymBroMessage` models) — a Tinder-style workout-partner matching layer on
+top of `Profile` (goals/experience/availability/location): discover
+candidates, swipe like/pass, chat once matched. Fully separate from the
+training/progress domain; only shares the `Profile` model.
+
+**Recovery & mindfulness** (`frontend/lib/features/recovery/`) — a
+post-workout "session complete" recovery screen (RPE/recovery mock metrics)
+and a standalone breathwork timer (`/breathwork`). Currently client-only, no
+dedicated backend model — this is the app's nod to "well-being" beyond pure
+strength training.
+
+**Auth & onboarding** — JWT access/refresh via `rest_framework_simplejwt`.
+Refresh tokens live in the OS keychain on mobile (`flutter_secure_storage`)
+and in `SharedPreferences`/localStorage on web (no secure-storage equivalent
+there). A `Profile.onboarding_completed` flag (plus a local
+`SharedPreferences` mirror) gates a first-run wizard (goal, experience,
+equipment, schedule) that produces the initial AI `WorkoutPlan`; the router's
+top-level `redirect` is the single place that decides sign-in vs onboarding
+vs main-app routing based on `authStatusProvider` + `onboardingDoneProvider`.
+
+**Billing** — a `Subscription` model/endpoint exists (`plan_name`, `status`,
+period dates). No dedicated `features/billing/` module — it's surfaced
+directly inline in `features/you/presentation/you_page.dart` (the Profile
+tab fetches and can upgrade the subscription from there), not its own route.
+
 ## Procedure
 1. Start at repository root.
 2. Inspect only top-level files/directories relevant to the request.
