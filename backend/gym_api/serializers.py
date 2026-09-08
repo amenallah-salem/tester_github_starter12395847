@@ -104,8 +104,23 @@ class MatchSerializer(serializers.ModelSerializer):
         return ProfileSerializer(profile, context=self.context).data
 
 
+class ExerciseMinimalSerializer(serializers.ModelSerializer):
+    """Compact exercise shape for nesting inside another exercise's relations."""
+
+    class Meta:
+        model = Exercise
+        fields = ['id', 'name', 'body_part', 'difficulty', 'equipment', 'primary_muscles']
+
+
 class ExerciseSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(read_only=True)
+    alternatives_detail = ExerciseMinimalSerializer(source='alternatives', many=True, read_only=True)
+    progression_exercises_detail = ExerciseMinimalSerializer(
+        source='progression_exercises', many=True, read_only=True,
+    )
+    regression_exercises_detail = ExerciseMinimalSerializer(
+        source='regression_exercises', many=True, read_only=True,
+    )
 
     class Meta:
         model = Exercise
@@ -115,6 +130,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
             'movement_pattern', 'exercise_type', 'difficulty', 'is_timed',
             'instructions', 'setup', 'execution', 'breathing', 'common_mistakes',
             'alternatives', 'progression_exercises', 'regression_exercises',
+            'alternatives_detail', 'progression_exercises_detail', 'regression_exercises_detail',
             'video_url', 'animation_url', 'image',
             'target_sets', 'target_reps', 'target_weight_kg',
             'order', 'is_library', 'created_at',

@@ -180,7 +180,7 @@ class APITests(APITestCase):
         resp = self.client.get('/api/library/exercises/?search=bench&body_part=Chest')
 
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual([item['name'] for item in resp.data['results']], ['Bench Press'])
+        self.assertEqual([item['name'] for item in resp.data], ['Bench Press'])
 
     def test_library_exercises_return_empty_results_for_unknown_filter(self):
         Exercise.objects.create(
@@ -192,7 +192,7 @@ class APITests(APITestCase):
         resp = self.client.get('/api/library/exercises/?body_part=Legs')
 
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(resp.data['results'], [])
+        self.assertEqual(resp.data, [])
 
     def test_session_crud(self):
         resp = self.client.post('/api/sessions/', {'name': 'Morning Workout'})

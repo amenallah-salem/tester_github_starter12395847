@@ -1,18 +1,11 @@
-import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
-import 'package:gym_app/core/database/app_database.dart';
-import 'package:gym_app/core/database/daos/exercise_dao.dart';
 import 'package:gym_app/features/exercise_library/domain/exercise.dart'
     as domain;
 import 'package:gym_app/services/api_client.dart';
 
-/// Reads/writes the exercise library against the local Drift database.
-/// Milestone 1 seeds a small starter library on first launch.
+/// Reads the exercise library from the backend API, falling back to a
+/// bundled starter list when the network is unavailable.
 class ExerciseRepository {
-  ExerciseRepository(this._dao);
-
-  final ExerciseDao _dao;
-
   Stream<List<domain.Exercise>> watchAll({
     String? search,
     String? bodyPart,
@@ -37,28 +30,33 @@ class ExerciseRepository {
     );
   }
 
-  Future<domain.Exercise?> getByName(String name) async {
-    if (kIsWeb) {
+  Future<domain.Exercise?> getById(String id) async {
+    List<Map<String, dynamic>> list;
+    try {
+      list = await ApiClient.I.fetchLibraryExercises();
+    } catch (error, stackTrace) {
+      debugPrint('Unable to load exercise library from API: $error');
       for (final exercise in _webExercises) {
-        if (exercise.name == name) return exercise;
+        if (exercise.id == id) return exercise;
       }
       return null;
     }
-    // Try the backend library first
-    final list = await ApiClient.I.fetchLibraryExercises();
     for (final m in list) {
-      if ((m['name'] as String).toLowerCase() == name.toLowerCase()) {
+      if (m['id']?.toString() == id) {
         return _fromApi(m);
       }
     }
-    // Fallback to local DB if available
-    final row = await _dao.getByName(name);
-    return row == null ? null : _toDomain(row);
+    // Not found in the live library (e.g. legacy bundled id) — check the
+    // fallback list too before giving up.
+    for (final exercise in _webExercises) {
+      if (exercise.id == id) return exercise;
+    }
+    return null;
   }
 
-  static const _webExercises = [
-    domain.Exercise(
-      id: 1,
+  static final _webExercises = [
+    domain.Exercise.legacy(
+      id: '1',
       name: 'Barbell Squat',
       muscleGroup: 'Quads',
       equipment: 'Barbell',
@@ -71,8 +69,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Keep your knees tracking over your toes.',
     ),
-    domain.Exercise(
-      id: 2,
+    domain.Exercise.legacy(
+      id: '2',
       name: 'Goblet Squat',
       muscleGroup: 'Quads',
       equipment: 'Dumbbell',
@@ -85,8 +83,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Move slowly and keep your ribs stacked over your hips.',
     ),
-    domain.Exercise(
-      id: 3,
+    domain.Exercise.legacy(
+      id: '3',
       name: 'Push-Up',
       muscleGroup: 'Chest',
       equipment: 'Bodyweight',
@@ -99,8 +97,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Keep a straight line from your head to your heels.',
     ),
-    domain.Exercise(
-      id: 4,
+    domain.Exercise.legacy(
+      id: '4',
       name: 'Dumbbell Row',
       muscleGroup: 'Back',
       equipment: 'Dumbbell',
@@ -113,8 +111,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Lead with your elbow and squeeze your shoulder blade.',
     ),
-    domain.Exercise(
-      id: 5,
+    domain.Exercise.legacy(
+      id: '5',
       name: 'Bench Press',
       muscleGroup: 'Chest',
       equipment: 'Barbell',
@@ -127,8 +125,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Keep your wrists stacked over your elbows.',
     ),
-    domain.Exercise(
-      id: 6,
+    domain.Exercise.legacy(
+      id: '6',
       name: 'Plank',
       muscleGroup: 'Core',
       equipment: 'Bodyweight',
@@ -141,8 +139,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Think long and strong rather than squeezing for time.',
     ),
-    domain.Exercise(
-      id: 7,
+    domain.Exercise.legacy(
+      id: '7',
       name: 'Lat Pulldown',
       muscleGroup: 'Back',
       equipment: 'Cable Machine',
@@ -155,8 +153,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Keep the bar in front of your body and lead with your elbows.',
     ),
-    domain.Exercise(
-      id: 8,
+    domain.Exercise.legacy(
+      id: '8',
       name: 'Seated Cable Row',
       muscleGroup: 'Back',
       equipment: 'Cable Machine',
@@ -169,8 +167,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Avoid rocking; let your back do the work.',
     ),
-    domain.Exercise(
-      id: 9,
+    domain.Exercise.legacy(
+      id: '9',
       name: 'Dumbbell Shoulder Press',
       muscleGroup: 'Shoulders',
       equipment: 'Dumbbell',
@@ -183,8 +181,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Use a load that lets you keep your ribs down.',
     ),
-    domain.Exercise(
-      id: 10,
+    domain.Exercise.legacy(
+      id: '10',
       name: 'Dumbbell Lateral Raise',
       muscleGroup: 'Shoulders',
       equipment: 'Dumbbell',
@@ -197,8 +195,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Keep the movement quiet and controlled.',
     ),
-    domain.Exercise(
-      id: 11,
+    domain.Exercise.legacy(
+      id: '11',
       name: 'Biceps Curl',
       muscleGroup: 'Biceps',
       equipment: 'Dumbbell',
@@ -211,8 +209,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Choose a weight that does not require body swing.',
     ),
-    domain.Exercise(
-      id: 12,
+    domain.Exercise.legacy(
+      id: '12',
       name: 'Cable Triceps Pressdown',
       muscleGroup: 'Triceps',
       equipment: 'Cable Machine',
@@ -225,8 +223,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Keep your upper arms still throughout each rep.',
     ),
-    domain.Exercise(
-      id: 13,
+    domain.Exercise.legacy(
+      id: '13',
       name: 'Romanian Deadlift',
       muscleGroup: 'Hamstrings',
       equipment: 'Barbell',
@@ -240,8 +238,8 @@ class ExerciseRepository {
       coachTip:
           'Stop when your hamstrings are taut, not when your back rounds.',
     ),
-    domain.Exercise(
-      id: 14,
+    domain.Exercise.legacy(
+      id: '14',
       name: 'Reverse Lunge',
       muscleGroup: 'Glutes',
       equipment: 'Bodyweight',
@@ -254,8 +252,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Use a stable support until your balance feels reliable.',
     ),
-    domain.Exercise(
-      id: 15,
+    domain.Exercise.legacy(
+      id: '15',
       name: 'Calf Raise',
       muscleGroup: 'Calves',
       equipment: 'Bodyweight',
@@ -268,8 +266,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Avoid bouncing and use a comfortable range of motion.',
     ),
-    domain.Exercise(
-      id: 16,
+    domain.Exercise.legacy(
+      id: '16',
       name: 'Dead Bug',
       muscleGroup: 'Core',
       equipment: 'Bodyweight',
@@ -282,8 +280,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Keep your lower back gently connected to the floor.',
     ),
-    domain.Exercise(
-      id: 17,
+    domain.Exercise.legacy(
+      id: '17',
       name: 'Treadmill Walk',
       muscleGroup: 'Cardio',
       equipment: 'Treadmill',
@@ -297,8 +295,8 @@ class ExerciseRepository {
       ],
       coachTip: 'Stay upright and avoid leaning heavily on the rails.',
     ),
-    domain.Exercise(
-      id: 18,
+    domain.Exercise.legacy(
+      id: '18',
       name: 'Stationary Cycling',
       muscleGroup: 'Cardio',
       equipment: 'Exercise Bike',
@@ -324,181 +322,58 @@ class ExerciseRepository {
   }
 }
 
-domain.Exercise _toDomain(Exercise r) {
-  return domain.Exercise(
-    id: r.id,
-    name: r.name,
-    muscleGroup: r.muscleGroup,
-    equipment: r.equipment,
-    description: r.description,
-    muscleGroups: _split(r.muscleGroups),
-    howTo: _split(r.howTo),
-    coachTip: r.coachTip,
-  );
-}
-
-/// Convert API exercise JSON to domain model with best-effort mapping.
+/// Convert API exercise JSON to domain model, keeping every backend field.
 domain.Exercise _fromApi(Map<String, dynamic> m) {
-  final name = (m['name'] ?? '') as String;
-  final bodyPart = (m['body_part'] ?? '') as String;
-  final primary = (m['primary_muscles'] as List?)?.cast<String>() ?? [];
-  final secondary = (m['secondary_muscles'] as List?)?.cast<String>() ?? [];
-  final equipmentList = (m['equipment'] as List?)?.cast<String>() ?? [];
-  final movement = (m['movement_pattern'] ?? '') as String;
-  final instructions = (m['instructions'] ?? '') as String;
-  final setup = (m['setup'] ?? '') as String;
-  final execution = (m['execution'] ?? '') as String;
-  final commonMistakes = (m['common_mistakes'] as List?)?.cast<String>() ?? [];
+  List<String> strings(String key) =>
+      (m[key] as List?)?.cast<String>() ?? const [];
 
-  final muscleGroups = [...primary, ...secondary];
-  final howTo = <String>[];
-  if (setup.isNotEmpty) howTo.addAll(_splitSentences(setup));
-  if (execution.isNotEmpty) howTo.addAll(_splitSentences(execution));
-  if (howTo.isEmpty && instructions.isNotEmpty)
-    howTo.addAll(_splitSentences(instructions));
+  List<domain.ExerciseSummary> summaries(String key) {
+    final raw = (m[key] as List?) ?? const [];
+    return raw
+        .cast<Map<String, dynamic>>()
+        .map(
+          (e) => domain.ExerciseSummary(
+            id: e['id'].toString(),
+            name: (e['name'] ?? '') as String,
+            bodyPart: (e['body_part'] ?? '') as String,
+            difficulty: (e['difficulty'] ?? '') as String,
+          ),
+        )
+        .toList();
+  }
+
+  final targetWeight = m['target_weight_kg'];
 
   return domain.Exercise(
-    id: null,
-    remoteId: m['id']?.toString(),
-    name: name,
-    muscleGroup: bodyPart.isNotEmpty
-        ? bodyPart
-        : (primary.isNotEmpty ? primary.first : 'Unknown'),
-    equipment: equipmentList.isNotEmpty ? equipmentList.first : 'Bodyweight',
-    description: instructions.isNotEmpty
-        ? instructions
-        : (howTo.isNotEmpty ? howTo.first : ''),
-    muscleGroups: muscleGroups,
-    howTo: howTo,
-    coachTip: commonMistakes.isNotEmpty ? commonMistakes.first : '',
+    id: m['id']?.toString(),
+    name: (m['name'] ?? '') as String,
+    description: (m['description'] ?? '') as String,
+    aliases: strings('aliases'),
+    bodyPart: (m['body_part'] ?? '') as String,
+    primaryMuscles: strings('primary_muscles'),
+    secondaryMuscles: strings('secondary_muscles'),
+    equipment: strings('equipment'),
+    movementPattern: (m['movement_pattern'] ?? '') as String,
+    exerciseType: (m['exercise_type'] ?? '') as String,
+    difficulty: (m['difficulty'] ?? '') as String,
+    isTimed: (m['is_timed'] as bool?) ?? false,
+    instructions: (m['instructions'] ?? '') as String,
+    setup: (m['setup'] ?? '') as String,
+    execution: (m['execution'] ?? '') as String,
+    breathing: (m['breathing'] ?? '') as String,
+    commonMistakes: strings('common_mistakes'),
+    alternatives: summaries('alternatives_detail'),
+    progressions: summaries('progression_exercises_detail'),
+    regressions: summaries('regression_exercises_detail'),
+    videoUrl: (m['video_url'] ?? '') as String,
+    animationUrl: (m['animation_url'] ?? '') as String,
+    imageUrl: (m['image'] ?? '') as String,
+    targetSets: (m['target_sets'] as num?)?.toInt(),
+    targetReps: (m['target_reps'] as num?)?.toInt(),
+    targetWeightKg: targetWeight == null
+        ? null
+        : (targetWeight is num
+            ? targetWeight.toDouble()
+            : double.tryParse(targetWeight.toString())),
   );
-}
-
-List<String> _splitSentences(String text) {
-  // Naive split on periods, question marks and newlines; trim and remove empties.
-  return text
-      .split(RegExp(r'[\.\?\n]'))
-      .map((s) => s.trim())
-      .where((s) => s.isNotEmpty)
-      .toList();
-}
-
-List<String> _split(String value) =>
-    value.isEmpty ? const [] : value.split(',').map((s) => s.trim()).toList();
-
-List<ExercisesCompanion> _defaultExercises() {
-  const seeds = [
-    _Seed(
-      name: 'Goblet Squat',
-      muscleGroup: 'Quads',
-      equipment: 'Dumbbell',
-      description: 'Fundamental lower-body strength move.',
-      muscleGroups: ['Quads', 'Glutes', 'Core'],
-      howTo: [
-        'Hold a dumbbell vertically at your chest.',
-        'Sit back with chest up, weight in heels.',
-        'Drive through heels to stand tall.',
-      ],
-      coachTip:
-          'Keep your core tight and move with control — quality over speed.',
-    ),
-    _Seed(
-      name: 'Push-Up',
-      muscleGroup: 'Chest',
-      equipment: 'Bodyweight',
-      description: 'Classic upper-body pressing move.',
-      muscleGroups: ['Chest', 'Shoulders', 'Triceps'],
-      howTo: [
-        'Place hands under shoulders, body in a line.',
-        'Lower your chest toward the floor.',
-        'Press back up, keeping a rigid plank.',
-      ],
-      coachTip: 'Breathe out as you push up. Lower with control.',
-    ),
-    _Seed(
-      name: 'Dumbbell Row',
-      muscleGroup: 'Back',
-      equipment: 'Dumbbell',
-      description: 'Pulling move for the upper back.',
-      muscleGroups: ['Back', 'Biceps'],
-      howTo: [
-        'Hinge at the hips, flat back, one hand braced.',
-        'Pull the dumbbell to your hip.',
-        'Lower slowly, then switch sides.',
-      ],
-      coachTip: 'Squeeze your shoulder blade at the top of each rep.',
-    ),
-    _Seed(
-      name: 'Barbell Squat',
-      muscleGroup: 'Legs',
-      equipment: 'Barbell',
-      description: 'Compound lower-body movement.',
-      muscleGroups: ['Quads', 'Glutes', 'Core'],
-      howTo: [
-        'Rest the bar on your upper back.',
-        'Break at hips and knees to descend.',
-        'Stand back up, driving through the mid-foot.',
-      ],
-      coachTip: 'Keep your chest up and your knees tracking your toes.',
-    ),
-    _Seed(
-      name: 'Bench Press',
-      muscleGroup: 'Chest',
-      equipment: 'Barbell',
-      description: 'Compound pressing movement.',
-      muscleGroups: ['Chest', 'Shoulders', 'Triceps'],
-      howTo: [
-        'Plant your feet, arch slightly, grip the bar.',
-        'Lower the bar to your chest.',
-        'Press powerfully back to the start.',
-      ],
-      coachTip: 'Keep your wrists stacked over your elbows.',
-    ),
-    _Seed(
-      name: 'Plank',
-      muscleGroup: 'Core',
-      equipment: 'Bodyweight',
-      description: 'Isometric core stabilization.',
-      muscleGroups: ['Core'],
-      howTo: [
-        'Forearms on the floor, body in a straight line.',
-        'Brace your abs and glutes.',
-        'Hold steady, breathing evenly.',
-      ],
-      coachTip: 'Don’t let your hips sag — think long and straight.',
-    ),
-  ];
-  return seeds
-      .map(
-        (s) => ExercisesCompanion.insert(
-          name: s.name,
-          muscleGroup: s.muscleGroup,
-          equipment: Value(s.equipment),
-          description: Value(s.description),
-          muscleGroups: Value(s.muscleGroups.join(',')),
-          howTo: Value(s.howTo.join(',')),
-          coachTip: Value(s.coachTip),
-        ),
-      )
-      .toList();
-}
-
-class _Seed {
-  const _Seed({
-    required this.name,
-    required this.muscleGroup,
-    required this.equipment,
-    required this.description,
-    required this.muscleGroups,
-    required this.howTo,
-    required this.coachTip,
-  });
-
-  final String name;
-  final String muscleGroup;
-  final String equipment;
-  final String description;
-  final List<String> muscleGroups;
-  final List<String> howTo;
-  final String coachTip;
 }

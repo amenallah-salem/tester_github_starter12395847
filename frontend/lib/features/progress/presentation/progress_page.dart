@@ -423,7 +423,11 @@ class _BodyWeightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final values = entries
-        .map((entry) => (entry['weight_kg'] as num?)?.toDouble())
+        .map((entry) {
+          final raw = entry['weight_kg'];
+          if (raw == null) return null;
+          return raw is num ? raw.toDouble() : double.tryParse(raw.toString());
+        })
         .whereType<double>()
         .toList();
     return Card(

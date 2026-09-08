@@ -349,6 +349,7 @@ class LibraryExerciseViewSet(viewsets.ModelViewSet):
     """
     serializer_class = ExerciseSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
     def get_permissions(self):
         # Allow anyone to perform safe methods (list, retrieve).

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:gym_app/features/biomechanics/data/biomechanics_mock.dart';
 
@@ -14,6 +15,11 @@ class FormVaultPage extends ConsumerWidget {
     final entries = ref.watch(formVaultProvider);
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/explorer'),
+        ),
         title: const Text('Form Vault'),
         actions: [
           IconButton(

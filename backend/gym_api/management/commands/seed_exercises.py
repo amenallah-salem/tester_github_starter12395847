@@ -234,6 +234,72 @@ EXERCISES = [
 ]
 
 
+# Per-movement-pattern coaching cues, used because the seed data doesn't
+# hand-author bespoke breathing/mistake copy for every one of the ~59 rows.
+_PATTERN_COACHING = {
+    'Horizontal Push': (
+        'Exhale forcefully as you press away; inhale on the way back.',
+        ['Flaring the elbows out to 90 degrees', 'Letting the shoulders round forward at the bottom'],
+    ),
+    'Vertical Push': (
+        'Exhale as you press overhead; inhale as you lower.',
+        ['Arching the lower back to gain range of motion', 'Flaring the elbows instead of pressing straight up'],
+    ),
+    'Horizontal Pull': (
+        'Exhale as you pull, inhale as you extend back out.',
+        ['Using momentum instead of the target muscles', 'Shrugging the shoulders up toward the ears'],
+    ),
+    'Vertical Pull': (
+        'Exhale as you pull, inhale as you return to the start.',
+        ['Using momentum to swing the weight up', 'Not controlling the lowering (eccentric) phase'],
+    ),
+    'Hinge': (
+        'Inhale as you hinge down, exhale as you drive the hips through.',
+        ['Rounding the lower back instead of hinging at the hips', 'Letting the bar or weight drift away from the body'],
+    ),
+    'Squat': (
+        'Inhale as you descend, exhale as you drive up.',
+        ['Letting the knees cave inward', 'Losing a neutral spine at the bottom of the movement'],
+    ),
+    'Lunge': (
+        'Inhale as you step and lower, exhale as you push back up.',
+        ['Letting the front knee travel far past the toes', 'Losing balance from a narrow foot placement'],
+    ),
+    'Isolation': (
+        'Exhale on the contraction, inhale on the release.',
+        ['Using momentum instead of a slow, controlled tempo', 'Recruiting larger muscle groups to cheat the weight up'],
+    ),
+    'Core Stabilization': (
+        'Breathe steadily throughout; never hold your breath.',
+        ['Letting the hips sag or pike out of a straight line', 'Rushing the hold instead of keeping steady tension'],
+    ),
+    'Rotation': (
+        'Exhale as you rotate, inhale as you return to center.',
+        ['Rotating from the lower back instead of the torso', 'Using momentum instead of controlled rotation'],
+    ),
+    'Other': (
+        'Keep your breathing steady and matched to the effort of the movement.',
+        ['Sacrificing form for speed or extra load', 'Losing core tension partway through the set'],
+    ),
+}
+
+# Well-known alternate names; most exercises simply have no common alias.
+_ALIASES = {
+    'Push-up': ['Press-up'],
+    'Barbell Back Squat': ['Back Squat'],
+    "Farmer's Carry": ["Farmer's Walk"],
+    'Front Plank': ['Plank'],
+}
+
+# Hold/duration-based movements (their "reps" value in EXERCISES is really seconds).
+_TIMED_EXERCISES = {
+    'Front Plank', 'Side Plank', "Farmer's Carry",
+    'Treadmill Running', 'Stationary Cycling', 'Rowing Machine', 'Jump Rope',
+}
+
+_DIFFICULTY_RANK = {'Beginner': 0, 'Intermediate': 1, 'Advanced': 2}
+
+
 class Command(BaseCommand):
     help = 'Seed the exercise library with a starter set of exercises (idempotent).'
 
@@ -247,9 +313,14 @@ class Command(BaseCommand):
 
         created = 0
         updated = 0
+        by_name = {}
         for (name, body_part, primary_muscles, secondary_muscles, equipment,
              movement_pattern, exercise_type, difficulty, sets, reps, instructions) in EXERCISES:
             slug = _slug(name)
+            breathing, common_mistakes = _PATTERN_COACHING.get(
+                movement_pattern, _PATTERN_COACHING['Other'],
+            )
+            equipment_text = ' and '.join(equipment) if equipment else 'just your bodyweight'
             defaults = {
                 'body_part': body_part,
                 'primary_muscles': primary_muscles,
@@ -262,6 +333,12 @@ class Command(BaseCommand):
                 'target_reps': reps,
                 'instructions': instructions,
                 'description': instructions,
+                'setup': f'Set up with {equipment_text}; brace your core and find a neutral spine before you start.',
+                'execution': instructions,
+                'breathing': breathing,
+                'common_mistakes': common_mistakes,
+                'aliases': _ALIASES.get(name, []),
+                'is_timed': name in _TIMED_EXERCISES,
                 'video_url': f'{MEDIA_BASE}/{slug}.mp4',
                 'animation_url': f'{MEDIA_BASE}/{slug}.jpg',
                 'user': admin_user,
@@ -269,10 +346,34 @@ class Command(BaseCommand):
             obj, was_created = Exercise.objects.update_or_create(
                 name=name, is_library=True, defaults=defaults,
             )
+            by_name[name] = obj
             if was_created:
                 created += 1
             else:
                 updated += 1
+
+        # Second pass: derive alternatives/progressions/regressions from
+        # same-body-part groups, ordered by difficulty.
+        groups = {}
+        for (name, body_part, *_rest) in EXERCISES:
+            groups.setdefault(body_part, []).append(name)
+        for names in groups.values():
+            ordered = sorted(names, key=lambda n: _DIFFICULTY_RANK[by_name[n].difficulty])
+            for index, name in enumerate(ordered):
+                obj = by_name[name]
+                regression = by_name[ordered[index - 1]] if index > 0 else None
+                progression = by_name[ordered[index + 1]] if index < len(ordered) - 1 else None
+                excluded = {name}
+                if regression:
+                    excluded.add(regression.name)
+                if progression:
+                    excluded.add(progression.name)
+                alternatives = [
+                    by_name[other] for other in ordered if other not in excluded
+                ][:2]
+                obj.regression_exercises.set([regression] if regression else [])
+                obj.progression_exercises.set([progression] if progression else [])
+                obj.alternatives.set(alternatives)
 
         self.stdout.write(self.style.SUCCESS(
             f'Exercise library seeded (created={created}, updated={updated}, total={len(EXERCISES)}).'

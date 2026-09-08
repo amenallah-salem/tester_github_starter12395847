@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/plan.dart';
+import '../features/plans/domain/plan_summary.dart';
 import '../models/progress_metric.dart';
 
 class ApiClient {
@@ -156,7 +156,7 @@ class ApiClient {
     return _jsonObject(response, 'registration');
   }
 
-  Future<List<Plan>> fetchPlans() async {
+  Future<List<PlanSummary>> fetchPlans() async {
     final data = _jsonObject(
       await _send(
         () => http.get(_uri('/plans/'), headers: _headers()),
@@ -166,7 +166,19 @@ class ApiClient {
       'plans',
     );
     final list = (data['results'] as List?) ?? const [];
-    return list.cast<Map<String, dynamic>>().map(Plan.fromJson).toList();
+    return list.cast<Map<String, dynamic>>().map(PlanSummary.fromJson).toList();
+  }
+
+  /// Full plan detail, including nested exercises (`PlanSerializer`).
+  Future<Map<String, dynamic>> fetchPlanDetail(String planId) async {
+    return _jsonObject(
+      await _send(
+        () => http.get(_uri('/plans/$planId/'), headers: _headers()),
+        method: 'GET',
+        path: '/plans/$planId/',
+      ),
+      'plan detail',
+    );
   }
 
   Future<List<ProgressMetric>> fetchProgress() async {

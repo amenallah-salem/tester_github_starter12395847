@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:gym_app/features/biomechanics/data/biomechanics_mock.dart';
 
@@ -45,6 +46,11 @@ class _ReplayPage3DState extends ConsumerState<ReplayPage3D> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/coach'),
+        ),
         title: Text('Replay · ${replay.exerciseName}'),
         actions: [
           IconButton(

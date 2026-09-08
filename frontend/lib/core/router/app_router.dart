@@ -10,6 +10,8 @@ import 'package:gym_app/features/plan_runner/presentation/plan_runner_page.dart'
 import 'package:gym_app/features/exercise_library/presentation/exercise_detail_page.dart';
 import 'package:gym_app/features/exercise_library/presentation/muscle_filter_bar.dart';
 import 'package:gym_app/features/exercise_library/domain/exercise.dart';
+import 'package:gym_app/features/plans/presentation/plans_list_page.dart';
+import 'package:gym_app/features/plans/presentation/plan_detail_page.dart';
 import 'package:gym_app/core/di/injection.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:gym_app/services/api_client.dart';
@@ -86,17 +88,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/progress',
             builder: (context, state) => const ProgressPage(),
           ),
-          GoRoute(
-            path: '/coach',
-            builder: (context, state) => const CoachPage(),
-          ),
           GoRoute(path: '/you', builder: (context, state) => const YouPage()),
           // Bottom-nav tab: must live inside the shell so navigation stays.
           GoRoute(
             path: '/explorer',
             builder: (context, state) => const ExerciseExplorerPage(),
           ),
+          GoRoute(
+            path: '/plans',
+            builder: (context, state) => const PlansListPage(),
+          ),
+          GoRoute(
+            path: '/plans/:id',
+            builder: (context, state) =>
+                PlanDetailPage(planId: state.pathParameters['id']!),
+          ),
         ],
+      ),
+      GoRoute(
+        path: '/coach',
+        builder: (context, state) => const CoachPage(),
       ),
       GoRoute(
         path: '/run',
@@ -221,7 +232,7 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
   }
 
   Future<void> _toggleFavorite(Exercise exercise) async {
-    final id = exercise.remoteId;
+    final id = exercise.id;
     if (id == null) return;
     final recordId = _favoriteRecords[id];
     if (recordId != null) {
@@ -246,6 +257,16 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
         title: const Text('Exercise Explorer'),
         actions: [
           IconButton(
+            tooltip: 'AI Coach',
+            onPressed: () => context.push('/coach'),
+            icon: const Icon(Icons.chat_bubble_outline),
+          ),
+          IconButton(
+            tooltip: 'My Plans',
+            onPressed: () => context.push('/plans'),
+            icon: const Icon(Icons.calendar_month_outlined),
+          ),
+          IconButton(
             tooltip: 'Form Vault',
             onPressed: () => context.push('/vault'),
             icon: const Icon(Icons.bookmark_border),
@@ -257,8 +278,8 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
         builder: (context, snapshot) {
           final visible = [...snapshot.data ?? const <Exercise>[]]
             ..sort((a, b) {
-              final aFavorite = _favoriteRecords.containsKey(a.remoteId);
-              final bFavorite = _favoriteRecords.containsKey(b.remoteId);
+              final aFavorite = _favoriteRecords.containsKey(a.id);
+              final bFavorite = _favoriteRecords.containsKey(b.id);
               if (aFavorite == bFavorite) return 0;
               return aFavorite ? -1 : 1;
             });
@@ -302,33 +323,64 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
                       contentPadding: const EdgeInsets.all(12),
                       leading: CircleAvatar(
                         backgroundColor: AppTheme.primaryContainer,
-                        child: const Icon(
-                          Icons.directions_run,
-                          color: AppTheme.primary,
-                        ),
+                        backgroundImage: exercise.imageUrl.isNotEmpty
+                            ? NetworkImage(exercise.imageUrl)
+                            : null,
+                        onBackgroundImageError: exercise.imageUrl.isNotEmpty
+                            ? (_, __) {}
+                            : null,
+                        child: exercise.imageUrl.isEmpty
+                            ? const Icon(
+                                Icons.directions_run,
+                                color: AppTheme.primary,
+                              )
+                            : null,
                       ),
                       title: Text(
                         exercise.name,
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      subtitle: Text(
-                        '${exercise.muscleGroup} · ${exercise.equipment}',
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${exercise.muscleGroup} · '
+                            '${exercise.equipment.isNotEmpty ? exercise.equipment.join(', ') : 'Bodyweight'}',
+                          ),
+                          if (exercise.difficulty.isNotEmpty ||
+                              exercise.exerciseType.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  if (exercise.difficulty.isNotEmpty)
+                                    _ExplorerBadge(exercise.difficulty),
+                                  if (exercise.exerciseType.isNotEmpty)
+                                    _ExplorerBadge(exercise.exerciseType),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
+                      isThreeLine: exercise.difficulty.isNotEmpty ||
+                          exercise.exerciseType.isNotEmpty,
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             tooltip:
-                                _favoriteRecords.containsKey(exercise.remoteId)
+                                _favoriteRecords.containsKey(exercise.id)
                                     ? 'Remove favorite'
                                     : 'Add favorite',
                             onPressed: () => _toggleFavorite(exercise),
                             icon: Icon(
-                              _favoriteRecords.containsKey(exercise.remoteId)
+                              _favoriteRecords.containsKey(exercise.id)
                                   ? Icons.star
                                   : Icons.star_border,
                               color: _favoriteRecords
-                                      .containsKey(exercise.remoteId)
+                                      .containsKey(exercise.id)
                                   ? Colors.amber
                                   : null,
                             ),
@@ -336,14 +388,39 @@ class _ExerciseExplorerPageState extends ConsumerState<ExerciseExplorerPage> {
                           const Icon(Icons.chevron_right),
                         ],
                       ),
-                      onTap: () => context.push(
-                        '/exercise/${Uri.encodeComponent(exercise.name)}',
-                      ),
+                      onTap: exercise.id == null
+                          ? null
+                          : () => context.push('/exercise/${exercise.id}'),
                     ),
                   ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _ExplorerBadge extends StatelessWidget {
+  const _ExplorerBadge(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          color: AppTheme.primary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

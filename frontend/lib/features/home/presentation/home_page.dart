@@ -14,9 +14,8 @@ class HomePage extends StatelessWidget {
   static const _tabs = [
     _Tab('/', Icons.home_outlined, 'Home'),
     _Tab('/explorer', Icons.fitness_center_outlined, 'Workouts'),
-    _Tab('/coach', Icons.groups_outlined, 'Train'),
     _Tab('/progress', Icons.show_chart_outlined, 'Progress'),
-    _Tab('/you', Icons.person_outline, 'More'),
+    _Tab('/you', Icons.person_outline, 'Profile'),
   ];
 
   int _indexFor(String location) {

@@ -34,6 +34,11 @@ class PlanPage extends ConsumerWidget {
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
+            tooltip: 'AI Coach',
+            onPressed: () => context.push('/coach'),
+            icon: const Icon(Icons.chat_bubble_outline),
+          ),
+          IconButton(
             tooltip: 'Notifications',
             onPressed: () {},
             icon: const Icon(Icons.notifications_none_rounded),

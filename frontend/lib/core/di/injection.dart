@@ -23,7 +23,7 @@ final planDaoProvider = Provider<PlanDao>((ref) {
 });
 
 final exerciseRepositoryProvider = Provider<ExerciseRepository>((ref) {
-  return ExerciseRepository(ref.watch(exerciseDaoProvider));
+  return ExerciseRepository();
 });
 
 /// Seed default exercise library on first launch.
