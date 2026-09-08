@@ -14,6 +14,13 @@ class ApiClient {
   String? accessToken;
   String? refreshToken;
 
+  /// Invoked when a request 401s and the refresh token can't recover it
+  /// (missing, expired, or rejected by the backend). Wired once at app
+  /// startup to clear auth state and route to sign-in — this is the single
+  /// place "session genuinely can't be restored" is decided, rather than
+  /// each screen handling 401s independently.
+  Future<void> Function()? onSessionExpired;
+
   ApiClient({String? baseUrl}) : baseUrl = baseUrl ?? _defaultBaseUrl();
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
@@ -47,9 +54,14 @@ class ApiClient {
     final uri = _uri(path);
     try {
       var response = await request();
-      if (response.statusCode == 401 && refreshToken != null) {
-        final refreshed = await _refreshAccessToken();
-        if (refreshed) response = await request();
+      if (response.statusCode == 401) {
+        final refreshed =
+            refreshToken != null && await _refreshAccessToken();
+        if (refreshed) {
+          response = await request();
+        } else if (response.statusCode == 401) {
+          await onSessionExpired?.call();
+        }
       }
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw ApiException.fromResponse(
@@ -107,6 +119,18 @@ class ApiClient {
       path: '/auth/token/',
     );
     return _jsonObject(response, 'login');
+  }
+
+  /// Invalidate the refresh token server-side (JWT equivalent of Django's
+  /// session `logout()`). Best-effort: callers should clear local state
+  /// regardless of whether this succeeds.
+  Future<void> logout(String? refresh) async {
+    if (refresh == null || accessToken == null) return;
+    await http.post(
+      _uri('/auth/logout/'),
+      headers: _headers(json: true),
+      body: jsonEncode({'refresh': refresh}),
+    );
   }
 
   Future<Map<String, dynamic>> register({

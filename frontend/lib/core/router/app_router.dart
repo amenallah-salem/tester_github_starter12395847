@@ -58,9 +58,16 @@ class _MissingSessionPage extends StatelessWidget {
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authReady = ref.watch(authBootstrapProvider);
   final onboardingReady = ref.watch(onboardingBootstrapProvider);
-  final accessToken = ref.watch(accessTokenProvider);
+  final authStatus = ref.watch(authStatusProvider);
   return GoRouter(
-    initialLocation: '/sign-in',
+    // No initialLocation: on Flutter Web that would force every browser
+    // refresh at "/" to start on "/sign-in" (go_router falls back to
+    // initialLocation whenever the platform's current path is "/"), which
+    // is exactly what caused refreshing while on Home to flash back to
+    // Sign In. Letting go_router read the platform's actual current
+    // location (browser URL / deep link) and leaving `redirect` below to
+    // decide what's reachable is what makes "stay on this page after a
+    // refresh" work.
     routes: [
       GoRoute(
         path: '/sign-in',
@@ -176,7 +183,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (authReady.isLoading || onboardingReady.isLoading) return null;
       return resolveRedirect(
         location: state.matchedLocation,
-        signedIn: accessToken != null,
+        signedIn: authStatus == AuthStatus.authenticated,
         onboardingDone: ref.read(onboardingDoneProvider),
       );
     },

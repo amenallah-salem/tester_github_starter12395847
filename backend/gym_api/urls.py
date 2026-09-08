@@ -15,6 +15,7 @@ from .views import (
     BodyWeightEntryViewSet,
     FavoriteExerciseViewSet,
     RegisterView,
+    LogoutView,
     SubscriptionViewSet,
     HealthCheckView,
     SwipeViewSet,
@@ -41,6 +42,7 @@ urlpatterns = [
     path('auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/register/', RegisterView.as_view(), name='register'),
+    path('auth/logout/', LogoutView.as_view(), name='logout'),
     # Router URLs
     path('', include(router.urls)),
 ]

@@ -12,22 +12,72 @@ MON, TUE, WED, THU, FRI, SAT, SUN = range(7)
 # Each program: name, description, {weekday: [exercise names, in order]}
 PROGRAMS = [
     (
-        'Push / Pull / Legs',
-        '3-day split: Push (chest/shoulders/triceps), Pull (back/biceps), Legs.',
+        'Push Pull Legs',
+        (
+            'Classic 3-way body-part split (push, pull, legs) run twice per week '
+            '(6 training days, Thursday rest) so every muscle group is trained '
+            'roughly every 3-4 days -- the frequency research links to the best '
+            'hypertrophy outcomes for this split. See docs/workout-plans.md for sources.'
+        ),
         {
-            MON: ['Barbell Bench Press', 'Barbell Overhead Press', 'Triceps Pushdown', 'Dumbbell Lateral Raise'],
-            WED: ['Pull-up', 'Bent Over Barbell Row', 'Barbell Curl', 'Dumbbell Rear Delt Fly'],
-            FRI: ['Barbell Back Squat', 'Romanian Deadlift', 'Leg Press', 'Standing Calf Raise'],
+            # Push: chest, front/lateral delts, triceps
+            MON: ['Barbell Bench Press', 'Incline Dumbbell Press', 'Barbell Overhead Press',
+                  'Dumbbell Lateral Raise', 'Triceps Pushdown', 'Lying Triceps Extension'],
+            # Pull: lats, upper back, traps, rear delts, biceps
+            TUE: ['Pull-up', 'Bent Over Barbell Row', 'Seated Cable Row',
+                  'Dumbbell Rear Delt Fly', 'Barbell Curl', 'Dumbbell Hammer Curl'],
+            # Legs: quads, hamstrings, glutes, calves
+            WED: ['Barbell Back Squat', 'Romanian Deadlift', 'Walking Lunge',
+                  'Leg Extension', 'Lying Leg Curl', 'Standing Calf Raise'],
+            # THU: rest
+            FRI: ['Barbell Bench Press', 'Incline Dumbbell Press', 'Barbell Overhead Press',
+                  'Dumbbell Lateral Raise', 'Triceps Pushdown', 'Lying Triceps Extension'],
+            SAT: ['Pull-up', 'Bent Over Barbell Row', 'Seated Cable Row',
+                  'Dumbbell Rear Delt Fly', 'Barbell Curl', 'Dumbbell Hammer Curl'],
+            SUN: ['Barbell Back Squat', 'Romanian Deadlift', 'Walking Lunge',
+                  'Leg Extension', 'Lying Leg Curl', 'Standing Calf Raise'],
         },
     ),
     (
-        'Upper / Lower Split',
-        '4-day split alternating upper body and lower body sessions.',
+        'Full Body',
+        (
+            'Three full-body sessions per week (Mon/Wed/Fri), each covering every '
+            'major movement pattern -- squat, hinge, horizontal/vertical push, '
+            'horizontal/vertical pull, plus arms and core -- with varied exercise '
+            'selection across A/B/C so the same muscles are trained through '
+            'different angles. See docs/workout-plans.md for sources.'
+        ),
         {
-            MON: ['Barbell Bench Press', 'Bent Over Barbell Row', 'Barbell Overhead Press', 'Barbell Curl'],
-            TUE: ['Barbell Back Squat', 'Romanian Deadlift', 'Leg Extension', 'Standing Calf Raise'],
-            THU: ['Incline Dumbbell Press', 'Lat Pulldown', 'Triceps Pushdown', 'Dumbbell Hammer Curl'],
-            FRI: ['Barbell Hip Thrust', 'Lying Leg Curl', 'Walking Lunge', 'Seated Calf Raise'],
+            MON: ['Barbell Back Squat', 'Romanian Deadlift', 'Barbell Bench Press',
+                  'Barbell Overhead Press', 'Bent Over Barbell Row', 'Lat Pulldown',
+                  'Barbell Curl', 'Front Plank'],
+            WED: ['Leg Press', 'Barbell Hip Thrust', 'Incline Dumbbell Press',
+                  'Arnold Press', 'Seated Cable Row', 'Pull-up',
+                  'Triceps Pushdown', 'Cable Crunch'],
+            FRI: ['Walking Lunge', 'Glute Bridge', 'Push-up',
+                  'Barbell Overhead Press', 'Bent Over Barbell Row', 'Lat Pulldown',
+                  'Dumbbell Hammer Curl', 'Hanging Leg Raise'],
+        },
+    ),
+    (
+        'Upper Lower',
+        (
+            '4-day upper/lower split (Mon/Tue, Thu/Fri, weekend rest) hitting '
+            'each muscle group twice a week -- the frequency research ties to '
+            'reliable hypertrophy -- with a different exercise selection on the '
+            'B days to vary angles and equipment. See docs/workout-plans.md for sources.'
+        ),
+        {
+            MON: ['Barbell Bench Press', 'Lat Pulldown', 'Seated Cable Row',
+                  'Barbell Overhead Press', 'Barbell Curl', 'Triceps Pushdown'],
+            TUE: ['Barbell Back Squat', 'Romanian Deadlift', 'Walking Lunge',
+                  'Lying Leg Curl', 'Standing Calf Raise'],
+            # WED: rest
+            THU: ['Incline Dumbbell Press', 'Pull-up', 'Bent Over Barbell Row',
+                  'Dumbbell Lateral Raise', 'Dumbbell Hammer Curl', 'Lying Triceps Extension'],
+            FRI: ['Leg Press', 'Romanian Deadlift', 'Walking Lunge',
+                  'Leg Extension', 'Lying Leg Curl', 'Seated Calf Raise'],
+            # SAT/SUN: rest
         },
     ),
     (
@@ -78,6 +128,11 @@ PROGRAMS = [
     ),
 ]
 
+# Plans that were superseded by a more research-aligned, correctly named
+# version above. Only ever removed for the seed-owned demo user, never for a
+# real user's data.
+SUPERSEDED_PLAN_NAMES = ['Push / Pull / Legs', 'Upper / Lower Split']
+
 
 class Command(BaseCommand):
     help = 'Seed example workout plans/programs using the exercise library (idempotent).'
@@ -91,6 +146,14 @@ class Command(BaseCommand):
         if not demo_user.has_usable_password():
             demo_user.set_unusable_password()
             demo_user.save(update_fields=['password'])
+
+        superseded_qs = Plan.objects.filter(user=demo_user, name__in=SUPERSEDED_PLAN_NAMES)
+        removed = superseded_qs.count()
+        superseded_qs.delete()
+        if removed:
+            self.stdout.write(self.style.WARNING(
+                f'Removed {removed} superseded demo plan(s) (renamed to their new equivalents).'
+            ))
 
         exercises_by_name = {
             exercise.name: exercise

@@ -365,6 +365,75 @@ class APITests(APITestCase):
         self.assertIn('password', resp.data)
 
 
+class AuthenticationTests(APITestCase):
+    """Login persistence: token issuance, refresh, logout invalidation."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('authuser', 'auth@example.com', 'authpass123')
+
+    def test_login_issues_access_and_refresh_tokens(self):
+        resp = self.client.post('/api/auth/token/', {
+            'username': 'authuser', 'password': 'authpass123',
+        })
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('access', resp.data)
+        self.assertIn('refresh', resp.data)
+
+    def test_login_rejects_wrong_password(self):
+        resp = self.client.post('/api/auth/token/', {
+            'username': 'authuser', 'password': 'wrong-password',
+        })
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_access_token_authenticates_requests(self):
+        tokens = self.client.post('/api/auth/token/', {
+            'username': 'authuser', 'password': 'authpass123',
+        }).data
+        resp = self.client.get(
+            '/api/profiles/me/',
+            HTTP_AUTHORIZATION=f'Bearer {tokens["access"]}',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_refresh_token_issues_a_new_access_token(self):
+        tokens = self.client.post('/api/auth/token/', {
+            'username': 'authuser', 'password': 'authpass123',
+        }).data
+        resp = self.client.post('/api/auth/token/refresh/', {
+            'refresh': tokens['refresh'],
+        })
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('access', resp.data)
+
+    def test_logout_blacklists_refresh_token(self):
+        tokens = self.client.post('/api/auth/token/', {
+            'username': 'authuser', 'password': 'authpass123',
+        }).data
+        resp = self.client.post(
+            '/api/auth/logout/',
+            {'refresh': tokens['refresh']},
+            HTTP_AUTHORIZATION=f'Bearer {tokens["access"]}',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_205_RESET_CONTENT)
+
+        # The blacklisted refresh token can no longer mint new access tokens.
+        resp = self.client.post('/api/auth/token/refresh/', {
+            'refresh': tokens['refresh'],
+        })
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_logout_requires_authentication(self):
+        resp = self.client.post('/api/auth/logout/', {'refresh': 'whatever'})
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_invalid_access_token_is_rejected(self):
+        resp = self.client.get(
+            '/api/profiles/me/',
+            HTTP_AUTHORIZATION='Bearer not-a-real-token',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
 class GymBroTests(APITestCase):
     def setUp(self):
         self.user_a = User.objects.create_user('bro_a', 'a@example.com', 'pass12345')

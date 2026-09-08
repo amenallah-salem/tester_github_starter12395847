@@ -97,6 +97,32 @@ class RegisterView(APIView):
         return Response(s.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class LogoutView(APIView):
+    """POST /auth/logout/ – blacklist the given refresh token.
+
+    JWT access tokens can't be revoked (they're just verified signatures), so
+    logout invalidates the *refresh* token server-side: once blacklisted it
+    can never be exchanged for a new access token again, which is the JWT
+    equivalent of Django's session-based `logout()` clearing session data.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        refresh = request.data.get('refresh')
+        if not refresh:
+            return Response({'refresh': 'This field is required.'},
+                             status=status.HTTP_400_BAD_REQUEST)
+        from rest_framework_simplejwt.exceptions import TokenError
+        from rest_framework_simplejwt.tokens import RefreshToken
+        try:
+            RefreshToken(refresh).blacklist()
+        except TokenError:
+            # Already invalid/expired/blacklisted – logout is still a success
+            # from the client's point of view (the credential is unusable).
+            pass
+        return Response(status=status.HTTP_205_RESET_CONTENT)
+
+
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """Allow owners to edit; everyone can read."""
     def has_object_permission(self, request, view, obj):

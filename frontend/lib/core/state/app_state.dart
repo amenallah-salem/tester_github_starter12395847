@@ -10,6 +10,13 @@ import 'package:gym_app/core/state/auth_state.dart';
 final onboardingDoneProvider = StateProvider<bool>((ref) => false);
 
 final onboardingBootstrapProvider = FutureProvider<void>((ref) async {
+  // Wait for auth restoration to finish first: this reads accessTokenProvider
+  // below, and authBootstrapProvider is what sets it from persisted storage.
+  // Without this ordering the two futures race and this one frequently reads
+  // accessTokenProvider before sign-in has been restored, silently skipping
+  // the server sync every time.
+  await ref.watch(authBootstrapProvider.future);
+
   final prefs = await SharedPreferences.getInstance();
   // Default from local pref
   var locallyDone = prefs.getBool('onboarding_done') ?? false;
