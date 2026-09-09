@@ -7,6 +7,9 @@ than the stock `django.contrib.admin` so every registered model picks up the
 theme automatically.
 """
 from django.contrib import admin
+from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import Group, User
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin, TabularInline
 
@@ -20,6 +23,32 @@ from .models import (
 # ---------------------------------------------------------------------------
 # People
 # ---------------------------------------------------------------------------
+
+# django.contrib.auth registers User/Group with its own UserAdmin/GroupAdmin,
+# which subclass the *stock* django.contrib.admin.ModelAdmin rather than
+# unfold's. Unfold's changelist template renders each bulk action's "Run"
+# button with `x-show="action"`, which only becomes true once the action
+# <select> updates an Alpine `x-model="action"` binding — a binding only
+# unfold.admin.ModelAdmin's ActionForm widget sets. Without it (the stock
+# admin's default ActionForm), the Run button never appears, so bulk actions
+# (e.g. "Delete selected users") are otherwise impossible to submit. Re-
+# registering under unfold.admin.ModelAdmin (mixed in ahead of the stock
+# UserAdmin/GroupAdmin so its ActionForm wins) fixes this while keeping all
+# of Django's normal user/group admin behavior (password change, permissions
+# widgets, etc.).
+admin.site.unregister(User)
+admin.site.unregister(Group)
+
+
+@admin.register(User)
+class UserAdmin(ModelAdmin, BaseUserAdmin):
+    pass
+
+
+@admin.register(Group)
+class GroupAdmin(ModelAdmin, BaseGroupAdmin):
+    pass
+
 
 @admin.register(Profile)
 class ProfileAdmin(ModelAdmin):

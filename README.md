@@ -57,8 +57,75 @@ The product combines workout planning and execution with an exercise library, pr
 - Locale and country fields
 - Training goals, experience level, availability, and profile information
 
+### Social / Gym Bro
+- Tinder-style workout-partner discovery: swipe left (pass) or right (like) through nearby candidate profiles
+- Matching: a mutual like creates a match, surfaced in a dedicated "Gym Bro" bottom-nav tab
+- A per-match chat thread (messages icon on the discovery screen) for matched training partners
+- A short training-focused profile (bio, training goals, experience level, availability, location) that's separate from the main account profile, editable from its own settings screen
+- Built on top of the existing `Profile` model plus three dedicated models (`Swipe`, `Match`, `GymBroMessage`) — see the "Gym Bro" section further down for the full picture
+
 ### Subscription Foundation
 The backend contains a subscription model and billing abstraction that can be extended with a payment provider such as Stripe. Payment processing/webhooks are **not yet a complete production billing integration**.
+
+---
+
+# 🧭 Getting to Know WELLAURA (a guided tour)
+
+This section is the mental model an engineer (or an AI assistant) needs before
+touching this codebase — the shape of each piece, not just its file path,
+built up by actually reading the code rather than guessing from folder names.
+
+WELLAURA ("welora" in the UI) is a single Flutter codebase talking to one
+Django REST API — no separate microservices. It's a solo training coach
+(plan generation, a library-backed exercise browser, workout logging,
+progress tracking) plus a social layer (Gym Bro matching) and a lightweight
+mindfulness layer (breathwork, recovery), all sharing one `Profile` model.
+
+The bottom-nav shell (`frontend/lib/features/home/presentation/home_page.dart`)
+carries five tabs, each a `ShellRoute` child so the nav bar persists across
+navigation:
+
+- **Home** (`/`) — the daily dashboard: weekly-rhythm cards, a category grid
+  that deep-links into the exercise library, an editable weekly schedule, and
+  the AI-generated plan's *today* session with a "Start workout" CTA.
+- **Workouts** (`/explorer`) — the exercise library: search, muscle-group
+  filters, favorites, and entry points to My Plans, Form Vault, and the AI
+  Coach.
+- **Gym Bro** (`/gym-bro`) — the Tinder-style training-partner discovery feed
+  (see the dedicated section below).
+- **Progress** (`/progress`) — history and analytics: streaks, lift volume,
+  personal records, body-weight trend, rhythm/muscle-load charts, and the raw
+  session/set history.
+- **Profile** (`/you`) — account settings, onboarding data, and the
+  subscription state.
+
+Two things trip people up the first time:
+
+1. **There are two unrelated "Plan" concepts.** The real backend `Plan` /
+   `PlanDay` / `PlanDayExercise` models are full CRUD, multiple named plans
+   per user, with a weekly schedule (`frontend/lib/features/plans/`, reachable
+   from the calendar icon on the Workouts tab). Separately, the Home tab's
+   dashboard runs on an AI-coach `WorkoutPlan` JSON contract
+   (`frontend/lib/features/plan/domain/plan_contract.dart`) that's bridged
+   from the user's first real `Plan` by `PlanNotifier.refreshFromApi()`. They
+   look similar but are not interchangeable.
+2. **`Exercise` plays two roles with one table.** `is_library=True` /
+   `user=None` rows are the shared, admin-authored catalog (rich metadata:
+   muscles, equipment, instructions, alternatives/progressions/regressions).
+   The same model, with `is_library=False` and a `user`/`plan` set, doubles as
+   a per-plan-day assignment row.
+
+Everything a workout produces flows through `WorkoutSession` (start/finish
+timestamps, optional `Plan` link) grouping `ProgressMetric` rows (one row per
+logged set — reps, weight, duration, which exercise); the Progress tab reads
+that same data back out. The AI Coach ("Kaori") is a chat-style assistant
+that is currently UI/mock-data driven, not backed by a real inference
+pipeline yet — same for the biomechanics/3D-replay screens.
+
+Once that picture is in place, the fastest way to extend the backend safely
+is with fully-populated, realistic test accounts rather than hand-crafting
+data through the API or the admin one field at a time — see the "Test
+Environment Initialization" section further down.
 
 ---
 
@@ -367,6 +434,49 @@ http://127.0.0.1:8000/admin/
 
 ---
 
+# 🧪 Test Environment Initialization
+
+Once the dev stack is up (`./docker.dev.sh up` prints a reminder of this at
+the end), populate it with fully-featured test accounts — users, profiles,
+avatars, exercises, workout plans, plan assignments, and workout
+history/sets/reps/weights — with a single command:
+
+```bash
+./scripts/init_test_environment.sh
+```
+
+All of that data comes from one JSON file, `asserts/inputs_dev_env/json_file.json`
+— it is the single source of truth for the dev/test environment, not the
+script or the Django command that reads it:
+
+```text
+asserts/inputs_dev_env/json_file.json
+                ↓
+scripts/init_test_environment.sh
+                ↓
+backend/gym_api/management/commands/init_test_environment.py
+                ↓
+database
+```
+
+To add or change a test user, exercise, plan, or workout history entry, edit
+that JSON file and re-run the script — the command is idempotent (safe to
+re-run; it updates/reuses existing rows by stable id rather than duplicating
+them) and validates the entire file up front, refusing to write anything to
+the database if it finds a problem (missing fields, bad references, invalid
+dates, duplicate ids, etc.).
+
+Validate without writing to the database:
+
+```bash
+./scripts/init_test_environment.sh --check-only
+```
+
+Full schema documentation, including how to add each kind of record, lives
+in [`asserts/inputs_dev_env/README.md`](asserts/inputs_dev_env/README.md).
+
+---
+
 # 🔐 Authentication
 
 The API uses JWT authentication through `djangorestframework-simplejwt`.
@@ -439,6 +549,51 @@ features/gym_bro
 ```
 
 This structure keeps product functionality isolated and makes it easier to evolve individual domains independently.
+
+---
+
+# 🏋️ Gym Bro
+
+Gym Bro is WELLAURA's social layer: a Tinder-style way to find a training
+partner, layered on top of the same `Profile` model the rest of the app
+uses (no separate account system).
+
+**Data model** (`backend/gym_api/models.py`):
+
+- `Profile` carries the Gym Bro–specific fields: `bio`, `training_goals`
+  (a JSON list, e.g. `["strength", "cardio"]`), `experience_level`
+  (`beginner` / `intermediate` / `advanced`), `availability` (free text),
+  and `location` (city/area text only — precise geolocation is intentionally
+  never collected or stored).
+- `Swipe` — a like/pass recorded by one user against another's profile.
+- `Match` — created automatically once two users have both liked each
+  other; stored as an ordered pair so a mutual like can never create two
+  rows for the same pair. It also doubles as the chat thread.
+- `GymBroMessage` — a persisted chat message tied to a `Match`.
+
+**API** (`backend/gym_api/views.py`, `urls.py`):
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/profiles/discover/` | Candidate profiles to swipe on (excludes already-swiped users) |
+| POST | `/api/swipes/` | Record a like/pass; auto-creates a `Match` on mutual like |
+| GET | `/api/gym-bro/matches/` | List the current user's matches |
+| GET / POST | `/api/gym-bro/matches/<id>/messages/` | Read/send messages in a match's chat thread |
+
+**Frontend** (`frontend/lib/features/gym_bro/`):
+
+- `gym_bro_settings_page.dart` — edit your own Gym Bro profile (bio, goal
+  chips, experience, availability).
+- `gym_bro_discover_page.dart` — the swipe deck (also embedded as the
+  `Gym Bro` bottom-nav tab; see `isTab` on `GymBroDiscoverPage`).
+- `gym_bro_matches_page.dart` — your matches list ("Your matches"; empty
+  state until you get a mutual like).
+- `gym_bro_chat_page.dart` — the per-match chat screen.
+
+The bottom-nav tab's app bar carries a messages icon on the left (opens your
+matches/chat) and a settings icon on the right (opens your Gym Bro profile
+editor), so discovery, messaging, and profile editing are all one tap away
+from the tab itself.
 
 ---
 
@@ -692,9 +847,9 @@ Potential product evolution includes:
 - Music/workout integrations
 - Smarter reminders and scheduling
 - Premium subscription features
-- Social/community experiences
+- Deeper social/community experiences beyond the current Gym Bro matching (e.g. group challenges, activity feeds)
 
-Some of these concepts are represented in the current UI, while others remain roadmap items.
+Some of these concepts are represented in the current UI, while others remain roadmap items. Gym Bro matching itself is already implemented — see the dedicated section above.
 
 ---
 

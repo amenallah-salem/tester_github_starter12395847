@@ -238,5 +238,8 @@ echo "Frontend: http://127.0.0.1:8080"
 echo "Backend:  http://${BACKEND_HOST}:${BACKEND_PORT}"
 echo "Postgres: 127.0.0.1:${POSTGRES_PORT:-5432}"
 echo
+echo "To populate fully-featured test accounts (users, exercises, plans, workout history), run:"
+echo "  ./scripts/init_test_environment.sh"
+echo
 
 "${COMPOSE[@]}" ps
