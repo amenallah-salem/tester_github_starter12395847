@@ -1,9 +1,45 @@
 # CI pipeline
 
-Pull requests run the analyzer and Flutter tests through `ci.yml`.
-Pushes to `main` run the same checks in `android-release.yml`, then build and
-publish the Android APK and AAB, followed by an unsigned iOS archive (see
-"iOS releases" below).
+Five workflows, each scoped to one concern:
+
+| Workflow | Triggers | What it does |
+|---|---|---|
+| `ci.yml` | pull_request → main | Original PR check: Flutter analyze + test. Kept as-is; overlaps with `frontend-ci.yml` below. |
+| `frontend-ci.yml` | pull_request, push → main | Flutter analyze + test (`flutter test`) — same checks as `ci.yml`, also run on push to main. |
+| `backend-ci.yml` | pull_request, push → main | Django tests (`manage.py test gym_api`) against SQLite (`DJANGO_TESTING=1`) — no service container needed. |
+| `docker-build.yml` | pull_request, push → main | `./docker.dev.sh build` — builds the backend + frontend dev Docker images and fails if either build fails. Does not start the stack or need any secrets (`.env.dev` is checked into the repo). |
+| `android-release.yml` | push → main | Re-runs Flutter analyze + test, then builds/tags/publishes the Android APK+AAB and an unsigned iOS archive. See "Android releases" / "iOS releases" below — unchanged. |
+
+`frontend-ci.yml`/`backend-ci.yml`/`docker-build.yml` are new, independent
+workflows (not merged into `ci.yml` or `android-release.yml`) so each concern
+fails/passes on its own and is easy to read in the Actions tab. Some overlap
+with `ci.yml` (which still runs Flutter analyze+test on PRs) and with
+`android-release.yml` (which still re-runs Flutter analyze+test before
+building) is intentional — nothing was removed from either.
+
+## Backend tests
+
+`backend-ci.yml` installs `backend/requirements.txt` under Python 3.13
+(matching `backend/Dockerfile`'s base image) and runs
+`manage.py test gym_api --noinput` with `DJANGO_TESTING=1`, which flips
+`backend/gym_project/settings.py`'s `DATABASES` block to SQLite instead of
+Postgres. `manage.py test` builds and migrates its own throwaway test
+database regardless of engine, so no separate migration step or Postgres
+service container is needed. This does not exercise any Postgres-specific
+behavior — if that ever needs coverage, switch this job to a
+`services: postgres:` container and drop `DJANGO_TESTING`.
+
+## Docker build verification
+
+`docker-build.yml` runs the exact same command documented in `CLAUDE.md`
+(`./docker.dev.sh build`), which validates the Compose config for
+`docker-compose.backend.dev.yml` + `docker-compose.frontend.dev.yml` and then
+builds both images. It only proves the images build — it does not start
+Postgres, run migrations, or health-check the backend/frontend (that's what
+`./docker.dev.sh up` does locally). Production compose files
+(`docker-compose.*.prod.yml`) are intentionally not built in CI since they
+expect production secrets/config that don't exist here.
+
 ## Android releases
 
 `android-release.yml` runs automatically for every push to `main`. It runs the

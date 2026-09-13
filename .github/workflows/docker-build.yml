@@ -1,0 +1,23 @@
+name: Docker build
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build dev images (backend + frontend)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # .env.dev is checked into the repo (see git ls-files), so no secrets
+      # setup is needed here — this only proves the images build, it never
+      # starts the stack or talks to a real database/network.
+      - name: Build development images
+        run: ./docker.dev.sh build
