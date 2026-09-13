@@ -309,26 +309,6 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     );
   }
 
-  void _showSession(BuildContext context, WorkoutSession s) {
-    showDialog(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: Text(s.name),
-        content: Text(
-          '${_fmtDate(s.date)}\n'
-          '${s.exerciseCount} exercises · ${s.setCount} sets · ${s.minutes} min\n'
-          'Exercises: ${s.exerciseNames.join(', ')}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(c).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _deleteMetric(ProgressMetric metric) async {
     final confirmed = await showDialog<bool>(
       context: context,

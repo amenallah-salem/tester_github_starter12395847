@@ -7,7 +7,7 @@ from rest_framework import serializers
 from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
     WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
-    Swipe, Match, GymBroMessage,
+    Swipe, Match, GymBroMessage, MeditationSession, Feedback,
 )
 
 
@@ -278,6 +278,19 @@ class BodyWeightEntrySerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'logged_at']
 
 
+class MeditationSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MeditationSession
+        fields = ['id', 'category', 'duration_minutes', 'completed_at']
+        read_only_fields = ['id', 'completed_at']
+
+    def validate_category(self, value):
+        valid = {choice for choice, _ in MeditationSession.CATEGORY_CHOICES}
+        if value not in valid:
+            raise serializers.ValidationError(f'category must be one of: {sorted(valid)}')
+        return value
+
+
 class FavoriteExerciseSerializer(serializers.ModelSerializer):
     exercise_name = serializers.CharField(source='exercise.name', read_only=True)
 
@@ -291,6 +304,18 @@ class FavoriteExerciseSerializer(serializers.ModelSerializer):
         if exercise.user_id not in (None, user.id) and not exercise.is_library:
             raise serializers.ValidationError('You can only favorite library or your own exercises.')
         return exercise
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = ['id', 'category', 'message', 'attachment', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate_message(self, value):
+        if not value.strip():
+            raise serializers.ValidationError('message cannot be empty.')
+        return value
 
 
 class WorkoutSessionSerializer(serializers.ModelSerializer):

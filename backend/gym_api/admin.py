@@ -16,7 +16,7 @@ from unfold.admin import ModelAdmin, TabularInline
 from .models import (
     Profile, Plan, PlanDay, PlanDayExercise, Exercise, WorkoutSession,
     ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
-    Swipe, Match, GymBroMessage,
+    Swipe, Match, GymBroMessage, Feedback,
 )
 
 
@@ -313,3 +313,35 @@ class GymBroMessageAdmin(ModelAdmin):
     @admin.display(description='Message')
     def text_preview(self, obj):
         return obj.text if len(obj.text) <= 60 else obj.text[:57] + '…'
+
+
+# ---------------------------------------------------------------------------
+# Feedback ("help us improve") — user-submitted from the app; this admin is
+# the *only* place these are ever reviewed, so it gets an attachment preview
+# and is read-only-ish (users can't edit after submitting from the app).
+# ---------------------------------------------------------------------------
+
+@admin.register(Feedback)
+class FeedbackAdmin(ModelAdmin):
+    list_display = ['user', 'category', 'message_preview', 'has_attachment', 'created_at']
+    list_filter = ['category', 'created_at']
+    search_fields = ['user__username', 'user__email', 'message']
+    autocomplete_fields = ['user']
+    readonly_fields = ['id', 'user', 'category', 'message', 'attachment_preview', 'created_at']
+    fields = ['user', 'category', 'message', 'attachment', 'attachment_preview', 'created_at']
+    list_per_page = 25
+
+    @admin.display(description='Message')
+    def message_preview(self, obj):
+        return obj.message if len(obj.message) <= 60 else obj.message[:57] + '…'
+
+    @admin.display(description='Attachment', boolean=True)
+    def has_attachment(self, obj):
+        return bool(obj.attachment)
+
+    @admin.display(description='Attachment preview')
+    def attachment_preview(self, obj):
+        return _media_preview(obj.attachment.url if obj.attachment else '', 'image')
+
+    def has_add_permission(self, request):
+        return False

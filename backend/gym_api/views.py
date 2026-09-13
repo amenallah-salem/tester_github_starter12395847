@@ -1,6 +1,8 @@
 """
 REST views for the Gym Planner API.
 """
+from datetime import timedelta
+
 from rest_framework import viewsets, permissions, status, mixins
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -12,11 +14,12 @@ from django.db.models import F, Max, Sum, Q
 from django.db.models.functions import TruncWeek
 from django.db.utils import OperationalError
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
     WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
-    Swipe, Match, GymBroMessage,
+    Swipe, Match, GymBroMessage, MeditationSession, Feedback,
 )
 from .serializers import (
     ProfileSerializer,
@@ -34,6 +37,8 @@ from .serializers import (
     SwipeSerializer,
     MatchSerializer,
     GymBroMessageSerializer,
+    MeditationSessionSerializer,
+    FeedbackSerializer,
 )
 
 
@@ -547,6 +552,57 @@ class FavoriteExerciseViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return FavoriteExercise.objects.filter(user=self.request.user).select_related('exercise')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class MeditationSessionViewSet(viewsets.ModelViewSet):
+    """ViewSet for logged meditation/mindfulness sessions."""
+    serializer_class = MeditationSessionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def get_queryset(self):
+        return MeditationSession.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=['get'], url_path='summary')
+    def summary(self, request):
+        """Return total minutes, session count, and the current daily streak."""
+        sessions = self.get_queryset()
+        total_minutes = sessions.aggregate(total=Sum('duration_minutes'))['total'] or 0
+        session_count = sessions.count()
+
+        completed_days = sorted(
+            {s.completed_at.date() for s in sessions.only('completed_at')},
+            reverse=True,
+        )
+        streak = 0
+        expected_day = timezone.localdate()
+        for day in completed_days:
+            if day != expected_day:
+                break
+            streak += 1
+            expected_day -= timedelta(days=1)
+
+        return Response({
+            'total_minutes': total_minutes,
+            'session_count': session_count,
+            'streak_days': streak,
+        })
+
+
+class FeedbackViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """'Help us improve' submissions. Write-only from the app — review and
+    management happens exclusively in the Django admin panel."""
+    serializer_class = FeedbackSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Feedback.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

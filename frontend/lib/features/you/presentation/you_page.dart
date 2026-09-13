@@ -8,6 +8,7 @@ import 'package:gym_app/features/plan/data/sample_plan.dart';
 import 'package:gym_app/features/plan/domain/plan_contract.dart';
 import 'package:gym_app/features/plan/state/plan_notifier.dart';
 import 'package:gym_app/services/api_client.dart';
+import 'package:gym_app/features/you/presentation/feedback_sheet.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gym_app/core/state/auth_state.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -367,6 +368,20 @@ class _YouPageState extends ConsumerState<YouPage> {
               trailing: const Text(
                 'Coming soon',
                 style: TextStyle(color: AppTheme.mut),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Support ──
+          _SectionCard(
+            title: 'Support',
+            child: _SettingRow(
+              icon: Icons.feedback_outlined,
+              label: 'Help us improve',
+              trailing: TextButton(
+                onPressed: () => showHelpUsImproveSheet(context),
+                child: const Text('Share feedback'),
               ),
             ),
           ),

@@ -6,9 +6,10 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APITestCase
 from rest_framework import status
+from django.core.files.uploadedfile import SimpleUploadedFile
 from .models import (
     Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription,
-    FavoriteExercise, Swipe, Match, GymBroMessage,
+    FavoriteExercise, Swipe, Match, GymBroMessage, MeditationSession, Feedback,
 )
 
 
@@ -325,6 +326,38 @@ class APITests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('weight_kg', resp.data)
 
+    def test_meditation_session_can_be_logged_and_listed_for_current_user(self):
+        resp = self.client.post('/api/meditation-sessions/', {
+            'category': 'focus', 'duration_minutes': 10,
+        })
+
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['category'], 'focus')
+        self.assertEqual(resp.data['duration_minutes'], 10)
+
+        resp = self.client.get('/api/meditation-sessions/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['results']), 1)
+
+    def test_meditation_session_rejects_invalid_category(self):
+        resp = self.client.post('/api/meditation-sessions/', {
+            'category': 'not-a-real-category', 'duration_minutes': 10,
+        })
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('category', resp.data)
+
+    def test_meditation_summary_is_scoped_and_derived(self):
+        MeditationSession.objects.create(user=self.other_user, category='sleep', duration_minutes=99)
+        self.client.post('/api/meditation-sessions/', {'category': 'sleep', 'duration_minutes': 5})
+        self.client.post('/api/meditation-sessions/', {'category': 'focus', 'duration_minutes': 15})
+
+        resp = self.client.get('/api/meditation-sessions/summary/')
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['total_minutes'], 20)
+        self.assertEqual(resp.data['session_count'], 2)
+        self.assertEqual(resp.data['streak_days'], 1)
+
     def test_related_objects_must_belong_to_current_user(self):
         other_plan = Plan.objects.create(user=self.other_user, name='Private plan')
         resp = self.client.post('/api/exercises/', {'name': 'Leaked', 'plan': str(other_plan.id)})
@@ -360,6 +393,42 @@ class APITests(APITestCase):
     def test_unauthenticated_rejected(self):
         self.client.force_authenticate(user=None)
         resp = self.client.get('/api/plans/')
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_feedback_can_be_submitted_with_attachment(self):
+        image = SimpleUploadedFile(
+            'screenshot.png',
+            # 1x1 transparent PNG
+            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
+            b'\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01'
+            b'\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82',
+            content_type='image/png',
+        )
+        resp = self.client.post('/api/feedback/', {
+            'category': 'bug', 'message': 'The rest timer freezes on iOS.', 'attachment': image,
+        }, format='multipart')
+
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['category'], 'bug')
+        feedback = Feedback.objects.get(id=resp.data['id'])
+        self.assertEqual(feedback.user, self.user)
+        self.assertTrue(feedback.attachment)
+
+    def test_feedback_requires_nonempty_message(self):
+        resp = self.client.post('/api/feedback/', {'category': 'suggestion', 'message': '   '})
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('message', resp.data)
+
+    def test_feedback_is_not_listable_from_the_app(self):
+        # Submissions are reviewed exclusively in the Django admin panel, so
+        # the API only exposes creation, not listing/retrieval.
+        Feedback.objects.create(user=self.user, category='other', message='Mine')
+        resp = self.client.get('/api/feedback/')
+        self.assertEqual(resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_feedback_rejected_when_unauthenticated(self):
+        self.client.force_authenticate(user=None)
+        resp = self.client.post('/api/feedback/', {'category': 'bug', 'message': 'x'})
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_registration_returns_field_specific_validation_errors(self):

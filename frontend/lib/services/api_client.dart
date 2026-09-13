@@ -234,6 +234,85 @@ class ApiClient {
     );
   }
 
+  Future<List<Map<String, dynamic>>> fetchMeditationSessions() async {
+    final data = _jsonObject(
+      await _send(
+        () => http.get(_uri('/meditation-sessions/'), headers: _headers()),
+        method: 'GET',
+        path: '/meditation-sessions/',
+      ),
+      'meditation sessions',
+    );
+    return ((data['results'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> logMeditationSession({
+    required String category,
+    required int durationMinutes,
+  }) async {
+    return _jsonObject(
+      await _send(
+        () => http.post(
+          _uri('/meditation-sessions/'),
+          headers: _headers(json: true),
+          body: jsonEncode({
+            'category': category,
+            'duration_minutes': durationMinutes,
+          }),
+        ),
+        method: 'POST',
+        path: '/meditation-sessions/',
+      ),
+      'meditation session',
+    );
+  }
+
+  Future<Map<String, dynamic>> fetchMeditationSummary() async {
+    return _jsonObject(
+      await _send(
+        () => http.get(
+          _uri('/meditation-sessions/summary/'),
+          headers: _headers(),
+        ),
+        method: 'GET',
+        path: '/meditation-sessions/summary/',
+      ),
+      'meditation summary',
+    );
+  }
+
+  /// Submits "help us improve" feedback, optionally with an attached image.
+  /// Submissions are reviewed only in the Django admin panel — there is no
+  /// in-app view of past submissions.
+  Future<Map<String, dynamic>> submitFeedback({
+    required String category,
+    required String message,
+    Uint8List? attachmentBytes,
+    String? attachmentFilename,
+  }) async {
+    return _jsonObject(
+      await _send(() async {
+        final request = http.MultipartRequest('POST', _uri('/feedback/'))
+          ..headers.addAll(_headers())
+          ..fields['category'] = category
+          ..fields['message'] = message;
+        if (attachmentBytes != null) {
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'attachment',
+              attachmentBytes,
+              filename: attachmentFilename ?? 'attachment.jpg',
+            ),
+          );
+        }
+        final streamed = await request.send();
+        return http.Response.fromStream(streamed);
+      }, method: 'POST', path: '/feedback/'),
+      'feedback submission',
+    );
+  }
+
   Future<Map<String, dynamic>> createWorkout({
     required String notes,
     String name = 'Workout',

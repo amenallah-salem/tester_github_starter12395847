@@ -494,10 +494,12 @@ class _CategoryGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const categories = [
-      ('Strength', 'Build & tone', Icons.fitness_center, Color(0xFFE5F5E9)),
-      ('Mobility', 'Move better', Icons.self_improvement, Color(0xFFF1ECFA)),
-      ('Cardio', 'Elevate energy', Icons.favorite_border, Color(0xFFFFF0EA)),
-      ('Recovery', 'Rest & restore', Icons.nightlight_outlined, Color(0xFFE8F5F5)),
+      ('Strength', 'Build & tone', Icons.fitness_center, Color(0xFFE5F5E9), '/explorer'),
+      ('Mobility', 'Move better', Icons.self_improvement, Color(0xFFF1ECFA), '/explorer'),
+      ('Cardio', 'Elevate energy', Icons.favorite_border, Color(0xFFFFF0EA), '/explorer'),
+      ('Recovery', 'Rest & restore', Icons.nightlight_outlined, Color(0xFFE8F5F5), '/explorer'),
+      ('Meditation', 'Breathe & focus', Icons.spa_outlined, Color(0xFFE0F2F1), '/meditation'),
+      ('Gym Bro', 'Find a training partner', Icons.diversity_3_outlined, Color(0xFFFFF3E0), '/gym-bro'),
     ];
     return GridView.builder(
       shrinkWrap: true,
@@ -513,7 +515,9 @@ class _CategoryGrid extends StatelessWidget {
         final category = categories[index];
         return InkWell(
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-          onTap: () => context.go('/explorer'),
+          onTap: () => category.$5 == '/meditation'
+              ? context.push(category.$5)
+              : context.go(category.$5),
           child: Ink(
             decoration: BoxDecoration(
               color: category.$4,

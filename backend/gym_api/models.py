@@ -356,6 +356,30 @@ class BodyWeightEntry(models.Model):
         return f'{self.user.username} – {self.weight_kg} kg'
 
 
+class MeditationSession(models.Model):
+    """A completed meditation/mindfulness session logged by a user."""
+    CATEGORY_CHOICES = [
+        ('sleep', 'Sleep'),
+        ('stress_relief', 'Stress relief'),
+        ('focus', 'Focus'),
+        ('body_scan', 'Body scan'),
+        ('breathing', 'Breathing'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='meditation_sessions')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    duration_minutes = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'meditation_sessions'
+        ordering = ['-completed_at']
+
+    def __str__(self):
+        return f'{self.user.username} – {self.category} ({self.duration_minutes}m)'
+
+
 class FavoriteExercise(models.Model):
     """An authenticated user's saved exercise."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorite_exercises')
@@ -363,6 +387,7 @@ class FavoriteExercise(models.Model):
 
     class Meta:
         db_table = 'favorite_exercises'
+        ordering = ['id']
         constraints = [
             models.UniqueConstraint(fields=['user', 'exercise'], name='unique_user_favorite_exercise'),
         ]
@@ -436,3 +461,32 @@ class GymBroMessage(models.Model):
 
     def __str__(self):
         return f'{self.sender_id}@{self.match_id}: {self.text[:30]}'
+
+
+class Feedback(models.Model):
+    """User-submitted feedback ('help us improve'): suggestions, bug reports,
+    feature requests. Only reviewable via the Django admin panel."""
+    BUG = 'bug'
+    SUGGESTION = 'suggestion'
+    FEATURE_REQUEST = 'feature_request'
+    OTHER = 'other'
+    CATEGORY_CHOICES = [
+        (BUG, 'Bug report'),
+        (SUGGESTION, 'Suggestion'),
+        (FEATURE_REQUEST, 'Feature request'),
+        (OTHER, 'Other'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='feedback_submissions')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default=OTHER)
+    message = models.TextField()
+    attachment = models.ImageField(upload_to='feedback/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'feedback_submissions'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.get_category_display()} from {self.user_id} @ {self.created_at:%Y-%m-%d}'

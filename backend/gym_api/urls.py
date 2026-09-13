@@ -20,6 +20,8 @@ from .views import (
     HealthCheckView,
     SwipeViewSet,
     MatchViewSet,
+    MeditationSessionViewSet,
+    FeedbackViewSet,
 )
 
 router = DefaultRouter()
@@ -31,9 +33,11 @@ router.register(r'sessions', WorkoutSessionViewSet, basename='session')
 router.register(r'metrics', ProgressMetricViewSet, basename='metric')
 router.register(r'body-weight', BodyWeightEntryViewSet, basename='body-weight')
 router.register(r'favorites', FavoriteExerciseViewSet, basename='favorite')
+router.register(r'meditation-sessions', MeditationSessionViewSet, basename='meditation-session')
 router.register(r'billing', SubscriptionViewSet, basename='subscription')
 router.register(r'swipes', SwipeViewSet, basename='swipe')
 router.register(r'gym-bro/matches', MatchViewSet, basename='gym-bro-match')
+router.register(r'feedback', FeedbackViewSet, basename='feedback')
 
 urlpatterns = [
     # Unauthenticated readiness probe (used by docker.dev.sh / orchestrators)

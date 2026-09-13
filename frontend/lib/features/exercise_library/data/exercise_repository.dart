@@ -34,7 +34,7 @@ class ExerciseRepository {
     List<Map<String, dynamic>> list;
     try {
       list = await ApiClient.I.fetchLibraryExercises();
-    } catch (error, stackTrace) {
+    } catch (error) {
       debugPrint('Unable to load exercise library from API: $error');
       for (final exercise in _webExercises) {
         if (exercise.id == id) return exercise;

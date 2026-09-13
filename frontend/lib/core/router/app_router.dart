@@ -22,6 +22,9 @@ import 'package:gym_app/features/you/presentation/you_page.dart';
 import 'package:gym_app/features/auth/presentation/sign_in_page.dart';
 import 'package:gym_app/features/recovery/presentation/recovery_page.dart';
 import 'package:gym_app/features/recovery/presentation/breathwork_page.dart';
+import 'package:gym_app/features/meditation/presentation/meditation_page.dart';
+import 'package:gym_app/features/meditation/presentation/meditation_session_page.dart';
+import 'package:gym_app/features/meditation/domain/meditation_session.dart';
 import 'package:gym_app/features/plan_runner/presentation/workout_setup_page.dart';
 import 'package:gym_app/features/plan_runner/presentation/freestyle_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/form_vault_page.dart';
@@ -189,6 +192,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/breathwork',
         builder: (context, state) => const BreathworkPage(),
+      ),
+      GoRoute(
+        path: '/meditation',
+        builder: (context, state) => const MeditationPage(),
+      ),
+      GoRoute(
+        path: '/meditation/session',
+        builder: (context, state) {
+          final extra = state.extra;
+          final data = extra is Map ? extra : const {};
+          final category = data['category'];
+          return MeditationSessionRunnerPage(
+            category: category is MeditationCategory
+                ? category
+                : meditationCategories.first,
+            durationMinutes: (data['durationMinutes'] as int?) ??
+                meditationDurationOptionsMinutes.first,
+          );
+        },
       ),
       GoRoute(
         path: '/setup',
