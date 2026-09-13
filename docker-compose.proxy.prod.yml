@@ -1,0 +1,30 @@
+# Production compose for the TLS-terminating reverse proxy (Caddy).
+# Combined with docker-compose.backend.prod.yml + docker-compose.frontend.prod.yml
+# by docker.prod.sh. Requires PROXY_DOMAIN (and ideally PROXY_EMAIL) in .env.prod.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: gym_caddy
+    env_file: .env.prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    networks:
+      - gym_network
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  gym_network:
+    driver: bridge

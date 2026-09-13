@@ -85,6 +85,10 @@ class Subscription(models.Model):
         ('past_due', 'Past due'),
         ('canceled', 'Canceled'),
         ('unpaid', 'Unpaid'),
+        # No real payment gateway is wired up yet (see STRIPE_PAYMENT_LINK_URL
+        # in settings). Until it is, "upgrading" only records intent here —
+        # it must never grant 'plan_name=premium' on its own.
+        ('waitlisted', 'Waitlisted for premium'),
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gym_app/core/strings/coaching.dart';
 import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/widgets/common.dart';
+import 'package:gym_app/features/plan/domain/plan_contract.dart';
 import 'package:gym_app/features/plan/state/plan_notifier.dart';
 
 /// Full-screen, no-chrome onboarding flow (TES-6 §3.1).
@@ -37,9 +38,57 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     context.go('/');
   }
 
+  // Wizard answers are option *text*, matched by index against the same
+  // strings list the choice step rendered — robust to copy changes without
+  // relying on exact English strings staying in sync in two places.
+  static const _goalByIndex = [
+    Goal.strength,
+    Goal.hypertrophy,
+    Goal.general,
+    Goal.endurance,
+  ];
+  static const _experienceByIndex = [
+    Experience.beginner,
+    Experience.intermediate,
+    Experience.advanced,
+  ];
+  static const _muscleByIndex = [
+    [FocusArea.chest, FocusArea.back, FocusArea.shoulders, FocusArea.arms],
+    [FocusArea.legs],
+    [FocusArea.core],
+    [FocusArea.fullBody],
+  ];
+  static const _equipmentByKit = {
+    'Bodyweight': [Equipment.bodyweight],
+    'Gym': [Equipment.barbell, Equipment.dumbbell, Equipment.machine, Equipment.cable],
+    'Both': [Equipment.bodyweight, Equipment.dumbbell, Equipment.barbell],
+  };
+
   void _buildPlan() {
     setState(() => _step = 7);
-    ref.read(planNotifierProvider.notifier).generatePlan();
+    final strings = ref.read(coachingStringsProvider);
+    final goalIndex = strings.goals.indexOf(_goal ?? '');
+    final experienceIndex = strings.experiences.indexOf(_experience ?? '');
+    final focusAreas = _muscles.isEmpty
+        ? const [FocusArea.fullBody]
+        : _muscles
+            .map((m) => strings.muscleOptions.indexOf(m))
+            .where((i) => i >= 0 && i < _muscleByIndex.length)
+            .expand((i) => _muscleByIndex[i])
+            .toSet()
+            .toList();
+    ref.read(planNotifierProvider.notifier).generatePlan(
+          goal: goalIndex >= 0 && goalIndex < _goalByIndex.length
+              ? _goalByIndex[goalIndex]
+              : null,
+          experience: experienceIndex >= 0 &&
+                  experienceIndex < _experienceByIndex.length
+              ? _experienceByIndex[experienceIndex]
+              : null,
+          daysPerWeek: _days,
+          equipment: _equipmentByKit[_kit],
+          focusAreas: focusAreas,
+        );
     Future<void>.delayed(const Duration(milliseconds: 1900), () {
       if (!mounted) return;
       ref.read(onboardingDoneProvider.notifier).state = true;

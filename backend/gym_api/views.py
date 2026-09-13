@@ -553,10 +553,17 @@ class FavoriteExerciseViewSet(viewsets.ModelViewSet):
 
 
 class SubscriptionViewSet(viewsets.ModelViewSet):
-    """Expose only the authenticated user's subscription."""
+    """Expose only the authenticated user's subscription.
+
+    There is no payment gateway wired up yet, so `plan_name`/`status` are
+    read-only over the API (see SubscriptionSerializer) — they can only be
+    changed by real billing logic (a future Stripe webhook handler) or by
+    staff in the admin. The only client-triggerable action today is
+    `join_waitlist`, which records intent, not a purchase.
+    """
     serializer_class = SubscriptionSerializer
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ['get', 'post', 'patch', 'head', 'options']
+    http_method_names = ['get', 'post', 'head', 'options']
 
     def get_queryset(self):
         return Subscription.objects.filter(user=self.request.user)
@@ -564,12 +571,15 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    @action(detail=False, methods=['get', 'patch'], url_path='subscription')
+    @action(detail=False, methods=['get'], url_path='subscription')
     def current(self, request):
         subscription, _ = Subscription.objects.get_or_create(user=request.user)
-        serializer = self.get_serializer(subscription, data=request.data or None,
-                                         partial=True) if request.method == 'PATCH' else self.get_serializer(subscription)
-        if request.method == 'PATCH':
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-        return Response(serializer.data)
+        return Response(self.get_serializer(subscription).data)
+
+    @action(detail=False, methods=['post'], url_path='subscription/waitlist')
+    def join_waitlist(self, request):
+        subscription, _ = Subscription.objects.get_or_create(user=request.user)
+        if subscription.plan_name == 'free':
+            subscription.status = 'waitlisted'
+            subscription.save(update_fields=['status', 'updated_at'])
+        return Response(self.get_serializer(subscription).data)

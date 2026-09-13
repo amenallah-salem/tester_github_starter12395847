@@ -8,6 +8,14 @@ import 'package:gym_app/core/theme/app_theme.dart';
 class CoachPage extends StatelessWidget {
   const CoachPage({super.key});
 
+  static void _showComingSoon(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Kaori's live chat is launching soon — this is a preview."),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,7 +74,7 @@ class CoachPage extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () => _showComingSoon(context),
                     icon: const Icon(Icons.play_circle_fill,
                         color: AppTheme.primary, size: 34),
                   ),
@@ -139,11 +147,13 @@ class CoachPage extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           TextField(
+            readOnly: true,
+            onTap: () => _showComingSoon(context),
             decoration: InputDecoration(
-              hintText: 'Message Kaori',
+              hintText: 'Message Kaori — coming soon',
               prefixIcon: const Icon(Icons.add_circle_outline),
               suffixIcon: IconButton(
-                onPressed: () {},
+                onPressed: () => _showComingSoon(context),
                 icon: const Icon(Icons.send),
               ),
             ),

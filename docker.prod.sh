@@ -51,6 +51,7 @@ fi
 
 BACKEND_FILE="$ROOT_DIR/docker-compose.backend.prod.yml"
 FRONTEND_FILE="$ROOT_DIR/docker-compose.frontend.prod.yml"
+PROXY_FILE="$ROOT_DIR/docker-compose.proxy.prod.yml"
 ENV_FILE="$ROOT_DIR/.env.prod"
 
 if [ ! -f "$BACKEND_FILE" ]; then
@@ -59,6 +60,10 @@ if [ ! -f "$BACKEND_FILE" ]; then
 fi
 if [ ! -f "$FRONTEND_FILE" ]; then
   echo "Error: frontend compose file not found: $FRONTEND_FILE" >&2
+  exit 4
+fi
+if [ ! -f "$PROXY_FILE" ]; then
+  echo "Error: proxy compose file not found: $PROXY_FILE" >&2
   exit 4
 fi
 if [ ! -f "$ENV_FILE" ]; then
@@ -75,11 +80,12 @@ fi
 # vars silently resolved to empty strings and Postgres refused to start
 # ("superuser password is not specified"). Passing --env-file makes Compose
 # use .env.prod for both purposes.
-COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$BACKEND_FILE" -f "$FRONTEND_FILE")
+COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$BACKEND_FILE" -f "$FRONTEND_FILE" -f "$PROXY_FILE")
 
 echo "Using files:"
 echo "  $BACKEND_FILE"
 echo "  $FRONTEND_FILE"
+echo "  $PROXY_FILE"
 echo
 echo "Note: Ensure required env vars (POSTGRES_*, DJANGO_SECRET_KEY, etc.) are set or provided via .env.prod before running the built containers."
 echo
@@ -243,14 +249,25 @@ echo
 echo "Starting frontend..."
 "${COMPOSE[@]}" up -d frontend
 
+# ------------------------------------------------------------------
+# Start the Caddy TLS reverse proxy (public entry point on 80/443)
+# ------------------------------------------------------------------
+echo "Starting Caddy (TLS reverse proxy)..."
+"${COMPOSE[@]}" up -d caddy
+
 echo
 echo "PostgreSQL is healthy."
 echo "Django backend is responding."
 echo "Production stack is running."
 echo
-echo "Frontend: http://${BACKEND_HOST}:80"
-echo "Backend:  http://${BACKEND_HOST}:${BACKEND_PORT}"
-echo "Postgres: ${BACKEND_HOST}:${POSTGRES_PORT:-5432}"
+echo "Public site (via Caddy): https://\${PROXY_DOMAIN}"
+echo "Frontend (localhost only):  http://${BACKEND_HOST}:80"
+echo "Backend  (localhost only):  http://${BACKEND_HOST}:${BACKEND_PORT}"
+echo "Postgres (localhost only):  ${BACKEND_HOST}:${POSTGRES_PORT:-5432}"
+echo
+echo "NOTE: Caddy needs PROXY_DOMAIN to already point at this server's public"
+echo "IP (DNS A/AAAA record) to obtain a Let's Encrypt certificate. Check"
+echo "'docker compose ... logs caddy' if HTTPS isn't up within a minute or two."
 echo
 
 "${COMPOSE[@]}" ps

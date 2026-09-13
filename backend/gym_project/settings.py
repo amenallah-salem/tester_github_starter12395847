@@ -12,6 +12,11 @@ ALLOWED_HOSTS = [host.strip() for host in os.getenv(
     'DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0'
 ).split(',') if host.strip()]
 
+# Stripe Payment Link for the Premium waitlist/pre-order flow. No gateway
+# integration exists yet — this is just a hosted checkout URL the app opens
+# in a browser. Set in .env.dev / .env.prod; see SubscriptionSerializer.
+STRIPE_PAYMENT_LINK_URL = os.getenv('STRIPE_PAYMENT_LINK_URL', '')
+
 INSTALLED_APPS = [
     # Must be listed before django.contrib.admin so it can override the
     # built-in admin templates/static assets.
@@ -175,6 +180,16 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        # Anonymous requests hit only register/login/refresh — keep this
+        # tight to blunt credential-stuffing/brute force on launch day.
+        'anon': '20/min',
+        'user': '300/min',
+    },
 }
 
 SPECTACULAR_SETTINGS = {
@@ -210,6 +225,18 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
 }
+
+# Fail loudly rather than silently serving debug pages / a known secret key
+# in anything that isn't explicitly a local dev run.
+if os.getenv('DJANGO_ENV', '').lower() == 'production':
+    if DEBUG:
+        raise RuntimeError(
+            'DJANGO_ENV=production but DJANGO_DEBUG is not False — refusing to start.'
+        )
+    if SECRET_KEY == 'dev-secret-key-change-in-production':
+        raise RuntimeError(
+            'DJANGO_ENV=production but DJANGO_SECRET_KEY is unset/default — refusing to start.'
+        )
 
 # Security defaults are enabled in production and remain opt-in for local HTTP.
 if not DEBUG:

@@ -1,0 +1,25 @@
+# TLS-terminating reverse proxy for the prod stack. Caddy auto-provisions a
+# Let's Encrypt certificate for PROXY_DOMAIN on first boot (needs ports 80+443
+# reachable from the internet) and redirects HTTP -> HTTPS automatically.
+#
+# Set PROXY_DOMAIN / PROXY_EMAIL in .env.prod before running docker.prod.sh.
+{
+	email {$PROXY_EMAIL}
+}
+
+{$PROXY_DOMAIN} {
+	encode gzip
+
+	# Django-served paths (DRF API, admin, static/media) go to the backend;
+	# everything else is the Flutter web build served by nginx.
+	@backend path /api/* /admin/* /static/* /media/*
+	handle @backend {
+		reverse_proxy backend:8000 {
+			header_up X-Forwarded-Proto https
+		}
+	}
+
+	handle {
+		reverse_proxy frontend:80
+	}
+}

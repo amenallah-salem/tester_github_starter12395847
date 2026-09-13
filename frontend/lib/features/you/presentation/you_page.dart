@@ -10,6 +10,7 @@ import 'package:gym_app/features/plan/state/plan_notifier.dart';
 import 'package:gym_app/services/api_client.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gym_app/core/state/auth_state.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Welora profile + settings tab. Enhanced per Stitch:
 /// - welora_profile_rhythm (name, goal, rhythm)
@@ -22,11 +23,6 @@ class YouPage extends ConsumerStatefulWidget {
 }
 
 class _YouPageState extends ConsumerState<YouPage> {
-  bool _notifications = true;
-  bool _wearables = false;
-  bool _heartRateAlerts = true;
-  bool _restVibration = true;
-  bool _voicePrompts = true;
   bool _upgrading = false;
 
   @override
@@ -135,14 +131,37 @@ class _YouPageState extends ConsumerState<YouPage> {
             child: FutureBuilder<Map<String, dynamic>>(
               future: ApiClient.I.fetchSubscription(),
               builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 20,
+                    child: LinearProgressIndicator(),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Could not load your membership status.'),
+                      ),
+                      TextButton(
+                        onPressed: () => setState(() {}),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  );
+                }
                 final plan = snapshot.data?['plan_name'] as String? ?? 'free';
+                final status = snapshot.data?['status'] as String? ?? 'active';
+                final waitlisted = plan == 'free' && status == 'waitlisted';
                 return Row(
                   children: [
                     Expanded(
                       child: Text(
-                        plan == 'free'
-                            ? 'Free plan · unlock more coaching with Premium.'
-                            : 'Premium plan active.',
+                        plan != 'free'
+                            ? 'Premium plan active.'
+                            : waitlisted
+                                ? "You're on the Premium waitlist — tap again to finish checkout."
+                                : 'Free plan · unlock AI coaching & Form Vault with Premium.',
                       ),
                     ),
                     if (plan == 'free')
@@ -152,14 +171,34 @@ class _YouPageState extends ConsumerState<YouPage> {
                             : () async {
                                 setState(() => _upgrading = true);
                                 try {
-                                  await ApiClient.I.upgradeSubscription();
+                                  final result =
+                                      await ApiClient.I.joinPremiumWaitlist();
+                                  final url =
+                                      result['upgrade_url'] as String?;
+                                  if (url != null && url.isNotEmpty) {
+                                    await launchUrl(
+                                      Uri.parse(url),
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                  } else if (mounted) {
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(const SnackBar(
+                                      content: Text(
+                                          "You're on the Premium waitlist — checkout link coming soon."),
+                                    ));
+                                  }
                                   if (mounted) setState(() {});
                                 } finally {
-                                  if (mounted)
+                                  if (mounted) {
                                     setState(() => _upgrading = false);
+                                  }
                                 }
                               },
-                        child: Text(_upgrading ? '...' : 'Upgrade'),
+                        child: Text(_upgrading
+                            ? '...'
+                            : waitlisted
+                                ? 'Checkout'
+                                : 'Upgrade'),
                       ),
                   ],
                 );
@@ -316,65 +355,19 @@ class _YouPageState extends ConsumerState<YouPage> {
           ),
           const SizedBox(height: 12),
 
-          // ── Wearables / biometric (Stitch: welora_profile_wearables_biometric_settings) ──
-          _SectionCard(
-            title: 'Sensors & Wearables',
-            child: Column(
-              children: [
-                _SettingRow(
-                  icon: Icons.watch_outlined,
-                  label: 'Connect wearable',
-                  trailing: Switch(
-                    value: _wearables,
-                    onChanged: (v) => setState(() => _wearables = v),
-                  ),
-                ),
-                const Divider(height: 1),
-                _SettingRow(
-                  icon: Icons.favorite_outline,
-                  label: 'Heart-rate alerts',
-                  trailing: Switch(
-                    value: _heartRateAlerts,
-                    onChanged: (v) => setState(() => _heartRateAlerts = v),
-                  ),
-                ),
-                const Divider(height: 1),
-                _SettingRow(
-                  icon: Icons.vibration,
-                  label: 'Rest timer vibration',
-                  trailing: Switch(
-                    value: _restVibration,
-                    onChanged: (v) => setState(() => _restVibration = v),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ── Coaching preferences ──
+          // Sensors/wearables and push-notification toggles were removed —
+          // none of them were wired to real hardware or a notification
+          // backend, so they silently did nothing. Re-add once real
+          // infra (FCM + a wearables integration) exists.
           _SectionCard(
             title: 'Coaching preferences',
-            child: Column(
-              children: [
-                _SettingRow(
-                  icon: Icons.notifications_active_outlined,
-                  label: 'Notifications',
-                  trailing: Switch(
-                    value: _notifications,
-                    onChanged: (v) => setState(() => _notifications = v),
-                  ),
-                ),
-                const Divider(height: 1),
-                _SettingRow(
-                  icon: Icons.volume_up_outlined,
-                  label: 'Voice prompts',
-                  trailing: Switch(
-                    value: _voicePrompts,
-                    onChanged: (v) => setState(() => _voicePrompts = v),
-                  ),
-                ),
-              ],
+            child: _SettingRow(
+              icon: Icons.notifications_active_outlined,
+              label: 'Push notifications',
+              trailing: const Text(
+                'Coming soon',
+                style: TextStyle(color: AppTheme.mut),
+              ),
             ),
           ),
         ],

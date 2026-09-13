@@ -71,17 +71,139 @@ class PlanNotifier extends Notifier<AsyncValue<WorkoutPlan?>> {
     );
   }
 
-  /// First-run generation triggered from onboarding.
-  Future<void> generatePlan() async {
+  /// First-run generation triggered from onboarding. When the wizard's
+  /// answers are passed in, the sample template is personalized to them
+  /// (goal, experience, day count, equipment) instead of always returning
+  /// the same static plan regardless of what the user picked. Called with
+  /// no arguments (e.g. the "Generate a plan" CTA on an empty Today view)
+  /// it still falls back to the generic sample.
+  Future<void> generatePlan({
+    Goal? goal,
+    Experience? experience,
+    int? daysPerWeek,
+    List<Equipment>? equipment,
+    List<FocusArea>? focusAreas,
+  }) async {
     state = const AsyncLoading();
     await Future.delayed(const Duration(milliseconds: 1600));
+    final hasAnswers = goal != null ||
+        experience != null ||
+        daysPerWeek != null ||
+        equipment != null ||
+        focusAreas != null;
+    final plan = hasAnswers
+        ? _personalizedPlan(
+            goal: goal ?? samplePlan.profile.goal,
+            experience: experience ?? samplePlan.profile.experience,
+            daysPerWeek: daysPerWeek ?? samplePlan.profile.daysPerWeek,
+            equipment: (equipment == null || equipment.isEmpty)
+                ? samplePlan.profile.equipment
+                : equipment,
+            focusAreas: (focusAreas == null || focusAreas.isEmpty)
+                ? samplePlan.profile.focusAreas
+                : focusAreas,
+          )
+        : samplePlan;
     try {
-      await _cacheAndEmit(samplePlan);
+      await _cacheAndEmit(plan);
     } catch (error) {
-      state = AsyncData(samplePlan);
+      state = AsyncData(plan);
       debugPrint('Unable to persist generated plan: $error');
     }
   }
+
+  /// Adapts the sample day template to the onboarding answers: swaps
+  /// equipment-only exercises for their bodyweight substitute when the user
+  /// picked bodyweight-only training, and repeats the (adapted) day across
+  /// the chosen days-per-week so the profile/summary the user sees actually
+  /// reflects what they picked. The exercise *content* is still drawn from
+  /// one starter template — real per-day exercise selection by goal is a
+  /// bigger, non-48h build (see launch plan P2: real AI plan generation).
+  WorkoutPlan _personalizedPlan({
+    required Goal goal,
+    required Experience experience,
+    required int daysPerWeek,
+    required List<Equipment> equipment,
+    required List<FocusArea> focusAreas,
+  }) {
+    final bodyweightOnly =
+        equipment.length == 1 && equipment.single == Equipment.bodyweight;
+    final template = samplePlan.days.first;
+
+    PlanExercise adapt(PlanExercise exercise) {
+      if (!bodyweightOnly ||
+          exercise.equipment == Equipment.bodyweight ||
+          exercise.substitutes.isEmpty) {
+        return exercise;
+      }
+      final substituteId = exercise.substitutes.first;
+      return PlanExercise(
+        exerciseId: substituteId,
+        name: substituteId
+            .split('_')
+            .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+            .join(' '),
+        equipment: Equipment.bodyweight,
+        muscleGroups: exercise.muscleGroups,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        weight: 'bodyweight',
+        isTimed: exercise.isTimed,
+        restSec: exercise.restSec,
+        tempo: exercise.tempo,
+        notes: exercise.notes,
+      );
+    }
+
+    final adaptedBlocks = template.blocks
+        .map((block) => PlanBlock(
+              blockType: block.blockType,
+              rounds: block.rounds,
+              exercises: block.exercises.map(adapt).toList(),
+            ))
+        .toList();
+
+    final focusLabel = focusAreas.isEmpty
+        ? template.focus
+        : focusAreas.map(enumName).map(_titleCase).join(' + ');
+
+    final days = List.generate(daysPerWeek, (i) {
+      return PlanDay(
+        dayIndex: i + 1,
+        dayLabel: 'Day ${String.fromCharCode(65 + i)}',
+        focus: focusLabel,
+        warmup: template.warmup,
+        cooldown: template.cooldown,
+        blocks: adaptedBlocks,
+        estimatedMinutes: template.estimatedMinutes,
+      );
+    });
+
+    return WorkoutPlan(
+      schemaVersion: samplePlan.schemaVersion,
+      planId: 'onboarding-${DateTime.now().millisecondsSinceEpoch}',
+      generatedAt: DateTime.now().toUtc(),
+      model: samplePlan.model,
+      profile: OnboardingProfile(
+        goal: goal,
+        experience: experience,
+        daysPerWeek: daysPerWeek,
+        sessionMinutes: template.estimatedMinutes,
+        equipment: equipment,
+        focusAreas: focusAreas,
+      ),
+      summary:
+          '${_titleCase(enumName(goal))} · $daysPerWeek day${daysPerWeek == 1 ? '' : 's'} a week, $focusLabel focus.',
+      weeklySplit: samplePlan.weeklySplit,
+      days: days,
+      progression: samplePlan.progression,
+      safetyNotes: samplePlan.safetyNotes,
+      disclaimer: samplePlan.disclaimer,
+    );
+  }
+
+  String _titleCase(String value) =>
+      value.isEmpty ? value : '${value[0].toUpperCase()}${value.substring(1)}';
 
   /// "Regenerate plan" from the Today view.
   Future<void> regeneratePlan() async {

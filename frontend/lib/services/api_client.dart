@@ -567,17 +567,20 @@ class ApiClient {
     return _jsonObject(response, 'subscription');
   }
 
-  Future<Map<String, dynamic>> upgradeSubscription() async {
+  /// Records upgrade intent server-side (`status: waitlisted`). There is no
+  /// payment gateway wired up yet, so this never grants premium on its own —
+  /// pair it with opening `upgrade_url` (a Stripe Payment Link) for the
+  /// actual checkout. See backend SubscriptionViewSet.join_waitlist.
+  Future<Map<String, dynamic>> joinPremiumWaitlist() async {
     final response = await _send(
-      () => http.patch(
-        _uri('/billing/subscription/'),
+      () => http.post(
+        _uri('/billing/subscription/waitlist/'),
         headers: _headers(json: true),
-        body: jsonEncode({'plan_name': 'premium'}),
       ),
-      method: 'PATCH',
-      path: '/billing/subscription/',
+      method: 'POST',
+      path: '/billing/subscription/waitlist/',
     );
-    return _jsonObject(response, 'subscription upgrade');
+    return _jsonObject(response, 'subscription waitlist');
   }
 
   // Gym Bro discovery feed (GB-2): candidate profiles not yet swiped on.

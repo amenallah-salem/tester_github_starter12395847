@@ -1,0 +1,34 @@
+# Environment files — real files hold secrets you fill in locally/on the
+# server and must never be committed. Only the *.example templates are
+# tracked, so future edits here can't leak a Stripe/DB/JWT secret.
+.env
+.env.dev
+.env.prod
+backend/.env
+!*.example
+!backend/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+backend/db.sqlite3
+backend/db.sqlite3-journal
+.venv/
+venv/
+env/
+ENV/
+
+# Flutter/Dart
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/build/
+frontend/.packages
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store

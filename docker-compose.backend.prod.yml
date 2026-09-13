@@ -10,8 +10,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Bound to localhost only — no reason to expose Postgres to the internet.
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -36,8 +37,11 @@ services:
       DB_PORT: 5432
     volumes:
       - media_data:/app/media
+    # Not published to the internet — Caddy (docker-compose.proxy.prod.yml)
+    # is the only public entry point; 127.0.0.1 keeps this reachable for the
+    # health-check probe in docker.prod.sh and for local debugging.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy

@@ -357,13 +357,25 @@ class WorkoutSessionListSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
+    # Where to send the user to actually pay (Stripe Payment Link). No
+    # gateway integration exists yet, so this is the only "upgrade" action
+    # that's real right now — see SubscriptionViewSet.join_waitlist.
+    upgrade_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Subscription
         fields = [
             'id', 'user', 'plan_name', 'status', 'current_period_start',
-            'current_period_end', 'created_at', 'updated_at',
+            'current_period_end', 'created_at', 'updated_at', 'upgrade_url',
         ]
+        # plan_name/status are intentionally read-only over the API: with no
+        # payment gateway wired up, a client must never be able to grant
+        # itself premium by PATCHing this endpoint directly.
         read_only_fields = [
-            'id', 'user', 'status', 'current_period_start',
+            'id', 'user', 'plan_name', 'status', 'current_period_start',
             'current_period_end', 'created_at', 'updated_at',
         ]
+
+    def get_upgrade_url(self, obj):
+        from django.conf import settings
+        return getattr(settings, 'STRIPE_PAYMENT_LINK_URL', '') or None

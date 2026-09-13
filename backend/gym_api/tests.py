@@ -336,17 +336,26 @@ class APITests(APITestCase):
         })
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_current_subscription_is_private_and_updatable(self):
+    def test_current_subscription_is_private_and_read_only(self):
         resp = self.client.get('/api/billing/subscription/')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data['plan_name'], 'free')
-        self.assertEqual(Subscription.objects.filter(user=self.user).count(), 1)
-
-        resp = self.client.patch('/api/billing/subscription/', {'plan_name': 'pro'})
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(resp.data['plan_name'], 'pro')
         self.assertEqual(resp.data['user'], self.user.id)
         self.assertNotIn('provider_customer_id', resp.data)
+        self.assertEqual(Subscription.objects.filter(user=self.user).count(), 1)
+
+        # No payment gateway is wired up: a client must not be able to grant
+        # itself a paid plan by PATCHing plan_name directly.
+        resp = self.client.patch('/api/billing/subscription/', {'plan_name': 'pro'})
+        self.assertEqual(resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(Subscription.objects.get(user=self.user).plan_name, 'free')
+
+    def test_join_waitlist_records_intent_without_granting_premium(self):
+        resp = self.client.post('/api/billing/subscription/waitlist/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['plan_name'], 'free')
+        self.assertEqual(resp.data['status'], 'waitlisted')
+        self.assertEqual(Subscription.objects.get(user=self.user).status, 'waitlisted')
 
     def test_unauthenticated_rejected(self):
         self.client.force_authenticate(user=None)
