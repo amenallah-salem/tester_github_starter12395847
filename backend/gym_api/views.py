@@ -9,6 +9,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.contrib.auth.models import User
 from django.db import connections, models, transaction
 from django.db.models import F, Max, Sum, Q
 from django.db.models.functions import TruncWeek
@@ -20,6 +21,7 @@ from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
     WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
     Swipe, Match, GymBroMessage, MeditationSession, Feedback, ProgressPhoto,
+    SocialAccount,
 )
 from .serializers import (
     ProfileSerializer,
@@ -40,6 +42,8 @@ from .serializers import (
     MeditationSessionSerializer,
     FeedbackSerializer,
     ProgressPhotoSerializer,
+    GoogleAuthSerializer,
+    AppleAuthSerializer,
 )
 
 
@@ -68,39 +72,208 @@ class HealthCheckView(APIView):
         return Response({'status': 'ok'}, status=status.HTTP_200_OK)
 
 
+def _provision_new_user(user):
+    """Shared post-creation setup for a brand-new User, regardless of signup
+    path (email/password RegisterView or social auth). Idempotent: safe to
+    call again for an already-provisioned user (e.g. a returning social user
+    being linked for the first time) without duplicating their starter plan.
+    """
+    Profile.objects.get_or_create(user=user)
+    if not Plan.objects.filter(user=user).exists():
+        starter_plan = Plan.objects.create(
+            user=user,
+            name='Starter Week',
+            description='A simple full-body routine to get started.',
+        )
+        starter_exercises = list(
+            Exercise.objects.filter(is_library=True).order_by('created_at')[:3]
+        )
+        if starter_exercises:
+            starter_day = PlanDay.objects.create(plan=starter_plan, weekday=0)
+            PlanDayExercise.objects.bulk_create([
+                PlanDayExercise(
+                    plan_day=starter_day,
+                    exercise=exercise,
+                    order=order,
+                )
+                for order, exercise in enumerate(starter_exercises)
+            ])
+
+
+def _issue_tokens_response(user, status_code):
+    from rest_framework_simplejwt.tokens import RefreshToken
+    refresh = RefreshToken.for_user(user)
+    return Response({
+        'user': {'id': user.id, 'username': user.username, 'email': user.email},
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+    }, status=status_code)
+
+
+def verify_google_id_token(token):
+    """Verify a Google id_token server-side. Returns the verified claims
+    dict (sub, email, email_verified, given_name, family_name, ...).
+    Raises ValueError if the token is invalid, expired, or issued for an
+    audience not in settings.GOOGLE_OAUTH_CLIENT_IDS.
+    """
+    from google.oauth2 import id_token as google_id_token
+    from google.auth.transport import requests as google_requests
+    from django.conf import settings
+
+    idinfo = google_id_token.verify_oauth2_token(token, google_requests.Request())
+    if not settings.GOOGLE_OAUTH_CLIENT_IDS or idinfo.get('aud') not in settings.GOOGLE_OAUTH_CLIENT_IDS:
+        raise ValueError('Unrecognized audience')
+    return idinfo
+
+
+def verify_apple_identity_token(token):
+    """Verify an Apple identity_token server-side (native iOS Sign in with
+    Apple). Returns the verified claims dict (sub, email, ...). Raises
+    ValueError if the token is invalid, expired, or fails signature/audience/
+    issuer checks.
+    """
+    import jwt
+    from jwt import PyJWKClient
+    from django.conf import settings
+
+    if not settings.APPLE_BUNDLE_ID:
+        raise ValueError('Apple sign-in is not configured')
+    try:
+        jwk_client = PyJWKClient('https://appleid.apple.com/auth/keys')
+        signing_key = jwk_client.get_signing_key_from_jwt(token)
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=['RS256'],
+            audience=settings.APPLE_BUNDLE_ID,
+            issuer='https://appleid.apple.com',
+        )
+    except jwt.PyJWTError as exc:
+        raise ValueError(str(exc)) from exc
+    return payload
+
+
+def find_or_create_social_user(provider, subject, email, email_verified, first_name='', last_name=''):
+    """Resolve a verified provider identity to a Django User.
+
+    1. An existing SocialAccount(provider, subject) -> that user (returning
+       social user).
+    2. No SocialAccount match, but the provider asserts a verified email that
+       matches an existing User.email -> auto-link a new SocialAccount to
+       that existing user (no password confirmation; the provider has
+       already proven ownership of the email).
+    3. Otherwise -> create a brand-new User (unusable password), provision it
+       like a normal signup, and link a new SocialAccount.
+
+    Raises ValueError if the email is unverified and there is no existing
+    SocialAccount to match against — we can neither safely link nor safely
+    dedupe on an email we don't trust.
+
+    Returns (user, created: bool).
+    """
+    existing = SocialAccount.objects.filter(provider=provider, provider_user_id=subject).first()
+    if existing is not None:
+        return existing.user, False
+
+    if not email_verified:
+        raise ValueError('Email could not be verified by the provider.')
+
+    user = User.objects.filter(email=email).first() if email else None
+    if user is not None:
+        SocialAccount.objects.create(provider=provider, provider_user_id=subject, user=user, email=email)
+        _provision_new_user(user)
+        return user, False
+
+    username = _unique_username_for_social_signup(provider, subject, email)
+    user = User.objects.create_user(
+        username=username,
+        email=email or '',
+        password=None,
+        first_name=first_name or '',
+        last_name=last_name or '',
+    )
+    SocialAccount.objects.create(provider=provider, provider_user_id=subject, user=user, email=email)
+    _provision_new_user(user)
+    return user, True
+
+
+def _unique_username_for_social_signup(provider, subject, email):
+    import re
+    base = (email.split('@')[0] if email else f'{provider}_{subject[:12]}')
+    base = re.sub(r'[^A-Za-z0-9_.@+-]', '', base) or f'{provider}user'
+    candidate = base
+    suffix = 1
+    while User.objects.filter(username=candidate).exists():
+        suffix += 1
+        candidate = f'{base}{suffix}'
+    return candidate
+
+
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
     def post(self, request):
         s = RegisterSerializer(data=request.data)
         if s.is_valid():
             user = s.save()
-            Profile.objects.get_or_create(user=user)
-            starter_plan = Plan.objects.create(
-                user=user,
-                name='Starter Week',
-                description='A simple full-body routine to get started.',
-            )
-            starter_exercises = list(
-                Exercise.objects.filter(is_library=True).order_by('created_at')[:3]
-            )
-            if starter_exercises:
-                starter_day = PlanDay.objects.create(plan=starter_plan, weekday=0)
-                PlanDayExercise.objects.bulk_create([
-                    PlanDayExercise(
-                        plan_day=starter_day,
-                        exercise=exercise,
-                        order=order,
-                    )
-                    for order, exercise in enumerate(starter_exercises)
-                ])
-            from rest_framework_simplejwt.tokens import RefreshToken
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'user': {'id': user.id, 'username': user.username, 'email': user.email},
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
-            }, status=status.HTTP_201_CREATED)
+            _provision_new_user(user)
+            return _issue_tokens_response(user, status.HTTP_201_CREATED)
         return Response(s.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GoogleAuthView(APIView):
+    """POST /auth/google/ – exchange a verified Google id_token for the
+    application's normal JWT session, creating or linking the account as
+    needed. See find_or_create_social_user for the resolution rules."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        s = GoogleAuthSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        try:
+            idinfo = verify_google_id_token(s.validated_data['id_token'])
+        except ValueError:
+            return Response({'detail': 'Invalid Google token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            user, created = find_or_create_social_user(
+                provider='google',
+                subject=idinfo['sub'],
+                email=idinfo.get('email', ''),
+                email_verified=bool(idinfo.get('email_verified')),
+                first_name=idinfo.get('given_name', ''),
+                last_name=idinfo.get('family_name', ''),
+            )
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return _issue_tokens_response(user, status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+class AppleAuthView(APIView):
+    """POST /auth/apple/ – exchange a verified Apple identity_token for the
+    application's normal JWT session (native iOS Sign in with Apple only).
+    Apple only sends first_name/last_name on the user's very first
+    authorization; they are optional here and their absence on later
+    sign-ins is expected, not an error."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        s = AppleAuthSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        try:
+            claims = verify_apple_identity_token(s.validated_data['identity_token'])
+        except ValueError:
+            return Response({'detail': 'Invalid Apple token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            user, created = find_or_create_social_user(
+                provider='apple',
+                subject=claims['sub'],
+                email=claims.get('email', ''),
+                email_verified=True,
+                first_name=s.validated_data.get('first_name', ''),
+                last_name=s.validated_data.get('last_name', ''),
+            )
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return _issue_tokens_response(user, status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 class LogoutView(APIView):

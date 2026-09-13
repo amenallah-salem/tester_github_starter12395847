@@ -73,6 +73,33 @@ class Profile(models.Model):
         return bool(self.bio.strip()) and bool(self.training_goals)
 
 
+class SocialAccount(models.Model):
+    """Links a verified OAuth provider identity to a Django User.
+
+    The provider's stable subject id (`provider_user_id`) is the durable
+    identity, not email — Apple private-relay emails and email changes on
+    either provider must not break the link.
+    """
+
+    PROVIDER_CHOICES = [
+        ('google', 'Google'),
+        ('apple', 'Apple'),
+    ]
+
+    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
+    provider_user_id = models.CharField(max_length=255)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='social_accounts')
+    email = models.EmailField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'social_accounts'
+        unique_together = [('provider', 'provider_user_id')]
+
+    def __str__(self):
+        return f'{self.provider}:{self.provider_user_id} -> {self.user.username}'
+
+
 class Subscription(models.Model):
     """The current billing state for a user.
 

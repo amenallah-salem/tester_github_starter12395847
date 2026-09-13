@@ -156,6 +156,47 @@ class ApiClient {
     return _jsonObject(response, 'registration');
   }
 
+  /// Exchanges a verified Google id_token for the app's normal JWT session.
+  /// The backend does the actual verification — see GoogleAuthView.
+  Future<Map<String, dynamic>> loginWithGoogle({
+    required String idToken,
+  }) async {
+    final response = await _send(
+      () => http.post(
+        _uri('/auth/google/'),
+        headers: _headers(json: true),
+        body: jsonEncode({'id_token': idToken}),
+      ),
+      method: 'POST',
+      path: '/auth/google/',
+    );
+    return _jsonObject(response, 'Google sign-in');
+  }
+
+  /// Exchanges a verified Apple identity_token for the app's normal JWT
+  /// session (native iOS Sign in with Apple only). [firstName]/[lastName]
+  /// are only ever non-null on the user's very first Apple authorization.
+  Future<Map<String, dynamic>> loginWithApple({
+    required String identityToken,
+    String? firstName,
+    String? lastName,
+  }) async {
+    final response = await _send(
+      () => http.post(
+        _uri('/auth/apple/'),
+        headers: _headers(json: true),
+        body: jsonEncode({
+          'identity_token': identityToken,
+          if (firstName != null) 'first_name': firstName,
+          if (lastName != null) 'last_name': lastName,
+        }),
+      ),
+      method: 'POST',
+      path: '/auth/apple/',
+    );
+    return _jsonObject(response, 'Apple sign-in');
+  }
+
   Future<List<PlanSummary>> fetchPlans() async {
     final data = _jsonObject(
       await _send(

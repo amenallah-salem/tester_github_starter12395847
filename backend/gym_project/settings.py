@@ -17,6 +17,16 @@ ALLOWED_HOSTS = [host.strip() for host in os.getenv(
 # in a browser. Set in .env.dev / .env.prod; see SubscriptionSerializer.
 STRIPE_PAYMENT_LINK_URL = os.getenv('STRIPE_PAYMENT_LINK_URL', '')
 
+# Social sign-in (Google / Apple). GOOGLE_OAUTH_CLIENT_IDS is comma-separated
+# because Google issues a distinct OAuth client id per platform (Android,
+# iOS, Web) and an id_token's `aud` claim will be whichever one issued it —
+# the backend must accept any of them. APPLE_BUNDLE_ID is the audience
+# expected in Apple identity tokens (native iOS Sign in with Apple only).
+GOOGLE_OAUTH_CLIENT_IDS = [
+    cid.strip() for cid in os.getenv('GOOGLE_OAUTH_CLIENT_IDS', '').split(',') if cid.strip()
+]
+APPLE_BUNDLE_ID = os.getenv('APPLE_BUNDLE_ID', '')
+
 INSTALLED_APPS = [
     # Must be listed before django.contrib.admin so it can override the
     # built-in admin templates/static assets.

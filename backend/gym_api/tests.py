@@ -7,10 +7,11 @@ from django.test import TestCase
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.core.files.uploadedfile import SimpleUploadedFile
+from unittest import mock
 from .models import (
     Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription,
     FavoriteExercise, Swipe, Match, GymBroMessage, MeditationSession, Feedback,
-    ProgressPhoto,
+    ProgressPhoto, SocialAccount,
 )
 
 
@@ -616,6 +617,85 @@ class AuthenticationTests(APITestCase):
             '/api/profiles/me/',
             HTTP_AUTHORIZATION='Bearer not-a-real-token',
         )
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class SocialAuthTests(APITestCase):
+    """Google/Apple sign-in: token verification is mocked at the function
+    boundary (gym_api.views.verify_*_token) so these tests never hit real
+    Google/Apple servers."""
+
+    def test_google_auth_creates_new_user(self):
+        claims = {
+            'sub': 'g-123', 'email': 'newgoogle@example.com',
+            'email_verified': True, 'given_name': 'New', 'family_name': 'Goog',
+        }
+        with mock.patch('gym_api.views.verify_google_id_token', return_value=claims):
+            resp = self.client.post('/api/auth/google/', {'id_token': 'whatever'})
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertIn('access', resp.data)
+        account = SocialAccount.objects.get(provider='google', provider_user_id='g-123')
+        self.assertEqual(account.user.email, 'newgoogle@example.com')
+        self.assertTrue(Profile.objects.filter(user=account.user).exists())
+        self.assertTrue(Plan.objects.filter(user=account.user).exists())
+
+    def test_google_auth_returning_user_logs_in(self):
+        user = User.objects.create_user('googuser', 'existing-social@example.com')
+        SocialAccount.objects.create(provider='google', provider_user_id='g-999', user=user, email=user.email)
+        claims = {'sub': 'g-999', 'email': user.email, 'email_verified': True}
+        with mock.patch('gym_api.views.verify_google_id_token', return_value=claims):
+            resp = self.client.post('/api/auth/google/', {'id_token': 'whatever'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(SocialAccount.objects.filter(provider='google', provider_user_id='g-999').count(), 1)
+        self.assertEqual(Plan.objects.filter(user=user).count(), 0)
+
+    def test_google_auth_links_to_existing_verified_email_user(self):
+        user = User.objects.create_user('emailuser', 'shared@example.com', 'somepass123')
+        claims = {'sub': 'g-link-1', 'email': 'shared@example.com', 'email_verified': True}
+        with mock.patch('gym_api.views.verify_google_id_token', return_value=claims):
+            resp = self.client.post('/api/auth/google/', {'id_token': 'whatever'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(User.objects.filter(email='shared@example.com').count(), 1)
+        account = SocialAccount.objects.get(provider='google', provider_user_id='g-link-1')
+        self.assertEqual(account.user_id, user.id)
+
+    def test_google_auth_rejects_unverified_email_auto_link(self):
+        User.objects.create_user('emailuser2', 'unverified@example.com', 'somepass123')
+        claims = {'sub': 'g-link-2', 'email': 'unverified@example.com', 'email_verified': False}
+        with mock.patch('gym_api.views.verify_google_id_token', return_value=claims):
+            resp = self.client.post('/api/auth/google/', {'id_token': 'whatever'})
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(SocialAccount.objects.filter(provider='google', provider_user_id='g-link-2').exists())
+
+    def test_google_auth_invalid_token_rejected(self):
+        with mock.patch('gym_api.views.verify_google_id_token', side_effect=ValueError('bad token')):
+            resp = self.client.post('/api/auth/google/', {'id_token': 'whatever'})
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_apple_auth_creates_new_user(self):
+        claims = {'sub': 'a-123', 'email': 'newapple@example.com'}
+        with mock.patch('gym_api.views.verify_apple_identity_token', return_value=claims):
+            resp = self.client.post('/api/auth/apple/', {
+                'identity_token': 'whatever', 'first_name': 'Ann', 'last_name': 'Apple',
+            })
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        account = SocialAccount.objects.get(provider='apple', provider_user_id='a-123')
+        self.assertEqual(account.user.first_name, 'Ann')
+        self.assertEqual(account.user.last_name, 'Apple')
+        self.assertTrue(Profile.objects.filter(user=account.user).exists())
+
+    def test_apple_auth_returning_user_logs_in(self):
+        user = User.objects.create_user('appleuser', 'apple-existing@example.com')
+        SocialAccount.objects.create(provider='apple', provider_user_id='a-999', user=user, email=user.email)
+        claims = {'sub': 'a-999', 'email': user.email}
+        with mock.patch('gym_api.views.verify_apple_identity_token', return_value=claims):
+            resp = self.client.post('/api/auth/apple/', {'identity_token': 'whatever'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(SocialAccount.objects.filter(provider='apple', provider_user_id='a-999').count(), 1)
+
+    def test_apple_auth_invalid_token_rejected(self):
+        with mock.patch('gym_api.views.verify_apple_identity_token', side_effect=ValueError('bad token')):
+            resp = self.client.post('/api/auth/apple/', {'identity_token': 'whatever'})
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
 

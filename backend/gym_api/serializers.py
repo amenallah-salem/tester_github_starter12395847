@@ -24,6 +24,23 @@ class RegisterSerializer(serializers.ModelSerializer):
         validate_password(password)
         return password
 
+
+class GoogleAuthSerializer(serializers.Serializer):
+    """Just validates a token is present; the actual trust decision happens
+    server-side in verify_google_id_token (views.py) — never trust
+    client-supplied identity fields directly."""
+    id_token = serializers.CharField()
+
+
+class AppleAuthSerializer(serializers.Serializer):
+    """identity_token is verified server-side. first_name/last_name are
+    display-only and only ever sent by the client on the user's very first
+    Apple authorization — their absence on later sign-ins is expected."""
+    identity_token = serializers.CharField()
+    first_name = serializers.CharField(required=False, allow_blank=True, default='')
+    last_name = serializers.CharField(required=False, allow_blank=True, default='')
+
+
 class UserSerializer(serializers.ModelSerializer):
     """Lightweight User serializer for nested representations."""
     class Meta:

@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:gym_app/core/state/auth_state.dart';
 import 'package:gym_app/services/api_client.dart';
+import 'package:gym_app/services/social_auth_service.dart';
 import 'package:gym_app/features/plan/state/plan_notifier.dart';
 import 'package:gym_app/features/progress/state/workout_sessions.dart';
 
@@ -51,38 +53,91 @@ class _SignInPageState extends ConsumerState<SignInPage> {
               username: _username.text.trim(),
               password: _password.text,
             );
-      ref.read(accessTokenProvider.notifier).state = result['access'] as String;
-      ApiClient.I.accessToken = result['access'] as String;
-      if (result['refresh'] case final String refresh) {
-        ref.read(refreshTokenProvider.notifier).state = refresh;
-        ApiClient.I.refreshToken = refresh;
-      }
-      await ref.read(planNotifierProvider.notifier).refreshFromApi();
-      await ref.read(workoutSessionsProvider.notifier).loadRemote();
-      final user = result['user'];
-      ref.read(currentUsernameProvider.notifier).state =
-          user is Map ? user['username'] as String : _username.text.trim();
-      await persistAuth(
-        access: result['access'] as String,
-        refresh: result['refresh'] as String?,
-        username: ref.read(currentUsernameProvider) ?? _username.text.trim(),
-      );
-      if (mounted) context.go('/');
+      await _onAuthSuccess(result, fallbackUsername: _username.text.trim());
     } catch (error) {
-      if (!mounted) return;
-      if (error is ApiException) {
-        setState(() {
-          _error = error.fieldErrors.isEmpty ? error.message : null;
-          _fieldErrors = error.fieldErrors;
-        });
-      } else {
-        setState(() {
-          _error = 'Unable to complete the request: $error';
-          _fieldErrors = const {};
-        });
-      }
+      _handleAuthError(error);
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _continueWithGoogle() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _fieldErrors = const {};
+    });
+    try {
+      final social = await SocialAuthService.signInWithGoogle();
+      final result = await ApiClient.I.loginWithGoogle(idToken: social.idToken);
+      await _onAuthSuccess(result, fallbackUsername: 'Google account');
+    } on SocialAuthCancelledException {
+      // User backed out of the Google flow deliberately — not a failure.
+    } catch (error) {
+      _handleAuthError(error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _continueWithApple() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _fieldErrors = const {};
+    });
+    try {
+      final social = await SocialAuthService.signInWithApple();
+      final result = await ApiClient.I.loginWithApple(
+        identityToken: social.idToken,
+        firstName: social.firstName,
+        lastName: social.lastName,
+      );
+      await _onAuthSuccess(result, fallbackUsername: 'Apple account');
+    } on SocialAuthCancelledException {
+      // User backed out of the Apple flow deliberately — not a failure.
+    } catch (error) {
+      _handleAuthError(error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _onAuthSuccess(
+    Map<String, dynamic> result, {
+    required String fallbackUsername,
+  }) async {
+    ref.read(accessTokenProvider.notifier).state = result['access'] as String;
+    ApiClient.I.accessToken = result['access'] as String;
+    if (result['refresh'] case final String refresh) {
+      ref.read(refreshTokenProvider.notifier).state = refresh;
+      ApiClient.I.refreshToken = refresh;
+    }
+    await ref.read(planNotifierProvider.notifier).refreshFromApi();
+    await ref.read(workoutSessionsProvider.notifier).loadRemote();
+    final user = result['user'];
+    ref.read(currentUsernameProvider.notifier).state =
+        user is Map ? user['username'] as String : fallbackUsername;
+    await persistAuth(
+      access: result['access'] as String,
+      refresh: result['refresh'] as String?,
+      username: ref.read(currentUsernameProvider) ?? fallbackUsername,
+    );
+    if (mounted) context.go('/');
+  }
+
+  void _handleAuthError(Object error) {
+    if (!mounted) return;
+    if (error is ApiException) {
+      setState(() {
+        _error = error.fieldErrors.isEmpty ? error.message : null;
+        _fieldErrors = error.fieldErrors;
+      });
+    } else {
+      setState(() {
+        _error = 'Unable to complete the request: $error';
+        _fieldErrors = const {};
+      });
     }
   }
 
@@ -164,6 +219,37 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                         : Text(_registering ? 'Create account' : 'Sign in'),
                   ),
                 ),
+                const SizedBox(height: 24),
+                const Row(
+                  children: [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('or'),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : _continueWithGoogle,
+                    child: const Text('Continue with Google'),
+                  ),
+                ),
+                if (defaultTargetPlatform == TargetPlatform.iOS) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: _busy ? null : _continueWithApple,
+                      child: const Text('Continue with Apple'),
+                    ),
+                  ),
+                ],
                 TextButton(
                   onPressed: _busy
                       ? null

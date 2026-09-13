@@ -17,6 +17,8 @@ from .views import (
     FavoriteExerciseViewSet,
     RegisterView,
     LogoutView,
+    GoogleAuthView,
+    AppleAuthView,
     SubscriptionViewSet,
     HealthCheckView,
     SwipeViewSet,
@@ -50,6 +52,8 @@ urlpatterns = [
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
+    path('auth/google/', GoogleAuthView.as_view(), name='google_auth'),
+    path('auth/apple/', AppleAuthView.as_view(), name='apple_auth'),
     path('exercises/lookup/<uuid:pk>/', ExerciseLookupView.as_view(), name='exercise-lookup'),
     # Router URLs
     path('', include(router.urls)),
