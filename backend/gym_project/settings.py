@@ -96,6 +96,31 @@ UNFOLD = {
                         'icon': 'monitor_weight',
                         'link': '/admin/gym_api/bodyweightentry/',
                     },
+                    {
+                        'title': 'Progress photos',
+                        'icon': 'photo_camera',
+                        'link': '/admin/gym_api/progressphoto/',
+                    },
+                    {
+                        'title': 'Meditation sessions',
+                        'icon': 'self_improvement',
+                        'link': '/admin/gym_api/meditationsession/',
+                    },
+                ],
+            },
+            {
+                'title': 'Support',
+                'items': [
+                    {
+                        'title': 'Feedback',
+                        'icon': 'feedback',
+                        'link': '/admin/gym_api/feedback/',
+                    },
+                    {
+                        'title': 'Subscriptions',
+                        'icon': 'workspace_premium',
+                        'link': '/admin/gym_api/subscription/',
+                    },
                 ],
             },
         ],
