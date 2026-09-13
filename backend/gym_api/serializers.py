@@ -7,7 +7,7 @@ from rest_framework import serializers
 from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
     WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
-    Swipe, Match, GymBroMessage, MeditationSession, Feedback,
+    Swipe, Match, GymBroMessage, MeditationSession, Feedback, ProgressPhoto,
 )
 
 
@@ -253,7 +253,7 @@ class ProgressMetricSerializer(serializers.ModelSerializer):
         model = ProgressMetric
         fields = [
             'id', 'session', 'exercise', 'set_number',
-            'reps', 'weight_kg', 'duration_seconds', 'logged_at', 'exercise_name',
+            'reps', 'weight_kg', 'duration_seconds', 'rpe', 'logged_at', 'exercise_name',
         ]
         read_only_fields = ['id', 'logged_at']
 
@@ -316,6 +316,13 @@ class FeedbackSerializer(serializers.ModelSerializer):
         if not value.strip():
             raise serializers.ValidationError('message cannot be empty.')
         return value
+
+
+class ProgressPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProgressPhoto
+        fields = ['id', 'image', 'logged_at']
+        read_only_fields = ['id', 'logged_at']
 
 
 class WorkoutSessionSerializer(serializers.ModelSerializer):

@@ -40,7 +40,9 @@ import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/state/auth_state.dart';
 
 class _MissingSessionPage extends StatelessWidget {
-  const _MissingSessionPage();
+  const _MissingSessionPage({this.message = 'This workout is not available offline.'});
+
+  final String message;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -53,10 +55,49 @@ class _MissingSessionPage extends StatelessWidget {
           ),
           title: const Text('Workout details'),
         ),
-        body: const Center(
-          child: Text('This workout is not available offline.'),
-        ),
+        body: Center(child: Text(message)),
       );
+}
+
+/// Loads a [WorkoutSession] by id from the API when the router had no
+/// in-memory `extra` to render immediately (a deep link, or a Flutter Web
+/// page refresh) — see `/session/:id` below.
+class _SessionDetailLoader extends StatefulWidget {
+  const _SessionDetailLoader({required this.sessionId});
+
+  final String sessionId;
+
+  @override
+  State<_SessionDetailLoader> createState() => _SessionDetailLoaderState();
+}
+
+class _SessionDetailLoaderState extends State<_SessionDetailLoader> {
+  late final Future<WorkoutSession> _future = _load();
+
+  Future<WorkoutSession> _load() async {
+    final json = await ApiClient.I.fetchSessionDetail(widget.sessionId);
+    return WorkoutSession.fromDetailJson(json);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<WorkoutSession>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          return const _MissingSessionPage(
+            message: 'This workout could not be found.',
+          );
+        }
+        return SessionDetailPage(session: snapshot.data!);
+      },
+    );
+  }
 }
 
 /// App navigation — Welora routes.
@@ -182,7 +223,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           if (extra is WorkoutSession) {
             return SessionDetailPage(session: extra);
           }
-          return const _MissingSessionPage();
+          final id = state.pathParameters['id'];
+          if (id == null || id.isEmpty) {
+            return const _MissingSessionPage();
+          }
+          return _SessionDetailLoader(sessionId: id);
         },
       ),
       GoRoute(

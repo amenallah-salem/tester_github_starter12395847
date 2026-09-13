@@ -268,6 +268,50 @@ class ApiClient {
     );
   }
 
+  /// Progress photos are strictly private to the current user — never
+  /// shared with other users (including Gym Bro matches).
+  Future<List<Map<String, dynamic>>> fetchProgressPhotos() async {
+    final data = _jsonObject(
+      await _send(
+        () => http.get(_uri('/progress-photos/'), headers: _headers()),
+        method: 'GET',
+        path: '/progress-photos/',
+      ),
+      'progress photos',
+    );
+    return ((data['results'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> uploadProgressPhoto({
+    required Uint8List bytes,
+    required String filename,
+  }) async {
+    return _jsonObject(
+      await _send(() async {
+        final request = http.MultipartRequest('POST', _uri('/progress-photos/'))
+          ..headers.addAll(_headers())
+          ..files.add(
+            http.MultipartFile.fromBytes('image', bytes, filename: filename),
+          );
+        final streamed = await request.send();
+        return http.Response.fromStream(streamed);
+      }, method: 'POST', path: '/progress-photos/'),
+      'progress photo upload',
+    );
+  }
+
+  Future<void> deleteProgressPhoto(String photoId) async {
+    await _send(
+      () => http.delete(
+        _uri('/progress-photos/$photoId/'),
+        headers: _headers(),
+      ),
+      method: 'DELETE',
+      path: '/progress-photos/$photoId/',
+    );
+  }
+
   Future<Map<String, dynamic>> fetchMeditationSummary() async {
     return _jsonObject(
       await _send(
@@ -383,6 +427,7 @@ class ApiClient {
     required int reps,
     double? weightKg,
     int? durationSeconds,
+    double? rpe,
     bool queueOnFailure = true,
   }) async {
     final payload = {
@@ -391,6 +436,7 @@ class ApiClient {
       'reps': reps,
       'weight_kg': weightKg,
       'duration_seconds': durationSeconds,
+      'rpe': rpe,
     };
     try {
       final response = await _send(
@@ -409,6 +455,25 @@ class ApiClient {
       }
       rethrow;
     }
+  }
+
+  /// Looks up any exercise the current user can see (their own, or a
+  /// library exercise) by id, including its curated `alternatives_detail` —
+  /// used by the workout runner's "Replace exercise" action.
+  Future<Map<String, dynamic>> fetchExerciseAlternatives(
+    String exerciseId,
+  ) async {
+    return _jsonObject(
+      await _send(
+        () => http.get(
+          _uri('/exercises/lookup/$exerciseId/'),
+          headers: _headers(),
+        ),
+        method: 'GET',
+        path: '/exercises/lookup/$exerciseId/',
+      ),
+      'exercise lookup',
+    );
   }
 
   Future<Map<String, dynamic>?> fetchLastMetricForExercise(
@@ -527,6 +592,19 @@ class ApiClient {
     final data = jsonDecode(response.body);
     final list = data is Map ? data['results'] as List? : data as List?;
     return (list ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  /// Fetch a single workout session by id (e.g. a deep link or a page
+  /// refresh where the router had no in-memory `extra` to fall back on).
+  Future<Map<String, dynamic>> fetchSessionDetail(String sessionId) async {
+    return _jsonObject(
+      await _send(
+        () => http.get(_uri('/sessions/$sessionId/'), headers: _headers()),
+        method: 'GET',
+        path: '/sessions/$sessionId/',
+      ),
+      'session detail',
+    );
   }
 
   /// Fetch global library exercises (admin-managed library).

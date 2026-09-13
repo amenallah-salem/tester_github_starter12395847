@@ -62,4 +62,33 @@ class WorkoutSession {
       volumeKg: (json['volumeKg'] as num?)?.toDouble() ?? 0,
     );
   }
+
+  /// Builds a [WorkoutSession] from the backend's single-object
+  /// `WorkoutSessionSerializer` shape (`GET /sessions/{id}/`), which nests
+  /// full `metrics` rather than the summarized `exercise_names`/`metric_count`
+  /// the list endpoint returns — used when a deep link or page refresh has
+  /// no in-memory session to fall back on (see app_router `/session/:id`).
+  factory WorkoutSession.fromDetailJson(Map<String, dynamic> json) {
+    final metrics = (json['metrics'] as List? ?? const [])
+        .cast<Map<String, dynamic>>();
+    final exerciseNames = metrics
+        .map((m) => m['exercise_name'] as String?)
+        .whereType<String>()
+        .toSet()
+        .toList();
+    return WorkoutSession(
+      id: json['id']?.toString(),
+      date: DateTime.parse(json['started_at'] as String).toLocal(),
+      name: json['name'] as String? ?? 'Workout',
+      finishedAt: json['finished_at'] == null
+          ? null
+          : DateTime.tryParse(json['finished_at'] as String)?.toLocal(),
+      exerciseCount: exerciseNames.length,
+      setCount: metrics.length,
+      minutes: (((json['duration_seconds'] as num?)?.toInt() ?? 0) / 60).round(),
+      exerciseNames: exerciseNames,
+      durationSeconds: (json['duration_seconds'] as num?)?.toInt(),
+      volumeKg: (json['total_volume_kg'] as num?)?.toDouble() ?? 0,
+    );
+  }
 }

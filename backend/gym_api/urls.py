@@ -9,6 +9,7 @@ from .views import (
     ProfileViewSet,
     PlanViewSet,
     ExerciseViewSet,
+    ExerciseLookupView,
     LibraryExerciseViewSet,
     WorkoutSessionViewSet,
     ProgressMetricViewSet,
@@ -22,6 +23,7 @@ from .views import (
     MatchViewSet,
     MeditationSessionViewSet,
     FeedbackViewSet,
+    ProgressPhotoViewSet,
 )
 
 router = DefaultRouter()
@@ -38,6 +40,7 @@ router.register(r'billing', SubscriptionViewSet, basename='subscription')
 router.register(r'swipes', SwipeViewSet, basename='swipe')
 router.register(r'gym-bro/matches', MatchViewSet, basename='gym-bro-match')
 router.register(r'feedback', FeedbackViewSet, basename='feedback')
+router.register(r'progress-photos', ProgressPhotoViewSet, basename='progress-photo')
 
 urlpatterns = [
     # Unauthenticated readiness probe (used by docker.dev.sh / orchestrators)
@@ -47,6 +50,7 @@ urlpatterns = [
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
+    path('exercises/lookup/<uuid:pk>/', ExerciseLookupView.as_view(), name='exercise-lookup'),
     # Router URLs
     path('', include(router.urls)),
 ]

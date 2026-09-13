@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
+import 'package:gym_app/core/widgets/common.dart';
 import 'package:gym_app/features/biomechanics/data/biomechanics_mock.dart';
 
 /// Form Vault — archive of past movement recordings.
@@ -22,6 +23,10 @@ class FormVaultPage extends ConsumerWidget {
         ),
         title: const Text('Form Vault'),
         actions: [
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Center(child: PreviewBadge()),
+          ),
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: () {},

@@ -9,7 +9,7 @@ ProgressMetric  – logged metrics (weight, reps, etc.) per session
 """
 import uuid
 from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -329,6 +329,12 @@ class ProgressMetric(models.Model):
         validators=[MinValueValidator(0)]
     )
     duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    # Rate of Perceived Exertion (1-10, half-point steps e.g. 7.5) — optional
+    # autoregulation input, never required to log a set.
+    rpe = models.DecimalField(
+        max_digits=3, decimal_places=1, null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+    )
     logged_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -490,3 +496,20 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f'{self.get_category_display()} from {self.user_id} @ {self.created_at:%Y-%m-%d}'
+
+
+class ProgressPhoto(models.Model):
+    """A user-submitted progress photo. Strictly private: never exposed to
+    any other user (including Gym Bro matches) — only the owner can ever
+    list, retrieve, or delete their own photos."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='progress_photos')
+    image = models.ImageField(upload_to='progress_photos/')
+    logged_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'progress_photos'
+        ordering = ['-logged_at']
+
+    def __str__(self):
+        return f'{self.user.username} – {self.logged_at:%Y-%m-%d}'

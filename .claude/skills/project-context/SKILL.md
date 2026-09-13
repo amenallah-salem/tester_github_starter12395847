@@ -55,10 +55,13 @@ doubles as a per-plan-day assignment row (`is_library=False`, tied to a
 
 **Running a workout** — `WorkoutSession` (start/finish timestamps, optional
 link to a `Plan`) groups `ProgressMetric` rows (one row per logged set: reps,
-weight, duration, which exercise). `frontend/lib/features/plan_runner/` is
-the live workout screen (set-by-set logging, rest timers, freestyle mode for
-an unplanned session); finishing feeds `WorkoutSessions`/`ProgressMetric`
-providers that the Progress tab reads back.
+weight, duration, optional RPE 1–10, which exercise). `frontend/lib/features/plan_runner/`
+is the live workout screen (set-by-set logging, rest timers, an optional RPE
+slider, a "Replace exercise" action that swaps in a curated alternative
+mid-workout via `GET /exercises/lookup/<uuid>/`, freestyle mode for an
+unplanned session); finishing feeds `WorkoutSessions`/`ProgressMetric`
+providers that the Progress tab reads back (including an average-RPE insight
+card and a private per-user progress-photo timeline, `ProgressPhoto` model).
 
 **AI Coach ("Kaori")** — `frontend/lib/features/coach/` (route `/coach`,
 outside the shell so it gets its own back button) is a chat-style assistant:
@@ -67,7 +70,10 @@ with a percentage score and a "Review biomechanical replay" action that opens
 `frontend/lib/features/biomechanics/` (`FormVaultPage` — saved form-check
 history; `replay_3d_page.dart` — a mocked 3D rep replay). This is currently
 UI/mock-data driven (`biomechanics/data/biomechanics_mock.dart`), not backed
-by a real pose-estimation pipeline yet.
+by a real pose-estimation pipeline yet — as of 2026-09-13 these surfaces (plus
+the You-tab Kaori card) carry a `PreviewBadge` (`core/widgets/common.dart`) so
+the UI no longer implies a live capability; reuse that widget for any other
+mock/concept surface rather than inventing a new "coming soon" pattern.
 
 **Gym Bro** (`frontend/lib/features/gym_bro/`, backend `Swipe`/`Match`/
 `GymBroMessage` models) — a Tinder-style workout-partner matching layer on
@@ -127,5 +133,7 @@ Concrete traps discovered during real feature work — check these before re-der
 - **Self-referential M2M fields serialize as bare PK lists by default.** DRF's `ModelSerializer` renders M2M relations (e.g. `Exercise.alternatives`/`progression_exercises`/`regression_exercises`) as UUID lists, not nested objects. To show names/details, add a read-only `SerializerMethodField` or nested serializer (see `ExerciseMinimalSerializer` in `serializers.py`) alongside the writable PK field — don't replace the PK field, it's still needed for writes.
 - **`frontend/lib/models/` and `frontend/lib/pages/`** (top-level, outside `features/`) have historically held unrouted, superseded duplicates of feature-folder code. Before reusing something found there, grep whether `app_router.dart` actually imports it — it may be dead code left over from an earlier iteration.
 - **Exercise identity is the backend UUID, not the name.** Navigate/look up exercises by `id`; an earlier version of the app routed by URL-encoded name, which broke on rename/casing and made cross-linking (alternatives, plan schedules) unreliable.
+- **Plan-assigned exercises can be either per-user or shared-library rows, and the two live behind separate ViewSets.** `ExerciseViewSet` only returns `user=request.user, is_library=False`; `LibraryExerciseViewSet` only returns `is_library=True`. Neither alone can look up an arbitrary exercise a workout plan assigned (it could be either kind). `GET /exercises/lookup/<uuid>/` (`ExerciseLookupView` in `views.py`) is the one endpoint that resolves either kind by id and returns the full `ExerciseSerializer` shape (including `alternatives_detail`) — reuse it instead of adding another per-feature lookup path. It backs the workout runner's "Replace exercise" action (`plan_runner_page.dart`).
+- **Private, per-user media models must scope `get_queryset()`, not just permissions.** `ProgressPhoto` (like `FavoriteExercise`/`BodyWeightEntry` before it) is only ever safe because its ViewSet's `get_queryset()` filters to `user=request.user` — `IsAuthenticated` alone would let any logged-in user list/delete anyone's photos by id. When adding another personal-data model, copy this scoping pattern (and add the "another user can't see it" test) rather than relying on object-level permission checks alone.
 - **A real headless browser is available for self-verification.** `google-chrome` is on PATH and `playwright` (Python) is installed, but the default Playwright Chromium download is missing — launch with `p.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])` instead of a bare `launch()`. This app renders via CanvasKit, so there are no real DOM `<input>`/button elements to select — drive it with `page.mouse.click(x, y)` on coordinates read off a screenshot, plus `page.keyboard.type(...)`, and verify by screenshotting rather than `page.inner_text`. `page.url` can read stale on this app's hash-based GoRouter navigation immediately after a click; trust a screenshot over a `page.url` check taken right after navigating. Full login on web requires clicking through `/onboarding` for any account with `onboarding_completed=False` (the "I'll do this later" button skips it) — check/patch `Profile.onboarding_completed` via `manage.py shell` first if testing an existing seeded account.
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -88,6 +89,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     final metrics = ref.watch(progressMetricsProvider).value ?? const [];
     final summary = ref.watch(progressSummaryProvider).value ?? const {};
     final bodyWeights = ref.watch(bodyWeightProvider).value ?? const [];
+    final progressPhotos = ref.watch(progressPhotosProvider).value ?? const [];
     final visible = _visible(sessions);
 
     return mobileWrap(
@@ -191,6 +193,16 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                               label: 'Personal records',
                             ),
                           ),
+                          if (summary['average_rpe'] != null) ...[
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _InsightCard(
+                                icon: Icons.speed_outlined,
+                                value: '${summary['average_rpe']}',
+                                label: 'Avg RPE',
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -207,6 +219,11 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                       _BodyWeightCard(
                        entries: bodyWeights,
                        onLogged: () => ref.invalidate(bodyWeightProvider),
+                      ),
+                      const SizedBox(height: 12),
+                      _ProgressPhotosCard(
+                        photos: progressPhotos,
+                        onChanged: () => ref.invalidate(progressPhotosProvider),
                       ),
                       const SizedBox(height: 12),
                       if (metrics.isNotEmpty) ...[
@@ -444,6 +461,150 @@ class _BodyWeightCard extends StatelessWidget {
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressPhotosCard extends StatefulWidget {
+  const _ProgressPhotosCard({required this.photos, required this.onChanged});
+
+  final List<Map<String, dynamic>> photos;
+  final VoidCallback onChanged;
+
+  @override
+  State<_ProgressPhotosCard> createState() => _ProgressPhotosCardState();
+}
+
+class _ProgressPhotosCardState extends State<_ProgressPhotosCard> {
+  bool _uploading = false;
+
+  Future<void> _addPhoto() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 2000,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    setState(() => _uploading = true);
+    try {
+      await ApiClient.I.uploadProgressPhoto(bytes: bytes, filename: picked.name);
+      widget.onChanged();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't upload photo. Please try again.")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _delete(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete photo?'),
+        content: const Text('This progress photo will be permanently removed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ApiClient.I.deleteProgressPhoto(id);
+    widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Progress photos',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _uploading ? null : _addPhoto,
+                  icon: _uploading
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.add_a_photo_outlined, size: 18),
+                  label: const Text('Add photo'),
+                ),
+              ],
+            ),
+            if (widget.photos.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('No progress photos yet.'),
+              )
+            else
+              SizedBox(
+                height: 96,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: widget.photos.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final photo = widget.photos[index];
+                    final url = photo['image'] as String?;
+                    final id = photo['id']?.toString();
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Stack(
+                        children: [
+                          SizedBox(
+                            width: 96,
+                            height: 96,
+                            child: url == null
+                                ? const ColoredBox(
+                                    color: AppTheme.surfaceContainerLow,
+                                  )
+                                : Image.network(url, fit: BoxFit.cover),
+                          ),
+                          if (id != null)
+                            Positioned(
+                              top: 2,
+                              right: 2,
+                              child: GestureDetector(
+                                onTap: () => _delete(id),
+                                child: const CircleAvatar(
+                                  radius: 12,
+                                  backgroundColor: Colors.black54,
+                                  child: Icon(Icons.close,
+                                      size: 14, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
           ],
         ),
       ),

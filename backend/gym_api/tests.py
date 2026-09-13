@@ -10,6 +10,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from .models import (
     Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription,
     FavoriteExercise, Swipe, Match, GymBroMessage, MeditationSession, Feedback,
+    ProgressPhoto,
 )
 
 
@@ -429,6 +430,112 @@ class APITests(APITestCase):
     def test_feedback_rejected_when_unauthenticated(self):
         self.client.force_authenticate(user=None)
         resp = self.client.post('/api/feedback/', {'category': 'bug', 'message': 'x'})
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_exercise_lookup_returns_own_and_library_exercises_with_alternatives(self):
+        alt = Exercise.objects.create(name='Bodyweight Squat', is_library=True)
+        library_ex = Exercise.objects.create(name='Goblet Squat', is_library=True)
+        library_ex.alternatives.add(alt)
+        own_ex = Exercise.objects.create(user=self.user, name='My Curl')
+
+        resp = self.client.get(f'/api/exercises/lookup/{library_ex.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [a['name'] for a in resp.data['alternatives_detail']], ['Bodyweight Squat'],
+        )
+
+        resp = self.client.get(f'/api/exercises/lookup/{own_ex.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['name'], 'My Curl')
+
+    def test_exercise_lookup_rejects_another_users_private_exercise(self):
+        foreign_ex = Exercise.objects.create(user=self.other_user, name='Not yours')
+        resp = self.client.get(f'/api/exercises/lookup/{foreign_ex.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_log_metric_accepts_optional_rpe_within_range(self):
+        session = WorkoutSession.objects.create(user=self.user, name='Strength')
+        resp = self.client.post(
+            f'/api/sessions/{session.id}/log-metric/',
+            {'exercise_name': 'Squat', 'set_number': 1, 'reps': 5, 'weight_kg': 100, 'rpe': '8.5'},
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['rpe'], '8.5')
+
+    def test_progress_metric_rejects_rpe_outside_valid_range(self):
+        session = WorkoutSession.objects.create(user=self.user, name='Strength')
+        exercise = Exercise.objects.create(user=self.user, name='Squat')
+        resp = self.client.post('/api/metrics/', {
+            'session': str(session.id), 'exercise': str(exercise.id), 'reps': 5, 'rpe': '11',
+        })
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('rpe', resp.data)
+
+    def test_metric_summary_includes_average_rpe_when_present(self):
+        session = WorkoutSession.objects.create(user=self.user, name='Strength')
+        exercise = Exercise.objects.create(user=self.user, name='Squat')
+        ProgressMetric.objects.create(session=session, exercise=exercise, reps=5, weight_kg=60, rpe='7')
+        ProgressMetric.objects.create(session=session, exercise=exercise, reps=5, weight_kg=60, rpe='9')
+        ProgressMetric.objects.create(session=session, exercise=exercise, reps=5, weight_kg=60)
+
+        resp = self.client.get('/api/metrics/summary/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['average_rpe'], 8.0)
+
+    def test_metric_summary_average_rpe_is_none_without_any_rpe_logged(self):
+        session = WorkoutSession.objects.create(user=self.user, name='Strength')
+        exercise = Exercise.objects.create(user=self.user, name='Squat')
+        ProgressMetric.objects.create(session=session, exercise=exercise, reps=5, weight_kg=60)
+
+        resp = self.client.get('/api/metrics/summary/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIsNone(resp.data['average_rpe'])
+
+    def test_session_detail_is_owner_scoped(self):
+        own_session = WorkoutSession.objects.create(user=self.user, name='Mine')
+        resp = self.client.get(f'/api/sessions/{own_session.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        foreign_session = WorkoutSession.objects.create(user=self.other_user, name='Not mine')
+        resp = self.client.get(f'/api/sessions/{foreign_session.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_progress_photo_can_be_uploaded_listed_and_deleted(self):
+        image = SimpleUploadedFile(
+            'progress.png',
+            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
+            b'\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01'
+            b'\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82',
+            content_type='image/png',
+        )
+        resp = self.client.post('/api/progress-photos/', {'image': image}, format='multipart')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        photo_id = resp.data['id']
+
+        resp = self.client.get('/api/progress-photos/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['results']), 1)
+
+        resp = self.client.delete(f'/api/progress-photos/{photo_id}/')
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        resp = self.client.get('/api/progress-photos/')
+        self.assertEqual(len(resp.data['results']), 0)
+
+    def test_progress_photos_are_never_visible_to_another_user(self):
+        ProgressPhoto.objects.create(user=self.other_user, image=SimpleUploadedFile(
+            'other.png',
+            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
+            b'\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01'
+            b'\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82',
+            content_type='image/png',
+        ))
+        resp = self.client.get('/api/progress-photos/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['results']), 0)
+
+    def test_progress_photos_rejected_when_unauthenticated(self):
+        self.client.force_authenticate(user=None)
+        resp = self.client.get('/api/progress-photos/')
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_registration_returns_field_specific_validation_errors(self):

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/strings/coaching.dart';
+import 'package:gym_app/core/widgets/common.dart';
 import 'package:gym_app/features/plan/data/sample_plan.dart';
 import 'package:gym_app/features/plan/domain/plan_contract.dart';
 import 'package:gym_app/features/plan/state/plan_notifier.dart';
@@ -103,16 +104,22 @@ class _YouPageState extends ConsumerState<YouPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Kaori',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              'Kaori',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            PreviewBadge(),
+                          ],
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Machine form specialist · Online',
+                          'Machine form specialist',
                           style: TextStyle(color: AppTheme.mut),
                         ),
                       ],
@@ -162,7 +169,7 @@ class _YouPageState extends ConsumerState<YouPage> {
                             ? 'Premium plan active.'
                             : waitlisted
                                 ? "You're on the Premium waitlist — tap again to finish checkout."
-                                : 'Free plan · unlock AI coaching & Form Vault with Premium.',
+                                : 'Free plan · Premium adds early access to Kaori\'s coaching previews.',
                       ),
                     ),
                     if (plan == 'free')

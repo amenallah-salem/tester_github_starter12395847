@@ -96,3 +96,9 @@ final bodyWeightProvider =
   if (ApiClient.I.accessToken == null) return const [];
   return ApiClient.I.fetchBodyWeight();
 });
+
+final progressPhotosProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  if (ApiClient.I.accessToken == null) return const [];
+  return ApiClient.I.fetchProgressPhotos();
+});

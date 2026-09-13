@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:gym_app/core/theme/app_theme.dart';
+import 'package:gym_app/core/widgets/common.dart';
 
 class CoachPage extends StatelessWidget {
   const CoachPage({super.key});
@@ -33,6 +34,8 @@ class CoachPage extends StatelessWidget {
             ),
             SizedBox(width: 10),
             Text('Kaori'),
+            SizedBox(width: 8),
+            PreviewBadge(),
           ],
         ),
         actions: [
@@ -109,17 +112,13 @@ class CoachPage extends StatelessWidget {
                         child: Text('Form analysis · Rep 6–8',
                             style: TextStyle(fontWeight: FontWeight.w700)),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryContainer,
-                          borderRadius:
-                              BorderRadius.circular(AppTheme.radiusPill),
-                        ),
-                        child: const Text('96% optimal'),
-                      ),
+                      const PreviewBadge(),
                     ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Example output — real form analysis is not available yet.',
+                    style: TextStyle(color: AppTheme.mut, fontSize: 12),
                   ),
                   const SizedBox(height: 16),
                   Container(

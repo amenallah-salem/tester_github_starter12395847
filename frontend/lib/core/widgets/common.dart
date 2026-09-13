@@ -5,6 +5,33 @@ import 'package:gym_app/core/strings/coaching.dart';
 import 'package:gym_app/core/state/app_state.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
 
+/// Marks a screen or card as a non-functional concept preview (no real
+/// AI/CV backend behind it yet) so nothing in the UI implies a live
+/// capability that doesn't exist — see FEATURE_RESEARCH.md TASK-002.
+class PreviewBadge extends StatelessWidget {
+  const PreviewBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppTheme.outlineVariant),
+      ),
+      child: const Text(
+        'Preview',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.mut,
+        ),
+      ),
+    );
+  }
+}
+
 /// Friendly coach bubble. Tone comes from [CoachingStrings] — never hardcoded.
 class CoachLine extends StatelessWidget {
   const CoachLine(this.text, {super.key});

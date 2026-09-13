@@ -16,7 +16,7 @@ from unfold.admin import ModelAdmin, TabularInline
 from .models import (
     Profile, Plan, PlanDay, PlanDayExercise, Exercise, WorkoutSession,
     ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
-    Swipe, Match, GymBroMessage, Feedback,
+    Swipe, Match, GymBroMessage, Feedback, ProgressPhoto,
 )
 
 
@@ -245,7 +245,7 @@ class WorkoutSessionAdmin(ModelAdmin):
 
 @admin.register(ProgressMetric)
 class ProgressMetricAdmin(ModelAdmin):
-    list_display = ['exercise', 'session', 'set_number', 'reps', 'weight_kg', 'duration_seconds', 'logged_at']
+    list_display = ['exercise', 'session', 'set_number', 'reps', 'weight_kg', 'duration_seconds', 'rpe', 'logged_at']
     list_filter = ['logged_at']
     search_fields = ['session__name', 'exercise__name']
     autocomplete_fields = ['session', 'exercise']
@@ -345,3 +345,19 @@ class FeedbackAdmin(ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+# ---------------------------------------------------------------------------
+# Progress photos — strictly personal content. Kept for support/debugging
+# lookups only; deliberately no list-view thumbnail so photos aren't casually
+# browsable while scrolling the change list (an object must be opened
+# individually to view its image).
+# ---------------------------------------------------------------------------
+
+@admin.register(ProgressPhoto)
+class ProgressPhotoAdmin(ModelAdmin):
+    list_display = ['user', 'logged_at']
+    list_filter = ['logged_at']
+    search_fields = ['user__username']
+    autocomplete_fields = ['user']
+    readonly_fields = ['id', 'logged_at']

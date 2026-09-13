@@ -122,7 +122,7 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            initialValue: _category,
+            value: _category,
             decoration: const InputDecoration(
               labelText: 'Category',
               border: OutlineInputBorder(),

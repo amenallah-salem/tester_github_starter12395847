@@ -19,7 +19,7 @@ from django.utils import timezone
 from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
     WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
-    Swipe, Match, GymBroMessage, MeditationSession, Feedback,
+    Swipe, Match, GymBroMessage, MeditationSession, Feedback, ProgressPhoto,
 )
 from .serializers import (
     ProfileSerializer,
@@ -39,6 +39,7 @@ from .serializers import (
     GymBroMessageSerializer,
     MeditationSessionSerializer,
     FeedbackSerializer,
+    ProgressPhotoSerializer,
 )
 
 
@@ -345,6 +346,29 @@ class ExerciseViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user, is_library=False)
 
 
+class ExerciseLookupView(APIView):
+    """GET /exercises/lookup/<uuid:pk>/ — look up any exercise the requesting
+    user is allowed to see (their own, or a library exercise) regardless of
+    which viewset originally created it.
+
+    A workout plan's assigned exercises can be either per-user rows
+    (ExerciseViewSet) or shared library rows (LibraryExerciseViewSet), and the
+    workout runner doesn't know which at swap-time — this is the one place
+    that looks up either kind by id so exercise substitution (surfacing
+    `alternatives_detail`) works regardless of origin.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        exercise = get_object_or_404(
+            Exercise.objects.filter(
+                models.Q(user=request.user) | models.Q(is_library=True),
+            ),
+            pk=pk,
+        )
+        return Response(ExerciseSerializer(exercise, context={'request': request}).data)
+
+
 class LibraryExerciseViewSet(viewsets.ModelViewSet):
     """ViewSet for global admin-managed exercise library.
 
@@ -431,6 +455,7 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
             'reps': request.data.get('reps', 0),
             'weight_kg': request.data.get('weight_kg'),
             'duration_seconds': request.data.get('duration_seconds'),
+            'rpe': request.data.get('rpe'),
         }
         serializer = ProgressMetricSerializer(data=payload, context={'request': request})
         serializer.is_valid(raise_exception=True)
@@ -512,10 +537,19 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
             .annotate(workout_count=models.Count('id'))
             .order_by('week')
         )
+        rpe_values = list(
+            self.get_queryset()
+            .filter(rpe__isnull=False)
+            .values_list('rpe', flat=True)
+        )
+        average_rpe = (
+            round(float(sum(rpe_values)) / len(rpe_values), 1) if rpe_values else None
+        )
         return Response({
             'total_volume_kg': float(volume),
             'estimated_one_rep_max_kg': round(estimated_one_rep_max, 2),
             'personal_records': len(best_by_exercise),
+            'average_rpe': average_rpe,
             'volume_by_day': [
                 {'date': day, 'volume_kg': round(value, 2)}
                 for day, value in sorted(volume_by_day.items())
@@ -603,6 +637,21 @@ class FeedbackViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     def get_queryset(self):
         return Feedback.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class ProgressPhotoViewSet(viewsets.ModelViewSet):
+    """User-submitted progress photos. Strictly private: get_queryset scopes
+    every action to the requesting user, so no other user (including a Gym
+    Bro match) can ever list, retrieve, or delete someone else's photos."""
+    serializer_class = ProgressPhotoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        return ProgressPhoto.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

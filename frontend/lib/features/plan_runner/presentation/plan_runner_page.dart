@@ -48,6 +48,9 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
   late final DateTime _sessionStartedAt;
   String? _remoteSessionId;
   bool _loggingSet = false;
+  // Optional Rate of Perceived Exertion (1-10). `null` means "not set" —
+  // logging a set never requires it.
+  double? _rpe;
 
   PlanExercise get _ex => _exercises[_exIndex];
 
@@ -88,6 +91,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
     _repsAdj = _parseReps(_ex.reps);
     _weightController.clear();
     _durationController.clear();
+    _rpe = null;
     _prefillWeight();
     if (announce) {
       _coach = ref.read(coachingStringsProvider).startCue(_ex.name, _setIndex);
@@ -163,6 +167,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       _workRemaining = _workSeconds(_ex);
       _repsAdj = _parseReps(_ex.reps);
       _weightController.clear();
+      _rpe = null;
       final s = ref.read(coachingStringsProvider);
       _coach = _setIndex == _ex.sets - 1
           ? s.lastSetCue
@@ -188,6 +193,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       'reps': _repsAdj,
       'weight': weight,
       'duration': _ex.isTimed ? duration : null,
+      'rpe': _rpe,
     };
     setState(() => _loggingSet = true);
     try {
@@ -230,6 +236,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
         reps: set['reps']! as int,
         weightKg: set['weight'] as double?,
         durationSeconds: set['duration'] as int?,
+        rpe: set['rpe'] as double?,
       );
       if (result?['is_new_personal_record'] == true && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -244,6 +251,46 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       }
       rethrow;
     }
+  }
+
+  Future<void> _openReplaceSheet() async {
+    final selected = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _ReplaceExerciseSheet(exerciseId: _ex.exerciseId),
+    );
+    if (selected == null || !mounted) return;
+    final equipmentList = (selected['equipment'] as List?)?.cast<String>() ?? const [];
+    final muscles = (selected['primary_muscles'] as List?)?.cast<String>() ?? const [];
+    // Best-effort mapping from the backend's free-text equipment/muscle
+    // strings onto the plan contract's closed enums — an imperfect match
+    // only affects cosmetic grouping, never the sets/reps/rest carried over
+    // below, so it safely falls back to bodyweight/fullBody.
+    String normalize(String value) =>
+        value.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+    final replacement = PlanExercise(
+      exerciseId: selected['id'].toString(),
+      name: selected['name'] as String? ?? _ex.name,
+      equipment: equipmentList.isEmpty
+          ? Equipment.bodyweight
+          : enumFromString(
+              Equipment.values, normalize(equipmentList.first), Equipment.bodyweight),
+      muscleGroups: muscles.isEmpty
+          ? _ex.muscleGroups
+          : [enumFromString(FocusArea.values, normalize(muscles.first), FocusArea.fullBody)],
+      sets: _ex.sets,
+      reps: _ex.reps,
+      weight: _ex.weight,
+      isTimed: _ex.isTimed,
+      restSec: _ex.restSec,
+      tempo: _ex.tempo,
+      notes: _ex.notes,
+    );
+    setState(() {
+      _exercises[_exIndex] = replacement;
+      _enterExercise(announce: true);
+    });
   }
 
   Future<void> _skip() async {
@@ -394,6 +441,11 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
             style: const TextStyle(fontSize: 13, color: AppTheme.mut),
           ),
           actions: [
+            IconButton(
+              tooltip: 'Replace exercise',
+              onPressed: _openReplaceSheet,
+              icon: const Icon(Icons.swap_horiz),
+            ),
             TextButton(
               onPressed: () => context.go('/'),
               child: const Text('Exit'),
@@ -492,6 +544,32 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
               ),
             ),
             const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.speed_outlined, size: 20, color: AppTheme.mut),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _rpe == null ? 'RPE: not set (optional)' : 'RPE: $_rpe',
+                    style: const TextStyle(color: AppTheme.mut),
+                  ),
+                ),
+                if (_rpe != null)
+                  TextButton(
+                    onPressed: () => setState(() => _rpe = null),
+                    child: const Text('Clear'),
+                  ),
+              ],
+            ),
+            Slider(
+              value: _rpe ?? 5.5,
+              min: 1,
+              max: 10,
+              divisions: 18,
+              label: (_rpe ?? 5.5).toString(),
+              onChanged: (value) => setState(() => _rpe = value),
+            ),
+            const SizedBox(height: 10),
             FilledButton.icon(
               onPressed: _running ? _pause : _startTimer,
               icon: Icon(_running ? Icons.pause : Icons.play_arrow),
@@ -572,6 +650,93 @@ class _CompleteScreen extends StatelessWidget {
             TextButton(
               onPressed: () => context.go('/'),
               child: Text(strings.done),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Replace exercise" bottom sheet shown from the workout runner — lists the
+/// current exercise's curated alternatives (`alternatives_detail`) so a user
+/// can swap it mid-workout, e.g. when the needed equipment isn't available.
+class _ReplaceExerciseSheet extends StatelessWidget {
+  const _ReplaceExerciseSheet({required this.exerciseId});
+
+  final String exerciseId;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Replace exercise',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Swap in a compatible alternative and continue your set.',
+              style: TextStyle(color: AppTheme.mut, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            FutureBuilder<Map<String, dynamic>>(
+              future: ApiClient.I.fetchExerciseAlternatives(exerciseId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text('Unable to load alternatives. Try again.'),
+                    ),
+                  );
+                }
+                final alternatives =
+                    (snapshot.data?['alternatives_detail'] as List? ?? const [])
+                        .cast<Map<String, dynamic>>();
+                if (alternatives.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text('No alternatives curated for this exercise yet.'),
+                    ),
+                  );
+                }
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final alt in alternatives)
+                      Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          title: Text(alt['name'] as String? ?? 'Exercise'),
+                          subtitle: Text([
+                            if ((alt['body_part'] as String?)?.isNotEmpty ?? false)
+                              alt['body_part'] as String,
+                            if ((alt['equipment'] as List?)?.isNotEmpty ?? false)
+                              (alt['equipment'] as List).join(', '),
+                          ].join(' · ')),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.of(context).pop(alt),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ],
         ),

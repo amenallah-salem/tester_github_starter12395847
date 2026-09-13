@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gym_app/core/theme/app_theme.dart';
+import 'package:gym_app/core/widgets/common.dart';
 import 'package:gym_app/features/biomechanics/data/biomechanics_mock.dart';
 
 /// 3D biomechanical replay UI — Stitch: welora_interactive_biomechanical_3d_replay.
@@ -53,6 +54,10 @@ class _ReplayPage3DState extends ConsumerState<ReplayPage3D> {
         ),
         title: Text('Replay · ${replay.exerciseName}'),
         actions: [
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Center(child: PreviewBadge()),
+          ),
           IconButton(
             icon: const Icon(Icons.rotate_90_degrees_ccw),
             onPressed: () {},
