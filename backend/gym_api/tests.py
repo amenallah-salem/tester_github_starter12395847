@@ -966,6 +966,7 @@ class FakeOpenRouterService:
     """Test double for OpenRouterService — never touches the network."""
 
     def __init__(self, chunks=None, error=None):
+        self.model = 'fake-model'
         self._chunks = chunks if chunks is not None else [
             StreamChunk(delta_text='Hello '),
             StreamChunk(delta_text='there!', finish_reason='stop', usage={'prompt_tokens': 5, 'completion_tokens': 2}),
@@ -1064,7 +1065,7 @@ class AIChatTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         conversation = self._make_conversation()
 
-        with mock.patch('gym_api.views.get_openrouter_service', return_value=FakeOpenRouterService()):
+        with mock.patch('gym_api.views.get_ai_service', return_value=FakeOpenRouterService()):
             resp = self.client.post(
                 f'/api/ai/conversations/{conversation.id}/stream/', {'content': 'How should I train legs?'}, format='json'
             )
@@ -1090,7 +1091,7 @@ class AIChatTests(APITestCase):
     def test_message_list_ordering(self):
         self.client.force_authenticate(user=self.user)
         conversation = self._make_conversation()
-        with mock.patch('gym_api.views.get_openrouter_service', return_value=FakeOpenRouterService()):
+        with mock.patch('gym_api.views.get_ai_service', return_value=FakeOpenRouterService()):
             self.client.post(f'/api/ai/conversations/{conversation.id}/stream/', {'content': 'first'}, format='json')
 
         resp = self.client.get(f'/api/ai/conversations/{conversation.id}/messages/')
@@ -1101,7 +1102,7 @@ class AIChatTests(APITestCase):
     def test_client_cannot_inject_role_or_extra_fields(self):
         self.client.force_authenticate(user=self.user)
         conversation = self._make_conversation()
-        with mock.patch('gym_api.views.get_openrouter_service', return_value=FakeOpenRouterService()):
+        with mock.patch('gym_api.views.get_ai_service', return_value=FakeOpenRouterService()):
             self.client.post(
                 f'/api/ai/conversations/{conversation.id}/stream/',
                 {'content': 'hi', 'role': 'system'},
@@ -1115,7 +1116,7 @@ class AIChatTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         conversation = self._make_conversation()
         with mock.patch(
-            'gym_api.views.get_openrouter_service',
+            'gym_api.views.get_ai_service',
             return_value=FakeOpenRouterService(error=OpenRouterError('boom')),
         ):
             resp = self.client.post(
@@ -1133,7 +1134,7 @@ class AIChatTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         conversation = self._make_conversation()
         with mock.patch(
-            'gym_api.views.get_openrouter_service',
+            'gym_api.views.get_ai_service',
             return_value=FakeOpenRouterService(error=OpenRouterTimeout('timed out')),
         ):
             resp = self.client.post(
@@ -1165,7 +1166,7 @@ class AIChatTests(APITestCase):
     def test_daily_message_limit_enforced(self):
         self.client.force_authenticate(user=self.user)
         conversation = self._make_conversation()
-        with mock.patch('gym_api.views.get_openrouter_service', return_value=FakeOpenRouterService()):
+        with mock.patch('gym_api.views.get_ai_service', return_value=FakeOpenRouterService()):
             first = self.client.post(
                 f'/api/ai/conversations/{conversation.id}/stream/', {'content': 'one'}, format='json'
             )
@@ -1178,7 +1179,7 @@ class AIChatTests(APITestCase):
     def test_title_generated_from_first_message_only(self):
         self.client.force_authenticate(user=self.user)
         conversation = self._make_conversation()
-        with mock.patch('gym_api.views.get_openrouter_service', return_value=FakeOpenRouterService()):
+        with mock.patch('gym_api.views.get_ai_service', return_value=FakeOpenRouterService()):
             self.client.post(
                 f'/api/ai/conversations/{conversation.id}/stream/',
                 {'content': 'How should I structure my push workout?'},

@@ -45,11 +45,31 @@ DEV_OTP_CODE = '123456'
 # see check_production_safety() below for the production refusal.
 SAFE_DEV_OTP_AUTH_PASS = os.getenv('SAFE_DEV_OTP_AUTH_PASS', '')
 
-# AI chat (OpenRouter). Server-side only — never exposed to the client.
+# AI chat. Server-side only — never exposed to the client. AI_PROVIDER picks
+# which backend AISendMessageStreamView talks to (see gym_api/views.py:
+# get_ai_service()) — 'openrouter' (default) or 'freellmapi'. Switching
+# requires restarting the backend; there is no in-app toggle.
+AI_PROVIDER = os.getenv('AI_PROVIDER', 'openrouter')
+
 # Defaults to the free-tier model; do not silently fall back to a paid one.
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
 OPENROUTER_BASE_URL = os.getenv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1')
 OPENROUTER_MODEL = os.getenv('OPENROUTER_MODEL', 'openrouter/free')
+
+# freellmapi (github.com/tashfeenahmed/freellmapi) — local OpenAI-compatible
+# proxy, typically run via its own `docker compose up` on the host. From
+# inside the backend container, 127.0.0.1 means the container itself, so
+# FREELLMAPI_BASE_URL can't just reuse freellmapi's published host port.
+# freellmapi's own compose commonly publishes it as 127.0.0.1:3001 (loopback
+# only), which host.docker.internal cannot reach either — the working fix is
+# joining freellmapi's own Docker network and addressing it by container
+# name. docker.dev.sh/docker.prod.sh do this join as a best-effort step
+# after the backend starts (not declared in the compose files themselves,
+# since Compose refuses to start a service referencing a missing external
+# network) — see FREELLMAPI_BASE_URL=http://freellmapi:3001/v1 in .env.dev.
+FREELLMAPI_API_KEY = os.getenv('FREELLMAPI_API_KEY', '')
+FREELLMAPI_BASE_URL = os.getenv('FREELLMAPI_BASE_URL', 'http://freellmapi:3001/v1')
+FREELLMAPI_MODEL = os.getenv('FREELLMAPI_MODEL', 'auto')
 
 # Usage guardrails for the AI chat feature (see gym_api/ai/limits.py).
 AI_CHAT_MAX_MESSAGE_LENGTH = 4000

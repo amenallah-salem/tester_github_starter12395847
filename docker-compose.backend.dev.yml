@@ -43,6 +43,15 @@ services:
         condition: service_healthy
     networks:
       - gym_network
+    extra_hosts:
+      # Fallback for a host service bound to 0.0.0.0 — not enough on its own
+      # for freellmapi, whose own compose commonly publishes 127.0.0.1:3001
+      # (loopback-only, unreachable via host.docker.internal too). docker.dev.sh
+      # instead best-effort-joins this container to freellmapi's own Docker
+      # network after startup (see FREELLMAPI_BASE_URL in .env.dev) — done in
+      # the script, not declared here, so this compose file (and anyone not
+      # using freellmapi) doesn't hard-fail when that network doesn't exist.
+      - "host.docker.internal:host-gateway"
 
 volumes:
   postgres_data_dev:

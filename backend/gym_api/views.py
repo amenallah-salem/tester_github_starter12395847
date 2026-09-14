@@ -67,7 +67,19 @@ from .ai.openrouter import (
     OpenRouterService,
     OpenRouterTimeout,
 )
+from .ai.freellmapi import (
+    FreellmapiAuthError,
+    FreellmapiError,
+    FreellmapiRateLimited,
+    FreellmapiService,
+    FreellmapiTimeout,
+)
 from .ai.titles import title_from_message
+
+AI_SERVICE_ERRORS = (
+    OpenRouterAuthError, OpenRouterRateLimited, OpenRouterTimeout, OpenRouterError,
+    FreellmapiAuthError, FreellmapiRateLimited, FreellmapiTimeout, FreellmapiError,
+)
 
 
 class HealthCheckView(APIView):
@@ -1013,7 +1025,7 @@ class AIConversationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         folder = _get_or_create_ai_folder(self.request.user)
-        serializer.save(folder=folder, model=settings.OPENROUTER_MODEL)
+        serializer.save(folder=folder, model=get_ai_service().model)
 
 
 class AIMessagePagination(PageNumberPagination):
@@ -1083,14 +1095,14 @@ class AISendMessageStreamView(APIView):
         conversation.save(update_fields=update_fields)
 
         upstream_messages = ai_build_messages(conversation)
+        service = get_ai_service()
         assistant_message = AIMessage.objects.create(
             conversation=conversation,
             role=AIMessage.ROLE_ASSISTANT,
             content='',
             status=AIMessage.STATUS_PENDING,
-            model=settings.OPENROUTER_MODEL,
+            model=service.model,
         )
-        service = get_openrouter_service()
 
         def event_stream():
             accumulated = ''
@@ -1105,7 +1117,7 @@ class AISendMessageStreamView(APIView):
                         finish_reason = chunk.finish_reason
                     if chunk.usage:
                         usage = chunk.usage
-            except (OpenRouterAuthError, OpenRouterRateLimited, OpenRouterTimeout, OpenRouterError) as exc:
+            except AI_SERVICE_ERRORS as exc:
                 assistant_message.status = AIMessage.STATUS_FAILED
                 assistant_message.content = accumulated
                 assistant_message.save(update_fields=['status', 'content'])
@@ -1131,7 +1143,10 @@ class AISendMessageStreamView(APIView):
         return response
 
 
-def get_openrouter_service():
+def get_ai_service():
     """Indirection point so tests can monkeypatch/replace the service with
-    a fake without touching AISendMessageStreamView itself."""
+    a fake without touching AISendMessageStreamView itself. Picks the
+    provider from settings.AI_PROVIDER (see gym_project/settings.py)."""
+    if settings.AI_PROVIDER == 'freellmapi':
+        return FreellmapiService()
     return OpenRouterService()

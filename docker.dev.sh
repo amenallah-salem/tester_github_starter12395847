@@ -224,6 +224,31 @@ done
 echo
 
 # ------------------------------------------------------------------
+# Best-effort: join freellmapi's Docker network, if it's running
+# ------------------------------------------------------------------
+# Only relevant when AI_PROVIDER=freellmapi (see .env.dev) — freellmapi's own
+# compose commonly publishes its port as 127.0.0.1:3001 on the host, which is
+# loopback-only and unreachable from inside a container (host.docker.internal
+# included), so the backend reaches it by joining its Docker network and
+# using the container name instead (FREELLMAPI_BASE_URL=http://freellmapi:3001/v1).
+# This is done here rather than declared in docker-compose.backend.dev.yml
+# because Compose refuses to start a service that references a missing
+# external network — declaring it there would break the whole dev stack for
+# anyone not running freellmapi. Missing network or a failed connect (e.g.
+# already joined) are both non-fatal.
+FREELLMAPI_DOCKER_NETWORK="${FREELLMAPI_DOCKER_NETWORK:-freellmapi_default}"
+if docker network inspect "$FREELLMAPI_DOCKER_NETWORK" >/dev/null 2>&1; then
+  if docker network connect "$FREELLMAPI_DOCKER_NETWORK" "$BACKEND_CID" >/dev/null 2>&1; then
+    echo "Joined freellmapi Docker network ($FREELLMAPI_DOCKER_NETWORK)."
+  else
+    echo "Already on freellmapi Docker network ($FREELLMAPI_DOCKER_NETWORK)."
+  fi
+else
+  echo "freellmapi Docker network ($FREELLMAPI_DOCKER_NETWORK) not found — skipping (only needed when AI_PROVIDER=freellmapi)."
+fi
+echo
+
+# ------------------------------------------------------------------
 # Start the frontend
 # ------------------------------------------------------------------
 echo "Starting frontend..."
