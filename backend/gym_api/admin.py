@@ -17,6 +17,7 @@ from .models import (
     Profile, Plan, PlanDay, PlanDayExercise, Exercise, WorkoutSession,
     ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
     Swipe, Match, GymBroMessage, Feedback, ProgressPhoto,
+    AIConversationFolder, AIConversation,
 )
 
 
@@ -361,3 +362,36 @@ class ProgressPhotoAdmin(ModelAdmin):
     search_fields = ['user__username']
     autocomplete_fields = ['user']
     readonly_fields = ['id', 'logged_at']
+
+
+# ---------------------------------------------------------------------------
+# AI chat — metadata only. Message content is strictly personal (may include
+# health/lifestyle details) and is deliberately NOT registered/browsable in
+# admin at all, matching the ProgressPhoto precedent of keeping personal
+# content out of casual admin browsing.
+# ---------------------------------------------------------------------------
+
+@admin.register(AIConversationFolder)
+class AIConversationFolderAdmin(ModelAdmin):
+    list_display = ['user', 'name', 'created_at']
+    search_fields = ['user__username']
+    autocomplete_fields = ['user']
+    readonly_fields = ['id', 'user', 'created_at', 'updated_at']
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(AIConversation)
+class AIConversationAdmin(ModelAdmin):
+    list_display = ['title', 'owner', 'model', 'last_message_at', 'created_at']
+    list_filter = ['model', 'created_at']
+    search_fields = ['title', 'folder__user__username']
+    readonly_fields = ['id', 'folder', 'title', 'model', 'created_at', 'updated_at', 'last_message_at']
+
+    @admin.display(description='Owner')
+    def owner(self, obj):
+        return obj.folder.user.username
+
+    def has_add_permission(self, request):
+        return False

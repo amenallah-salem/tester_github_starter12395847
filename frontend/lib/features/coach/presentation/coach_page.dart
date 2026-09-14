@@ -1,24 +1,20 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:gym_app/core/theme/app_theme.dart';
-import 'package:gym_app/core/widgets/common.dart';
+import 'package:gym_app/features/coach/application/ai_chat_providers.dart';
+import 'package:gym_app/features/coach/domain/ai_conversation.dart';
 
-class CoachPage extends StatelessWidget {
+/// "AI Discussions" home: Kaori's conversation list. Real chat lives at
+/// /coach/new (new conversation) and /coach/:id (continue an existing one).
+class CoachPage extends ConsumerWidget {
   const CoachPage({super.key});
 
-  static void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Kaori's live chat is launching soon — this is a preview."),
-      ),
-    );
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final conversations = ref.watch(aiConversationListProvider);
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -34,8 +30,6 @@ class CoachPage extends StatelessWidget {
             ),
             SizedBox(width: 10),
             Text('Kaori'),
-            SizedBox(width: 8),
-            PreviewBadge(),
           ],
         ),
         actions: [
@@ -46,163 +40,191 @@ class CoachPage extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-        children: [
-          Card(
-            color: AppTheme.surfaceContainerLow,
-            child: Padding(
-              padding: const EdgeInsets.all(AppTheme.cardPadding),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 30,
-                    backgroundColor: AppTheme.primaryContainer,
-                    child: Icon(Icons.graphic_eq,
-                        size: 30, color: AppTheme.primary),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Post-workout check-in',
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Your steady tempo today was a strong foundation.',
-                          style: TextStyle(color: AppTheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _showComingSoon(context),
-                    icon: const Icon(Icons.play_circle_fill,
-                        color: AppTheme.primary, size: 34),
-                  ),
-                ],
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/coach/new'),
+        icon: const Icon(Icons.add),
+        label: const Text('New Chat'),
+      ),
+      body: conversations.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _ErrorState(
+          onRetry: () => ref.read(aiConversationListProvider.notifier).refresh(),
+        ),
+        data: (list) => list.isEmpty
+            ? const _EmptyState()
+            : RefreshIndicator(
+                onRefresh: () => ref.read(aiConversationListProvider.notifier).refresh(),
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  itemCount: list.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) =>
+                      _ConversationTile(conversation: list[index]),
+                ),
               ),
-            ),
+      ),
+    );
+  }
+}
+
+class _ConversationTile extends ConsumerWidget {
+  const _ConversationTile({required this.conversation});
+
+  final AiConversation conversation;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      color: AppTheme.surfaceContainerLow,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        title: Text(conversation.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text(
+          _formatTimestamp(conversation.lastMessageAt ?? conversation.updatedAt),
+          style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
+        ),
+        onTap: () => context.push('/coach/${conversation.id}'),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) async {
+            if (value == 'rename') {
+              await _showRenameDialog(context, ref, conversation);
+            } else if (value == 'delete') {
+              await _confirmDelete(context, ref, conversation);
+            }
+          },
+          itemBuilder: (context) => const [
+            PopupMenuItem(value: 'rename', child: Text('Rename')),
+            PopupMenuItem(value: 'delete', child: Text('Delete')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showRenameDialog(
+      BuildContext context, WidgetRef ref, AiConversation conversation) async {
+    final controller = TextEditingController(text: conversation.title);
+    final newTitle = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Rename conversation'),
+        content: TextField(controller: controller, autofocus: true),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
           ),
-          const SizedBox(height: 20),
-          const _CoachBubble(
-            text:
-                'Welcome back. How did your lower-body session feel today?',
-            coach: true,
-          ),
-          const SizedBox(height: 12),
-          const _CoachBubble(
-            text:
-                'Felt very stable. Keeping my feet forward made a big difference.',
-            coach: false,
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppTheme.cardPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.show_chart, color: AppTheme.primary),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text('Form analysis · Rep 6–8',
-                            style: TextStyle(fontWeight: FontWeight.w700)),
-                      ),
-                      const PreviewBadge(),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Example output — real form analysis is not available yet.',
-                    style: TextStyle(color: AppTheme.mut, fontSize: 12),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-                    ),
-                    child: CustomPaint(painter: _WavePainter()),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Your hip hinge and bar path stayed consistent. '
-                    'Keep this grounded pace next week.',
-                  ),
-                  const SizedBox(height: 14),
-                  OutlinedButton.icon(
-                    onPressed: () => context.push('/replay/latest'),
-                    icon: const Icon(Icons.replay),
-                    label: const Text('Review biomechanical replay'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          TextField(
-            readOnly: true,
-            onTap: () => _showComingSoon(context),
-            decoration: InputDecoration(
-              hintText: 'Message Kaori — coming soon',
-              prefixIcon: const Icon(Icons.add_circle_outline),
-              suffixIcon: IconButton(
-                onPressed: () => _showComingSoon(context),
-                icon: const Icon(Icons.send),
-              ),
-            ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: const Text('Save'),
           ),
         ],
       ),
     );
+    if (newTitle != null && newTitle.isNotEmpty && context.mounted) {
+      try {
+        await ref
+            .read(aiConversationListProvider.notifier)
+            .renameConversation(conversation.id, newTitle);
+      } catch (_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not rename this conversation.')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _confirmDelete(
+      BuildContext context, WidgetRef ref, AiConversation conversation) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete conversation?'),
+        content: Text('"${conversation.title}" will be permanently deleted.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      try {
+        await ref.read(aiConversationListProvider.notifier).deleteConversation(conversation.id);
+      } catch (_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not delete this conversation.')),
+          );
+        }
+      }
+    }
   }
 }
 
-class _CoachBubble extends StatelessWidget {
-  const _CoachBubble({required this.text, required this.coach});
-
-  final String text;
-  final bool coach;
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: coach ? Alignment.centerLeft : Alignment.centerRight,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 320),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: coach ? AppTheme.surface : AppTheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-          boxShadow: AppTheme.cardShadow,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.spa_outlined, size: 48, color: AppTheme.primary),
+            const SizedBox(height: 16),
+            Text('Ask Kaori anything', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            const Text(
+              'Training structure, technique, recovery, or motivation — start a new chat to begin.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.onSurfaceVariant),
+            ),
+          ],
         ),
-        child: Text(text),
       ),
     );
   }
 }
 
-class _WavePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppTheme.primary
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-    final path = Path()..moveTo(12, size.height * .66);
-    for (var x = 12.0; x < size.width - 12; x += 4) {
-      final y = size.height * .5 +
-          (size.height * .22) * math.sin(x / size.width * math.pi * 2);
-      path.lineTo(x, y);
-    }
-    canvas.drawPath(path, paint);
-  }
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Could not load your conversations.'),
+            const SizedBox(height: 12),
+            OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _formatTimestamp(DateTime dateTime) {
+  final now = DateTime.now();
+  final local = dateTime.toLocal();
+  final isToday = local.year == now.year && local.month == now.month && local.day == now.day;
+  final hh = local.hour.toString().padLeft(2, '0');
+  final mm = local.minute.toString().padLeft(2, '0');
+  if (isToday) return 'Today · $hh:$mm';
+  return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
 }

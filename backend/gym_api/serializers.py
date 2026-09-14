@@ -8,6 +8,7 @@ from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
     WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
     Swipe, Match, GymBroMessage, MeditationSession, Feedback, ProgressPhoto,
+    AIConversationFolder, AIConversation, AIMessage,
 )
 
 
@@ -39,6 +40,17 @@ class AppleAuthSerializer(serializers.Serializer):
     identity_token = serializers.CharField()
     first_name = serializers.CharField(required=False, allow_blank=True, default='')
     last_name = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class PhoneOTPRequestSerializer(serializers.Serializer):
+    """Thin pass-through — normalize_phone_number (otp.py) is the actual
+    trust boundary, not this validator."""
+    phone_number = serializers.CharField()
+
+
+class PhoneOTPVerifySerializer(serializers.Serializer):
+    phone_number = serializers.CharField()
+    code = serializers.CharField(min_length=6, max_length=6)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -428,3 +440,45 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def get_upgrade_url(self, obj):
         from django.conf import settings
         return getattr(settings, 'STRIPE_PAYMENT_LINK_URL', '') or None
+
+
+class AIConversationFolderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AIConversationFolder
+        fields = ['id', 'name', 'created_at', 'updated_at']
+        read_only_fields = fields
+
+
+class AIConversationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AIConversation
+        fields = ['id', 'title', 'model', 'created_at', 'updated_at', 'last_message_at']
+        read_only_fields = ['id', 'model', 'created_at', 'updated_at', 'last_message_at']
+
+    def validate_title(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('title cannot be empty.')
+        return value[:120]
+
+
+class AIMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AIMessage
+        fields = [
+            'id', 'role', 'content', 'status', 'model',
+            'input_tokens', 'output_tokens', 'finish_reason', 'created_at',
+        ]
+        read_only_fields = fields
+
+
+class AISendMessageSerializer(serializers.Serializer):
+    """Input for POST .../stream/. The client can only ever send free-text
+    user content — role, system prompt, and model are never accepted here."""
+    content = serializers.CharField(allow_blank=False, trim_whitespace=True)
+
+    def validate_content(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('content cannot be empty.')
+        return value

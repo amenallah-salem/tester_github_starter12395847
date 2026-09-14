@@ -197,6 +197,45 @@ class ApiClient {
     return _jsonObject(response, 'Apple sign-in');
   }
 
+  /// Requests an SMS verification code for [phoneNumber] (expected in/close
+  /// to E.164 — the backend is authoritative on normalization). Does not
+  /// authenticate anyone; see verifyPhoneOtp. Returns
+  /// `{'message', 'resend_after_seconds'}`. A 429 (cooldown) or 400 (invalid
+  /// number) surfaces as an ApiException with the backend's message.
+  Future<Map<String, dynamic>> requestPhoneOtp({
+    required String phoneNumber,
+  }) async {
+    final response = await _send(
+      () => http.post(
+        _uri('/auth/phone/request-otp/'),
+        headers: _headers(json: true),
+        body: jsonEncode({'phone_number': phoneNumber}),
+      ),
+      method: 'POST',
+      path: '/auth/phone/request-otp/',
+    );
+    return _jsonObject(response, 'phone verification code request');
+  }
+
+  /// Verifies a previously-requested code and exchanges it for the app's
+  /// normal JWT session (same shape as login()/register()). Errors
+  /// (incorrect/expired code, too many attempts) surface as ApiException.
+  Future<Map<String, dynamic>> verifyPhoneOtp({
+    required String phoneNumber,
+    required String code,
+  }) async {
+    final response = await _send(
+      () => http.post(
+        _uri('/auth/phone/verify-otp/'),
+        headers: _headers(json: true),
+        body: jsonEncode({'phone_number': phoneNumber, 'code': code}),
+      ),
+      method: 'POST',
+      path: '/auth/phone/verify-otp/',
+    );
+    return _jsonObject(response, 'phone verification');
+  }
+
   Future<List<PlanSummary>> fetchPlans() async {
     final data = _jsonObject(
       await _send(
@@ -854,6 +893,156 @@ class ApiClient {
     return _jsonObject(response, 'message');
   }
 
+  // --- AI chat (Kaori) -----------------------------------------------
+  // The backend, never Flutter, holds the OpenRouter API key/model/system
+  // prompt. These calls only ever pass free-text user content.
+
+  Future<Map<String, dynamic>> fetchAiFolder() async {
+    final response = await _send(
+      () => http.get(_uri('/ai/folder/'), headers: _headers()),
+      method: 'GET',
+      path: '/ai/folder/',
+    );
+    return _jsonObject(response, 'AI folder');
+  }
+
+  Future<List<Map<String, dynamic>>> fetchAiConversations() async {
+    final data = _jsonObject(
+      await _send(
+        () => http.get(_uri('/ai/conversations/'), headers: _headers()),
+        method: 'GET',
+        path: '/ai/conversations/',
+      ),
+      'AI conversations',
+    );
+    return ((data['results'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> createAiConversation() async {
+    final response = await _send(
+      () => http.post(
+        _uri('/ai/conversations/'),
+        headers: _headers(json: true),
+      ),
+      method: 'POST',
+      path: '/ai/conversations/',
+    );
+    return _jsonObject(response, 'new AI conversation');
+  }
+
+  Future<Map<String, dynamic>> renameAiConversation(
+      String conversationId, String title) async {
+    final response = await _send(
+      () => http.patch(
+        _uri('/ai/conversations/$conversationId/'),
+        headers: _headers(json: true),
+        body: jsonEncode({'title': title}),
+      ),
+      method: 'PATCH',
+      path: '/ai/conversations/$conversationId/',
+    );
+    return _jsonObject(response, 'AI conversation rename');
+  }
+
+  Future<void> deleteAiConversation(String conversationId) async {
+    await _send(
+      () => http.delete(
+        _uri('/ai/conversations/$conversationId/'),
+        headers: _headers(),
+      ),
+      method: 'DELETE',
+      path: '/ai/conversations/$conversationId/',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> fetchAiMessages(
+      String conversationId) async {
+    final data = _jsonObject(
+      await _send(
+        () => http.get(
+          _uri('/ai/conversations/$conversationId/messages/'),
+          headers: _headers(),
+        ),
+        method: 'GET',
+        path: '/ai/conversations/$conversationId/messages/',
+      ),
+      'AI messages',
+    );
+    return ((data['results'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>();
+  }
+
+  /// Sends a user message and streams the assistant's reply as
+  /// Server-Sent Events: `delta` ({'text': ...}) chunks, then either a
+  /// `done` ({'message_id': ...}) or `error` ({'detail': ...}) event.
+  Stream<SseEvent> streamAiConversationMessage({
+    required String conversationId,
+    required String content,
+  }) async* {
+    final uri = _uri('/ai/conversations/$conversationId/stream/');
+    final client = http.Client();
+    try {
+      Future<http.StreamedResponse> doSend() {
+        final request = http.Request('POST', uri)
+          ..headers.addAll(_headers(json: true))
+          ..body = jsonEncode({'content': content});
+        return client.send(request);
+      }
+
+      var response = await doSend();
+      if (response.statusCode == 401 && refreshToken != null) {
+        if (await _refreshAccessToken()) {
+          response = await doSend();
+        }
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final body = await response.stream.bytesToString();
+        final details = _readErrorDetails(body);
+        throw ApiException(
+          message: details.message,
+          method: 'POST',
+          uri: uri,
+          statusCode: response.statusCode,
+          fieldErrors: details.fieldErrors,
+        );
+      }
+
+      String? currentEvent;
+      final dataBuffer = StringBuffer();
+      final lines = response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+      await for (final line in lines) {
+        if (line.startsWith('event:')) {
+          currentEvent = line.substring('event:'.length).trim();
+        } else if (line.startsWith('data:')) {
+          dataBuffer.write(line.substring('data:'.length).trim());
+        } else if (line.isEmpty) {
+          if (currentEvent != null && dataBuffer.isNotEmpty) {
+            final data =
+                jsonDecode(dataBuffer.toString()) as Map<String, dynamic>;
+            yield SseEvent(currentEvent, data);
+          }
+          currentEvent = null;
+          dataBuffer.clear();
+        }
+      }
+    } on ApiException {
+      rethrow;
+    } on http.ClientException catch (error) {
+      throw ApiException(
+        message:
+            'Unable to reach the API at $uri. Check that Django is running and that this device can reach the backend.',
+        method: 'POST',
+        uri: uri,
+        cause: error.message,
+      );
+    } finally {
+      client.close();
+    }
+  }
+
   Map<String, dynamic> _jsonObject(http.Response response, String operation) {
     try {
       final data = jsonDecode(response.body);
@@ -868,6 +1057,14 @@ class ApiClient {
       );
     }
   }
+}
+
+/// One parsed Server-Sent Event from the AI chat streaming endpoint.
+class SseEvent {
+  const SseEvent(this.event, this.data);
+
+  final String event;
+  final Map<String, dynamic> data;
 }
 
 class ApiException implements Exception {

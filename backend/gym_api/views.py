@@ -1,19 +1,24 @@
 """
 REST views for the Gym Planner API.
 """
+import json
 from datetime import timedelta
 
-from rest_framework import viewsets, permissions, status, mixins
+from rest_framework import viewsets, permissions, status, mixins, generics
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.conf import settings
 from django.contrib.auth.models import User
-from django.db import connections, models, transaction
+from django.db import IntegrityError, connections, models, transaction
 from django.db.models import F, Max, Sum, Q
 from django.db.models.functions import TruncWeek
 from django.db.utils import OperationalError
+from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -21,7 +26,7 @@ from .models import (
     Profile, Plan, Exercise, PlanDay, PlanDayExercise,
     WorkoutSession, ProgressMetric, BodyWeightEntry, FavoriteExercise, Subscription,
     Swipe, Match, GymBroMessage, MeditationSession, Feedback, ProgressPhoto,
-    SocialAccount,
+    SocialAccount, AIConversationFolder, AIConversation, AIMessage,
 )
 from .serializers import (
     ProfileSerializer,
@@ -44,7 +49,25 @@ from .serializers import (
     ProgressPhotoSerializer,
     GoogleAuthSerializer,
     AppleAuthSerializer,
+    PhoneOTPRequestSerializer,
+    PhoneOTPVerifySerializer,
+    AIConversationFolderSerializer,
+    AIConversationSerializer,
+    AIMessageSerializer,
+    AISendMessageSerializer,
 )
+from . import otp as otp_service
+from .sms import SmsDeliveryError
+from .ai import limits as ai_limits
+from .ai.context import build_messages as ai_build_messages
+from .ai.openrouter import (
+    OpenRouterAuthError,
+    OpenRouterError,
+    OpenRouterRateLimited,
+    OpenRouterService,
+    OpenRouterTimeout,
+)
+from .ai.titles import title_from_message
 
 
 class HealthCheckView(APIView):
@@ -273,6 +296,103 @@ class AppleAuthView(APIView):
             )
         except ValueError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return _issue_tokens_response(user, status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+def _unique_username_for_phone_signup(phone_number):
+    import re
+    digits = re.sub(r'\D', '', phone_number)
+    base = f'phone_{digits}'
+    candidate = base
+    suffix = 1
+    while User.objects.filter(username=candidate).exists():
+        suffix += 1
+        candidate = f'{base}{suffix}'
+    return candidate
+
+
+def find_or_create_phone_user(phone_number):
+    """Resolve a verified phone number to a Django User.
+
+    Only matches against Profile.phone_number set by a PRIOR phone
+    verification — this deliberately does not attempt to link to an existing
+    email/Google/Apple account, since none of those flows collect a verified
+    phone number to match against (see docs/authentication.md's "Account
+    linking" note for the accepted limitation this implies).
+
+    Returns (user, created: bool).
+    """
+    existing = Profile.objects.filter(phone_number=phone_number).select_related('user').first()
+    if existing is not None:
+        return existing.user, False
+
+    username = _unique_username_for_phone_signup(phone_number)
+    user = User.objects.create_user(username=username, password=None)
+    _provision_new_user(user)
+    try:
+        with transaction.atomic():
+            Profile.objects.filter(user=user).update(phone_number=phone_number)
+    except IntegrityError:
+        # Lost a race with a simultaneous first-verification of the same
+        # number: someone else's Profile now owns it, so use that account
+        # instead of leaving this freshly-created user phoneless/orphaned.
+        user.delete()
+        existing = Profile.objects.filter(phone_number=phone_number).select_related('user').first()
+        return existing.user, False
+    return user, True
+
+
+class PhoneOTPRequestView(APIView):
+    """POST /auth/phone/request-otp/ – send (or simulate, in dev) an SMS
+    verification code. Does not authenticate anyone by itself."""
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'otp_request'
+
+    def post(self, request):
+        s = PhoneOTPRequestSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        try:
+            phone = otp_service.normalize_phone_number(s.validated_data['phone_number'])
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            otp_service.create_otp(phone)
+        except otp_service.OtpCooldownActive as exc:
+            return Response(
+                {'detail': str(exc), 'retry_after_seconds': exc.retry_after_seconds},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        except SmsDeliveryError:
+            return Response(
+                {'detail': 'Could not send the verification code. Please try again shortly.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response({
+            'message': 'Verification code sent.',
+            'resend_after_seconds': settings.OTP_RESEND_COOLDOWN_SECONDS,
+        }, status=status.HTTP_200_OK)
+
+
+class PhoneOTPVerifyView(APIView):
+    """POST /auth/phone/verify-otp/ – verify the code and sign the user in,
+    creating an account on first verification of a phone number."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        s = PhoneOTPVerifySerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        try:
+            phone = otp_service.normalize_phone_number(s.validated_data['phone_number'])
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            otp_service.verify_otp(phone, s.validated_data['code'])
+        except otp_service.OtpMaxAttemptsExceeded as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        except (otp_service.OtpNotFound, otp_service.OtpExpired, otp_service.OtpInvalid) as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        user, created = find_or_create_phone_user(phone)
         return _issue_tokens_response(user, status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
@@ -861,3 +981,157 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             subscription.status = 'waitlisted'
             subscription.save(update_fields=['status', 'updated_at'])
         return Response(self.get_serializer(subscription).data)
+
+
+def _get_or_create_ai_folder(user):
+    folder, _ = AIConversationFolder.objects.get_or_create(user=user)
+    return folder
+
+
+class AIFolderView(APIView):
+    """GET /ai/folder/ — get-or-create the caller's single 'AI Discussions'
+    folder. Safe to call repeatedly; never creates more than one per user
+    (enforced by the OneToOneField)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        folder = _get_or_create_ai_folder(request.user)
+        return Response(AIConversationFolderSerializer(folder).data)
+
+
+class AIConversationViewSet(viewsets.ModelViewSet):
+    """CRUD for the caller's own AI conversations. get_queryset scopes every
+    action to the requesting user's folder, so no other user can ever list,
+    retrieve, rename, or delete someone else's conversation (see
+    test_ai_conversation_ownership in tests.py)."""
+    serializer_class = AIConversationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        return AIConversation.objects.filter(folder__user=self.request.user)
+
+    def perform_create(self, serializer):
+        folder = _get_or_create_ai_folder(self.request.user)
+        serializer.save(folder=folder, model=settings.OPENROUTER_MODEL)
+
+
+class AIMessagePagination(PageNumberPagination):
+    page_size = 50
+    max_page_size = 100
+
+
+class AIMessageListView(generics.ListAPIView):
+    """GET /ai/conversations/<uuid:pk>/messages/ — the persisted messages
+    for one conversation, oldest first. 404s (not 403s) on a conversation
+    the caller doesn't own, so ownership never leaks via response code."""
+    serializer_class = AIMessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = AIMessagePagination
+
+    def get_queryset(self):
+        conversation = get_object_or_404(
+            AIConversation, pk=self.kwargs['pk'], folder__user=self.request.user
+        )
+        return conversation.messages.all()
+
+
+class AISendMessageStreamView(APIView):
+    """POST /ai/conversations/<uuid:pk>/stream/ — persist the user's message,
+    then stream the assistant's reply back as Server-Sent Events while
+    accumulating and persisting it.
+
+    The client can only ever supply free-text `content` (AISendMessageSerializer);
+    role and the system prompt are entirely backend-controlled (ai/context.py).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'ai_chat'
+
+    @staticmethod
+    def _sse(event, data):
+        return f'event: {event}\ndata: {json.dumps(data)}\n\n'
+
+    def post(self, request, pk):
+        conversation = get_object_or_404(
+            AIConversation, pk=pk, folder__user=request.user
+        )
+
+        serializer = AISendMessageSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        content = serializer.validated_data['content']
+
+        try:
+            ai_limits.check_can_send_message(request.user, content)
+        except ai_limits.MessageTooLong as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except ai_limits.DailyLimitExceeded as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        is_first_message = not conversation.messages.exists()
+        user_message = AIMessage.objects.create(
+            conversation=conversation,
+            role=AIMessage.ROLE_USER,
+            content=content,
+            status=AIMessage.STATUS_COMPLETED,
+        )
+        conversation.last_message_at = user_message.created_at
+        update_fields = ['last_message_at']
+        if is_first_message:
+            conversation.title = title_from_message(content)
+            update_fields.append('title')
+        conversation.save(update_fields=update_fields)
+
+        upstream_messages = ai_build_messages(conversation)
+        assistant_message = AIMessage.objects.create(
+            conversation=conversation,
+            role=AIMessage.ROLE_ASSISTANT,
+            content='',
+            status=AIMessage.STATUS_PENDING,
+            model=settings.OPENROUTER_MODEL,
+        )
+        service = get_openrouter_service()
+
+        def event_stream():
+            accumulated = ''
+            finish_reason = None
+            usage = None
+            try:
+                for chunk in service.stream_chat_completion(upstream_messages):
+                    if chunk.delta_text:
+                        accumulated += chunk.delta_text
+                        yield self._sse('delta', {'text': chunk.delta_text})
+                    if chunk.finish_reason:
+                        finish_reason = chunk.finish_reason
+                    if chunk.usage:
+                        usage = chunk.usage
+            except (OpenRouterAuthError, OpenRouterRateLimited, OpenRouterTimeout, OpenRouterError) as exc:
+                assistant_message.status = AIMessage.STATUS_FAILED
+                assistant_message.content = accumulated
+                assistant_message.save(update_fields=['status', 'content'])
+                yield self._sse('error', {'detail': 'The assistant is temporarily unavailable. Please try again.'})
+                return
+
+            assistant_message.status = AIMessage.STATUS_COMPLETED
+            assistant_message.content = accumulated
+            assistant_message.finish_reason = finish_reason or ''
+            if usage:
+                assistant_message.input_tokens = usage.get('prompt_tokens')
+                assistant_message.output_tokens = usage.get('completion_tokens')
+            assistant_message.save(update_fields=[
+                'status', 'content', 'finish_reason', 'input_tokens', 'output_tokens',
+            ])
+            conversation.last_message_at = timezone.now()
+            conversation.save(update_fields=['last_message_at'])
+            yield self._sse('done', {'message_id': str(assistant_message.id)})
+
+        response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+        response['Cache-Control'] = 'no-cache'
+        response['X-Accel-Buffering'] = 'no'
+        return response
+
+
+def get_openrouter_service():
+    """Indirection point so tests can monkeypatch/replace the service with
+    a fake without touching AISendMessageStreamView itself."""
+    return OpenRouterService()

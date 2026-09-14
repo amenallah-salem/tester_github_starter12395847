@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:gym_app/core/state/auth_state.dart';
 import 'package:gym_app/services/api_client.dart';
 import 'package:gym_app/services/social_auth_service.dart';
-import 'package:gym_app/features/plan/state/plan_notifier.dart';
-import 'package:gym_app/features/progress/state/workout_sessions.dart';
+import 'package:gym_app/features/auth/application/auth_success.dart';
+import 'package:gym_app/features/auth/presentation/phone_auth_page.dart';
 
 class SignInPage extends ConsumerStatefulWidget {
   const SignInPage({super.key});
@@ -53,7 +52,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
               username: _username.text.trim(),
               password: _password.text,
             );
-      await _onAuthSuccess(result, fallbackUsername: _username.text.trim());
+      await applyAuthResult(ref, result, fallbackUsername: _username.text.trim());
+      if (mounted) context.go('/');
     } catch (error) {
       _handleAuthError(error);
     } finally {
@@ -70,7 +70,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     try {
       final social = await SocialAuthService.signInWithGoogle();
       final result = await ApiClient.I.loginWithGoogle(idToken: social.idToken);
-      await _onAuthSuccess(result, fallbackUsername: 'Google account');
+      await applyAuthResult(ref, result, fallbackUsername: 'Google account');
+      if (mounted) context.go('/');
     } on SocialAuthCancelledException {
       // User backed out of the Google flow deliberately — not a failure.
     } catch (error) {
@@ -93,7 +94,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
         firstName: social.firstName,
         lastName: social.lastName,
       );
-      await _onAuthSuccess(result, fallbackUsername: 'Apple account');
+      await applyAuthResult(ref, result, fallbackUsername: 'Apple account');
+      if (mounted) context.go('/');
     } on SocialAuthCancelledException {
       // User backed out of the Apple flow deliberately — not a failure.
     } catch (error) {
@@ -103,27 +105,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     }
   }
 
-  Future<void> _onAuthSuccess(
-    Map<String, dynamic> result, {
-    required String fallbackUsername,
-  }) async {
-    ref.read(accessTokenProvider.notifier).state = result['access'] as String;
-    ApiClient.I.accessToken = result['access'] as String;
-    if (result['refresh'] case final String refresh) {
-      ref.read(refreshTokenProvider.notifier).state = refresh;
-      ApiClient.I.refreshToken = refresh;
-    }
-    await ref.read(planNotifierProvider.notifier).refreshFromApi();
-    await ref.read(workoutSessionsProvider.notifier).loadRemote();
-    final user = result['user'];
-    ref.read(currentUsernameProvider.notifier).state =
-        user is Map ? user['username'] as String : fallbackUsername;
-    await persistAuth(
-      access: result['access'] as String,
-      refresh: result['refresh'] as String?,
-      username: ref.read(currentUsernameProvider) ?? fallbackUsername,
+  void _continueWithPhone() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PhoneAuthPage()),
     );
-    if (mounted) context.go('/');
   }
 
   void _handleAuthError(Object error) {
@@ -250,6 +236,15 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     ),
                   ),
                 ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : _continueWithPhone,
+                    child: const Text('Continue with phone'),
+                  ),
+                ),
                 TextButton(
                   onPressed: _busy
                       ? null

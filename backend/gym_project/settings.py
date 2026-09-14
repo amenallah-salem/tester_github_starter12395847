@@ -27,6 +27,35 @@ GOOGLE_OAUTH_CLIENT_IDS = [
 ]
 APPLE_BUNDLE_ID = os.getenv('APPLE_BUNDLE_ID', '')
 
+# Phone/OTP sign-in (Twilio SMS). TWILIO_* are empty by default so the app
+# still runs without them configured (phone auth just can't send real SMS).
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN', '')
+TWILIO_FROM_NUMBER = os.getenv('TWILIO_FROM_NUMBER', '')
+
+OTP_EXPIRY_MINUTES = 5
+OTP_MAX_ATTEMPTS = 5
+OTP_RESEND_COOLDOWN_SECONDS = 60
+DEV_OTP_CODE = '123456'
+
+# DEVELOPMENT / TESTING ONLY — NEVER CONFIGURE THIS IN PRODUCTION.
+# When set (and DEBUG is True), phone OTP requests use a fixed, documented
+# code (DEV_OTP_CODE) and simulate SMS delivery instead of calling Twilio —
+# see gym_api/sms.py:get_sms_provider(). Verification itself is unchanged;
+# see check_production_safety() below for the production refusal.
+SAFE_DEV_OTP_AUTH_PASS = os.getenv('SAFE_DEV_OTP_AUTH_PASS', '')
+
+# AI chat (OpenRouter). Server-side only — never exposed to the client.
+# Defaults to the free-tier model; do not silently fall back to a paid one.
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
+OPENROUTER_BASE_URL = os.getenv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1')
+OPENROUTER_MODEL = os.getenv('OPENROUTER_MODEL', 'openrouter/free')
+
+# Usage guardrails for the AI chat feature (see gym_api/ai/limits.py).
+AI_CHAT_MAX_MESSAGE_LENGTH = 4000
+AI_CHAT_DAILY_MESSAGE_LIMIT = 100
+AI_CHAT_CONTEXT_MESSAGE_COUNT = 20
+
 INSTALLED_APPS = [
     # Must be listed before django.contrib.admin so it can override the
     # built-in admin templates/static assets.
@@ -224,6 +253,12 @@ REST_FRAMEWORK = {
         # tight to blunt credential-stuffing/brute force on launch day.
         'anon': '20/min',
         'user': '300/min',
+        # Per-IP cap on SMS-sending requests, independent of the per-phone-
+        # number cooldown enforced in gym_api/otp.py — see PhoneOTPRequestView.
+        'otp_request': '5/min',
+        # Per-user cap on AI chat sends, independent of the daily message
+        # cap enforced in gym_api/ai/limits.py — see AISendMessageStreamView.
+        'ai_chat': '20/min',
     },
 }
 
@@ -262,16 +297,11 @@ SIMPLE_JWT = {
 }
 
 # Fail loudly rather than silently serving debug pages / a known secret key
-# in anything that isn't explicitly a local dev run.
-if os.getenv('DJANGO_ENV', '').lower() == 'production':
-    if DEBUG:
-        raise RuntimeError(
-            'DJANGO_ENV=production but DJANGO_DEBUG is not False — refusing to start.'
-        )
-    if SECRET_KEY == 'dev-secret-key-change-in-production':
-        raise RuntimeError(
-            'DJANGO_ENV=production but DJANGO_SECRET_KEY is unset/default — refusing to start.'
-        )
+# (or a development-only auth bypass) in anything that isn't explicitly a
+# local dev run. See env_guards.py for the actual checks (kept separately
+# importable so they're unit-testable against arbitrary env combinations).
+from .env_guards import check_production_safety
+check_production_safety(os.environ, DEBUG, SECRET_KEY)
 
 # Security defaults are enabled in production and remain opt-in for local HTTP.
 if not DEBUG:

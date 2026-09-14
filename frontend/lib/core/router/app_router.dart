@@ -30,6 +30,7 @@ import 'package:gym_app/features/plan_runner/presentation/freestyle_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/form_vault_page.dart';
 import 'package:gym_app/features/biomechanics/presentation/replay_3d_page.dart';
 import 'package:gym_app/features/coach/presentation/coach_page.dart';
+import 'package:gym_app/features/coach/presentation/chat_page.dart';
 import 'package:gym_app/features/gym_bro/presentation/gym_bro_settings_page.dart';
 import 'package:gym_app/features/gym_bro/presentation/gym_bro_discover_page.dart';
 import 'package:gym_app/features/gym_bro/presentation/gym_bro_matches_page.dart';
@@ -157,6 +158,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/coach',
         builder: (context, state) => const CoachPage(),
+      ),
+      GoRoute(
+        path: '/coach/new',
+        builder: (context, state) => const ChatPage(conversationId: null),
+      ),
+      GoRoute(
+        path: '/coach/:id',
+        builder: (context, state) =>
+            ChatPage(conversationId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/run',

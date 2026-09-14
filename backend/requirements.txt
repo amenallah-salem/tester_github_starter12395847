@@ -10,3 +10,4 @@ django-unfold>=0.38
 google-auth>=2.35,<3
 PyJWT[crypto]>=2.9
 requests>=2.32
+phonenumbers>=8.13

@@ -40,6 +40,10 @@ class Profile(models.Model):
     onboarding_completed_at = models.DateTimeField(null=True, blank=True)
     locale = models.CharField(max_length=20, blank=True)
     country = models.CharField(max_length=4, blank=True)
+    # E.164-normalized phone number for "Continue with phone" sign-in.
+    # unique + null (not blank-as-empty-string) so Postgres allows any number
+    # of users without a phone while still enforcing one account per number.
+    phone_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
 
     # Gym Bro training profile (GB-1)
     bio = models.TextField(blank=True, help_text='Short intro shown on the Gym Bro discovery card.')
@@ -98,6 +102,31 @@ class SocialAccount(models.Model):
 
     def __str__(self):
         return f'{self.provider}:{self.provider_user_id} -> {self.user.username}'
+
+
+class OTPVerification(models.Model):
+    """A single SMS one-time-code challenge for a phone number.
+
+    Not tied to a User — phone auth happens before any account is resolved.
+    `otp_hash` stores the code hashed via Django's own password hasher
+    (see gym_api/otp.py); the plaintext code is never persisted.
+    """
+
+    phone_number = models.CharField(max_length=20, db_index=True)
+    otp_hash = models.CharField(max_length=128)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'phone_otp_verifications'
+        indexes = [
+            models.Index(fields=['phone_number', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f'OTP for {self.phone_number} ({"used" if self.used else "pending"})'
 
 
 class Subscription(models.Model):
@@ -540,3 +569,80 @@ class ProgressPhoto(models.Model):
 
     def __str__(self):
         return f'{self.user.username} – {self.logged_at:%Y-%m-%d}'
+
+
+class AIConversationFolder(models.Model):
+    """One persistent 'AI Discussions' folder per user, get-or-created on
+    first use of the AI chat feature. A OneToOne is sufficient/simpler than
+    a uniqueness constraint since exactly one folder ever exists per user."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='ai_folder')
+    name = models.CharField(max_length=100, default='AI Discussions')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'ai_conversation_folders'
+
+    def __str__(self):
+        return f'{self.user.username} – {self.name}'
+
+
+class AIConversation(models.Model):
+    """A single independent AI chat thread inside a user's AI folder."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    folder = models.ForeignKey(AIConversationFolder, on_delete=models.CASCADE, related_name='conversations')
+    title = models.CharField(max_length=120, default='New Chat')
+    model = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_message_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'ai_conversations'
+        ordering = ['-last_message_at', '-created_at']
+        indexes = [models.Index(fields=['folder', '-last_message_at'])]
+
+    def __str__(self):
+        return f'{self.title} ({self.folder.user.username})'
+
+
+class AIMessage(models.Model):
+    """A single message (user or assistant) inside an AIConversation."""
+    ROLE_USER = 'user'
+    ROLE_ASSISTANT = 'assistant'
+    ROLE_SYSTEM = 'system'
+    ROLE_CHOICES = [
+        (ROLE_USER, 'User'),
+        (ROLE_ASSISTANT, 'Assistant'),
+        (ROLE_SYSTEM, 'System'),
+    ]
+
+    STATUS_PENDING = 'pending'
+    STATUS_COMPLETED = 'completed'
+    STATUS_FAILED = 'failed'
+    STATUS_CANCELLED = 'cancelled'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_COMPLETED, 'Completed'),
+        (STATUS_FAILED, 'Failed'),
+        (STATUS_CANCELLED, 'Cancelled'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    conversation = models.ForeignKey(AIConversation, on_delete=models.CASCADE, related_name='messages')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    content = models.TextField(blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_COMPLETED)
+    model = models.CharField(max_length=100, blank=True)
+    input_tokens = models.PositiveIntegerField(null=True, blank=True)
+    output_tokens = models.PositiveIntegerField(null=True, blank=True)
+    finish_reason = models.CharField(max_length=50, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ai_messages'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.role} @ {self.conversation_id} ({self.created_at:%Y-%m-%d %H:%M})'

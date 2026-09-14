@@ -19,6 +19,8 @@ from .views import (
     LogoutView,
     GoogleAuthView,
     AppleAuthView,
+    PhoneOTPRequestView,
+    PhoneOTPVerifyView,
     SubscriptionViewSet,
     HealthCheckView,
     SwipeViewSet,
@@ -26,6 +28,10 @@ from .views import (
     MeditationSessionViewSet,
     FeedbackViewSet,
     ProgressPhotoViewSet,
+    AIFolderView,
+    AIConversationViewSet,
+    AIMessageListView,
+    AISendMessageStreamView,
 )
 
 router = DefaultRouter()
@@ -43,6 +49,7 @@ router.register(r'swipes', SwipeViewSet, basename='swipe')
 router.register(r'gym-bro/matches', MatchViewSet, basename='gym-bro-match')
 router.register(r'feedback', FeedbackViewSet, basename='feedback')
 router.register(r'progress-photos', ProgressPhotoViewSet, basename='progress-photo')
+router.register(r'ai/conversations', AIConversationViewSet, basename='ai-conversation')
 
 urlpatterns = [
     # Unauthenticated readiness probe (used by docker.dev.sh / orchestrators)
@@ -54,7 +61,12 @@ urlpatterns = [
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     path('auth/google/', GoogleAuthView.as_view(), name='google_auth'),
     path('auth/apple/', AppleAuthView.as_view(), name='apple_auth'),
+    path('auth/phone/request-otp/', PhoneOTPRequestView.as_view(), name='phone_otp_request'),
+    path('auth/phone/verify-otp/', PhoneOTPVerifyView.as_view(), name='phone_otp_verify'),
     path('exercises/lookup/<uuid:pk>/', ExerciseLookupView.as_view(), name='exercise-lookup'),
+    path('ai/folder/', AIFolderView.as_view(), name='ai-folder'),
+    path('ai/conversations/<uuid:pk>/messages/', AIMessageListView.as_view(), name='ai-conversation-messages'),
+    path('ai/conversations/<uuid:pk>/stream/', AISendMessageStreamView.as_view(), name='ai-conversation-stream'),
     # Router URLs
     path('', include(router.urls)),
 ]

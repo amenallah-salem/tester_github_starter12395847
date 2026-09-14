@@ -3,7 +3,9 @@ Simple smoke tests for the gym_api app.
 Run with: python manage.py test gym_api
 """
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.db import IntegrityError, transaction
+from django.test import TestCase, override_settings
+from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -11,8 +13,12 @@ from unittest import mock
 from .models import (
     Profile, Plan, Exercise, WorkoutSession, ProgressMetric, Subscription,
     FavoriteExercise, Swipe, Match, GymBroMessage, MeditationSession, Feedback,
-    ProgressPhoto, SocialAccount,
+    ProgressPhoto, SocialAccount, OTPVerification,
+    AIConversationFolder, AIConversation, AIMessage,
 )
+from gym_project.env_guards import check_production_safety
+from .ai.openrouter import OpenRouterError, OpenRouterTimeout, StreamChunk
+from .ai.titles import title_from_message
 
 
 class ModelTests(TestCase):
@@ -699,6 +705,149 @@ class SocialAuthTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
+class PhoneAuthTests(APITestCase):
+    """Phone/OTP sign-in: real SMS delivery is always mocked (TwilioSmsProvider.send)
+    so these tests never hit the network, whether or not dev mode is active."""
+
+    PHONE = '+34612345678'
+
+    def setUp(self):
+        # ScopedRateThrottle state lives in Django's cache, not the test DB,
+        # so it isn't rolled back between tests by the transaction wrapper —
+        # clear it explicitly so each test starts with a fresh throttle window.
+        from django.core.cache import cache
+        cache.clear()
+
+    def _request_otp(self, phone=None):
+        return self.client.post('/api/auth/phone/request-otp/', {'phone_number': phone or self.PHONE})
+
+    def _verify_otp(self, code, phone=None):
+        return self.client.post('/api/auth/phone/verify-otp/', {'phone_number': phone or self.PHONE, 'code': code})
+
+    def _request_and_capture_code(self, phone=None):
+        """Requests an OTP and extracts the real generated code from the
+        (mocked) SMS message body, the way the real user would read it off
+        their phone — avoids reaching into OTPVerification internals."""
+        with mock.patch('gym_api.sms.TwilioSmsProvider.send') as send:
+            resp = self._request_otp(phone=phone)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        message = send.call_args.args[1]
+        code = ''.join(ch for ch in message if ch.isdigit())[-6:]
+        return code
+
+    def test_request_otp_rejects_invalid_phone_number(self):
+        with mock.patch('gym_api.sms.TwilioSmsProvider.send') as send:
+            resp = self._request_otp(phone='not-a-phone-number')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        send.assert_not_called()
+
+    def test_request_otp_sends_random_code_in_normal_mode(self):
+        with mock.patch('gym_api.sms.TwilioSmsProvider.send') as send:
+            resp = self._request_otp()
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('resend_after_seconds', resp.data)
+        send.assert_called_once()
+        message = send.call_args.args[1]
+        self.assertNotIn('123456', message)
+
+    @override_settings(SAFE_DEV_OTP_AUTH_PASS='test-dev-secret', DEBUG=True)
+    def test_request_otp_uses_dev_code_and_skips_real_sms_in_dev_mode(self):
+        with mock.patch('gym_api.sms.TwilioSmsProvider.send') as send:
+            resp = self._request_otp()
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        send.assert_not_called()
+        with mock.patch('gym_api.sms.TwilioSmsProvider.send') as send2:
+            verify_resp = self._verify_otp('123456')
+        self.assertEqual(verify_resp.status_code, status.HTTP_201_CREATED)
+        send2.assert_not_called()
+
+    def test_verify_otp_creates_new_user_and_provisions_them(self):
+        code = self._request_and_capture_code()
+        resp = self._verify_otp(code)
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertIn('access', resp.data)
+        profile = Profile.objects.get(phone_number=self.PHONE)
+        self.assertTrue(Plan.objects.filter(user=profile.user).exists())
+
+    def test_verify_otp_returning_user_logs_in_without_duplicate(self):
+        first_code = self._request_and_capture_code()
+        first = self._verify_otp(first_code)
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+
+        second_code = self._request_and_capture_code()
+        second = self._verify_otp(second_code)
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(Profile.objects.filter(phone_number=self.PHONE).count(), 1)
+
+    def test_verify_otp_rejects_wrong_code_and_tracks_attempts(self):
+        self._request_and_capture_code()
+        resp = self._verify_otp('000000')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        otp = OTPVerification.objects.latest('created_at')
+        self.assertEqual(otp.attempts, 1)
+        self.assertFalse(otp.used)
+
+    def test_verify_otp_rejects_expired_code(self):
+        code = self._request_and_capture_code()
+        otp = OTPVerification.objects.latest('created_at')
+        otp.expires_at = timezone.now() - timezone.timedelta(seconds=1)
+        otp.save(update_fields=['expires_at'])
+        resp = self._verify_otp(code)
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_verify_otp_cannot_be_reused(self):
+        code = self._request_and_capture_code()
+        first = self._verify_otp(code)
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        second = self._verify_otp(code)
+        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_verify_otp_invalidates_after_max_attempts(self):
+        self._request_and_capture_code()
+        for _ in range(5):
+            resp = self._verify_otp('000000')
+        self.assertEqual(resp.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        otp = OTPVerification.objects.latest('created_at')
+        self.assertTrue(otp.used)
+
+    def test_resend_cooldown_blocks_immediate_second_request(self):
+        with mock.patch('gym_api.sms.TwilioSmsProvider.send'):
+            first = self._request_otp()
+            second = self._request_otp()
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertIn('retry_after_seconds', second.data)
+
+
+class EnvGuardsTests(TestCase):
+    """Production startup safety, tested directly against the extracted
+    check_production_safety() rather than by re-importing settings.py."""
+
+    def test_production_with_dev_otp_pass_refuses_to_start(self):
+        with self.assertRaises(RuntimeError):
+            check_production_safety(
+                {'DJANGO_ENV': 'production', 'SAFE_DEV_OTP_AUTH_PASS': 'oops'},
+                debug=False,
+                secret_key='a-real-secret',
+            )
+
+    def test_production_without_dev_otp_pass_is_valid(self):
+        check_production_safety(
+            {'DJANGO_ENV': 'production'}, debug=False, secret_key='a-real-secret',
+        )
+
+    def test_production_with_debug_true_still_refuses(self):
+        with self.assertRaises(RuntimeError):
+            check_production_safety(
+                {'DJANGO_ENV': 'production'}, debug=True, secret_key='a-real-secret',
+            )
+
+    def test_development_may_set_dev_otp_pass(self):
+        check_production_safety(
+            {'SAFE_DEV_OTP_AUTH_PASS': 'fine-in-dev'}, debug=True, secret_key='dev-secret-key-change-in-production',
+        )
+
+
 class GymBroTests(APITestCase):
     def setUp(self):
         self.user_a = User.objects.create_user('bro_a', 'a@example.com', 'pass12345')
@@ -811,3 +960,235 @@ class GymBroTests(APITestCase):
 
         resp = self.client.post(f'/api/gym-bro/matches/{match_id}/messages/', {'text': '   '}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class FakeOpenRouterService:
+    """Test double for OpenRouterService — never touches the network."""
+
+    def __init__(self, chunks=None, error=None):
+        self._chunks = chunks if chunks is not None else [
+            StreamChunk(delta_text='Hello '),
+            StreamChunk(delta_text='there!', finish_reason='stop', usage={'prompt_tokens': 5, 'completion_tokens': 2}),
+        ]
+        self._error = error
+
+    def stream_chat_completion(self, messages):
+        if self._error:
+            raise self._error
+        for chunk in self._chunks:
+            yield chunk
+
+
+def _consume_stream(response):
+    return b''.join(response.streaming_content).decode('utf-8')
+
+
+class AIChatTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('aiuser', 'ai@example.com', 'aipass123')
+        self.other_user = User.objects.create_user('aiother', 'aiother@example.com', 'aiother123')
+
+    # --- Auth -------------------------------------------------------
+    def test_unauthenticated_access_rejected(self):
+        for resp in (
+            self.client.get('/api/ai/folder/'),
+            self.client.get('/api/ai/conversations/'),
+            self.client.post('/api/ai/conversations/', {}, format='json'),
+        ):
+            self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    # --- Folder -------------------------------------------------------
+    def test_folder_created_automatically_and_reused(self):
+        self.client.force_authenticate(user=self.user)
+        resp1 = self.client.get('/api/ai/folder/')
+        self.assertEqual(resp1.status_code, 200)
+        self.assertEqual(resp1.data['name'], 'AI Discussions')
+        resp2 = self.client.get('/api/ai/folder/')
+        self.assertEqual(resp1.data['id'], resp2.data['id'])
+        self.assertEqual(AIConversationFolder.objects.filter(user=self.user).count(), 1)
+
+    def test_only_one_folder_per_user_enforced_at_db_level(self):
+        AIConversationFolder.objects.create(user=self.user)
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                AIConversationFolder.objects.create(user=self.user)
+
+    # --- Conversations --------------------------------------------------
+    def test_conversation_crud_and_ownership(self):
+        self.client.force_authenticate(user=self.user)
+        create = self.client.post('/api/ai/conversations/', {}, format='json')
+        self.assertEqual(create.status_code, 201)
+        conv_id = create.data['id']
+        self.assertEqual(create.data['title'], 'New Chat')
+
+        listed = self.client.get('/api/ai/conversations/')
+        self.assertEqual(listed.status_code, 200)
+
+        retrieved = self.client.get(f'/api/ai/conversations/{conv_id}/')
+        self.assertEqual(retrieved.status_code, 200)
+
+        renamed = self.client.patch(f'/api/ai/conversations/{conv_id}/', {'title': 'Push day plan'}, format='json')
+        self.assertEqual(renamed.status_code, 200)
+        self.assertEqual(renamed.data['title'], 'Push day plan')
+
+        deleted = self.client.delete(f'/api/ai/conversations/{conv_id}/')
+        self.assertEqual(deleted.status_code, 204)
+        self.assertFalse(AIConversation.objects.filter(id=conv_id).exists())
+
+    def test_user_cannot_access_another_users_conversation(self):
+        self.client.force_authenticate(user=self.user)
+        conv_id = self.client.post('/api/ai/conversations/', {}, format='json').data['id']
+
+        self.client.force_authenticate(user=self.other_user)
+        self.assertEqual(self.client.get(f'/api/ai/conversations/{conv_id}/').status_code, 404)
+        self.assertEqual(
+            self.client.patch(f'/api/ai/conversations/{conv_id}/', {'title': 'hijacked'}, format='json').status_code,
+            404,
+        )
+        self.assertEqual(self.client.delete(f'/api/ai/conversations/{conv_id}/').status_code, 404)
+        self.assertEqual(self.client.get(f'/api/ai/conversations/{conv_id}/messages/').status_code, 404)
+        self.assertEqual(
+            self.client.post(f'/api/ai/conversations/{conv_id}/stream/', {'content': 'hi'}, format='json').status_code,
+            404,
+        )
+        # Original conversation must be untouched.
+        conv = AIConversation.objects.get(id=conv_id)
+        self.assertNotEqual(conv.title, 'hijacked')
+
+    # --- Messages / streaming --------------------------------------------
+    def _make_conversation(self):
+        folder = AIConversationFolder.objects.create(user=self.user)
+        return AIConversation.objects.create(folder=folder)
+
+    def test_send_message_persists_user_and_assistant_messages(self):
+        self.client.force_authenticate(user=self.user)
+        conversation = self._make_conversation()
+
+        with mock.patch('gym_api.views.get_openrouter_service', return_value=FakeOpenRouterService()):
+            resp = self.client.post(
+                f'/api/ai/conversations/{conversation.id}/stream/', {'content': 'How should I train legs?'}, format='json'
+            )
+        self.assertEqual(resp.status_code, 200)
+        body = _consume_stream(resp)
+        self.assertIn('Hello ', body)
+        self.assertIn('there!', body)
+        self.assertIn('event: done', body)
+
+        messages = list(conversation.messages.order_by('created_at'))
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0].role, AIMessage.ROLE_USER)
+        self.assertEqual(messages[0].content, 'How should I train legs?')
+        self.assertEqual(messages[1].role, AIMessage.ROLE_ASSISTANT)
+        self.assertEqual(messages[1].content, 'Hello there!')
+        self.assertEqual(messages[1].status, AIMessage.STATUS_COMPLETED)
+        self.assertEqual(messages[1].input_tokens, 5)
+        self.assertEqual(messages[1].output_tokens, 2)
+
+        conversation.refresh_from_db()
+        self.assertEqual(conversation.title, title_from_message('How should I train legs?'))
+
+    def test_message_list_ordering(self):
+        self.client.force_authenticate(user=self.user)
+        conversation = self._make_conversation()
+        with mock.patch('gym_api.views.get_openrouter_service', return_value=FakeOpenRouterService()):
+            self.client.post(f'/api/ai/conversations/{conversation.id}/stream/', {'content': 'first'}, format='json')
+
+        resp = self.client.get(f'/api/ai/conversations/{conversation.id}/messages/')
+        self.assertEqual(resp.status_code, 200)
+        roles = [m['role'] for m in resp.data['results']]
+        self.assertEqual(roles, ['user', 'assistant'])
+
+    def test_client_cannot_inject_role_or_extra_fields(self):
+        self.client.force_authenticate(user=self.user)
+        conversation = self._make_conversation()
+        with mock.patch('gym_api.views.get_openrouter_service', return_value=FakeOpenRouterService()):
+            self.client.post(
+                f'/api/ai/conversations/{conversation.id}/stream/',
+                {'content': 'hi', 'role': 'system'},
+                format='json',
+            )
+        user_message = conversation.messages.filter(role=AIMessage.ROLE_USER).first()
+        self.assertIsNotNone(user_message)
+        self.assertEqual(user_message.role, AIMessage.ROLE_USER)
+
+    def test_streaming_upstream_error_marks_message_failed_and_preserves_user_message(self):
+        self.client.force_authenticate(user=self.user)
+        conversation = self._make_conversation()
+        with mock.patch(
+            'gym_api.views.get_openrouter_service',
+            return_value=FakeOpenRouterService(error=OpenRouterError('boom')),
+        ):
+            resp = self.client.post(
+                f'/api/ai/conversations/{conversation.id}/stream/', {'content': 'hello'}, format='json'
+            )
+        body = _consume_stream(resp)
+        self.assertIn('event: error', body)
+
+        messages = list(conversation.messages.order_by('created_at'))
+        self.assertEqual(messages[0].role, AIMessage.ROLE_USER)
+        self.assertEqual(messages[0].content, 'hello')
+        self.assertEqual(messages[1].status, AIMessage.STATUS_FAILED)
+
+    def test_streaming_timeout_marks_message_failed(self):
+        self.client.force_authenticate(user=self.user)
+        conversation = self._make_conversation()
+        with mock.patch(
+            'gym_api.views.get_openrouter_service',
+            return_value=FakeOpenRouterService(error=OpenRouterTimeout('timed out')),
+        ):
+            resp = self.client.post(
+                f'/api/ai/conversations/{conversation.id}/stream/', {'content': 'hello'}, format='json'
+            )
+        _consume_stream(resp)
+        assistant_message = conversation.messages.filter(role=AIMessage.ROLE_ASSISTANT).first()
+        self.assertEqual(assistant_message.status, AIMessage.STATUS_FAILED)
+
+    def test_empty_message_rejected(self):
+        self.client.force_authenticate(user=self.user)
+        conversation = self._make_conversation()
+        resp = self.client.post(f'/api/ai/conversations/{conversation.id}/stream/', {'content': '   '}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(AI_CHAT_MAX_MESSAGE_LENGTH=10)
+    def test_oversized_message_rejected(self):
+        self.client.force_authenticate(user=self.user)
+        conversation = self._make_conversation()
+        resp = self.client.post(
+            f'/api/ai/conversations/{conversation.id}/stream/',
+            {'content': 'this message is way too long'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(conversation.messages.exists())
+
+    @override_settings(AI_CHAT_DAILY_MESSAGE_LIMIT=1)
+    def test_daily_message_limit_enforced(self):
+        self.client.force_authenticate(user=self.user)
+        conversation = self._make_conversation()
+        with mock.patch('gym_api.views.get_openrouter_service', return_value=FakeOpenRouterService()):
+            first = self.client.post(
+                f'/api/ai/conversations/{conversation.id}/stream/', {'content': 'one'}, format='json'
+            )
+            _consume_stream(first)
+            second = self.client.post(
+                f'/api/ai/conversations/{conversation.id}/stream/', {'content': 'two'}, format='json'
+            )
+        self.assertEqual(second.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_title_generated_from_first_message_only(self):
+        self.client.force_authenticate(user=self.user)
+        conversation = self._make_conversation()
+        with mock.patch('gym_api.views.get_openrouter_service', return_value=FakeOpenRouterService()):
+            self.client.post(
+                f'/api/ai/conversations/{conversation.id}/stream/',
+                {'content': 'How should I structure my push workout?'},
+                format='json',
+            )
+            conversation.refresh_from_db()
+            first_title = conversation.title
+            self.client.post(
+                f'/api/ai/conversations/{conversation.id}/stream/', {'content': 'a follow up question'}, format='json'
+            )
+        conversation.refresh_from_db()
+        self.assertEqual(conversation.title, first_title)
+        self.assertNotEqual(conversation.title, 'New Chat')
