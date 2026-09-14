@@ -2,6 +2,7 @@
 REST views for the Gym Planner API.
 """
 import json
+import uuid
 from datetime import timedelta
 
 from rest_framework import viewsets, permissions, status, mixins, generics
@@ -800,6 +801,12 @@ class ProgressMetricViewSet(viewsets.ModelViewSet):
                 {'exercise': 'This query parameter is required.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        try:
+            uuid.UUID(str(exercise_id))
+        except ValueError:
+            # Locally-generated sample plans use non-UUID exercise keys
+            # (e.g. "goblet_squat") that never have a matching metric.
+            return Response({'result': None}, status=status.HTTP_200_OK)
         metric = self.get_queryset().filter(
             exercise_id=exercise_id,
         ).order_by('-logged_at').first()

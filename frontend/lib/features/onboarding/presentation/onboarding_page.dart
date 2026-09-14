@@ -26,6 +26,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   String? _experience;
   String? _weight;
   final Set<String> _muscles = {};
+  String? _lastToggledMuscle;
+  DateTime? _lastMuscleToggleTime;
   int _days = 3;
   String _kit = 'Both';
 
@@ -153,13 +155,28 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           helper: strings.muscleHelper,
           options: strings.muscleOptions,
           selected: _muscles,
-          onToggle: (v) => setState(() {
-            if (_muscles.contains(v)) {
-              _muscles.remove(v);
-            } else {
-              _muscles.add(v);
+          onToggle: (v) {
+            // Flutter web's semantics layer can dispatch a single tap as two
+            // rapid onTap calls (accessibility overlay + canvas hit-test).
+            // That's a no-op for the single-select steps' assignment, but a
+            // toggle needs an explicit debounce or it cancels itself out.
+            final now = DateTime.now();
+            if (_lastToggledMuscle == v &&
+                _lastMuscleToggleTime != null &&
+                now.difference(_lastMuscleToggleTime!) <
+                    const Duration(milliseconds: 300)) {
+              return;
             }
-          }),
+            _lastToggledMuscle = v;
+            _lastMuscleToggleTime = now;
+            setState(() {
+              if (_muscles.contains(v)) {
+                _muscles.remove(v);
+              } else {
+                _muscles.add(v);
+              }
+            });
+          },
           onBack: _back,
           onNext: _next,
         );

@@ -312,12 +312,7 @@ class _PlanRunnerPageState extends ConsumerState<PlanRunnerPage> {
       ),
     );
     if (confirm != true) return;
-    if (_exIndex < _exercises.length - 1) {
-      _exIndex++;
-      setState(() => _enterExercise(announce: true));
-    } else {
-      _finish();
-    }
+    setState(_enterNextSetOrExercise);
   }
 
   void _finish() {
@@ -622,12 +617,7 @@ class _CompleteScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 8),
-            Text(
-              strings.sessionSummary(exerciseCount, setCount, minutes),
-              style: const TextStyle(color: AppTheme.mut),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -638,14 +628,10 @@ class _CompleteScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () => context.go('/recovery'),
-              child: Text(strings.seeProgress),
-            ),
-            OutlinedButton.icon(
+            FilledButton.icon(
               onPressed: () => context.go('/progress'),
               icon: const Icon(Icons.insights_outlined),
-              label: const Text('See progress'),
+              label: Text(strings.seeProgress),
             ),
             TextButton(
               onPressed: () => context.go('/'),

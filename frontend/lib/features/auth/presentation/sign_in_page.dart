@@ -248,7 +248,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                 TextButton(
                   onPressed: _busy
                       ? null
-                      : () => setState(() => _registering = !_registering),
+                      : () => setState(() {
+                            _registering = !_registering;
+                            _error = null;
+                            _fieldErrors = const {};
+                          }),
                   child: Text(
                     _registering
                         ? 'Already have an account? Sign in'

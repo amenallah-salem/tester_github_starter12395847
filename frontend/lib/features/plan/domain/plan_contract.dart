@@ -319,3 +319,16 @@ T enumFromString<T extends Enum>(List<T> values, dynamic value, [T? fallback]) {
 }
 
 String enumName(Enum value) => value.toString().split('.').last;
+
+/// Human-readable display form of an enum's [enumName], e.g. `fullBody` ->
+/// `Full Body`. Use this for anything shown to the user; [enumName] itself
+/// must stay the raw identifier since it round-trips through serialization.
+String enumLabel(Enum value) {
+  final name = enumName(value);
+  if (name.isEmpty) return name;
+  final withSpaces = name.replaceAllMapped(
+    RegExp(r'(?<=[a-z0-9])(?=[A-Z])'),
+    (m) => ' ',
+  );
+  return '${withSpaces[0].toUpperCase()}${withSpaces.substring(1)}';
+}

@@ -165,7 +165,7 @@ class PlanNotifier extends Notifier<AsyncValue<WorkoutPlan?>> {
 
     final focusLabel = focusAreas.isEmpty
         ? template.focus
-        : focusAreas.map(enumName).map(_titleCase).join(' + ');
+        : focusAreas.map(enumLabel).join(' + ');
 
     final days = List.generate(daysPerWeek, (i) {
       return PlanDay(
@@ -193,7 +193,7 @@ class PlanNotifier extends Notifier<AsyncValue<WorkoutPlan?>> {
         focusAreas: focusAreas,
       ),
       summary:
-          '${_titleCase(enumName(goal))} · $daysPerWeek day${daysPerWeek == 1 ? '' : 's'} a week, $focusLabel focus.',
+          '${enumLabel(goal)} · $daysPerWeek day${daysPerWeek == 1 ? '' : 's'} a week, $focusLabel focus.',
       weeklySplit: samplePlan.weeklySplit,
       days: days,
       progression: samplePlan.progression,
@@ -201,9 +201,6 @@ class PlanNotifier extends Notifier<AsyncValue<WorkoutPlan?>> {
       disclaimer: samplePlan.disclaimer,
     );
   }
-
-  String _titleCase(String value) =>
-      value.isEmpty ? value : '${value[0].toUpperCase()}${value.substring(1)}';
 
   /// "Regenerate plan" from the Today view.
   Future<void> regeneratePlan() async {

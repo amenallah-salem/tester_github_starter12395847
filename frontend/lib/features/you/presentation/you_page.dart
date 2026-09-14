@@ -271,7 +271,7 @@ class _YouPageState extends ConsumerState<YouPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    enumName(plan.profile.goal),
+                    enumLabel(plan.profile.goal),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -279,7 +279,7 @@ class _YouPageState extends ConsumerState<YouPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${plan.profile.daysPerWeek}-day plan · ${enumName(plan.weeklySplit)}',
+                    '${plan.profile.daysPerWeek}-day plan · ${enumLabel(plan.weeklySplit)}',
                     style: const TextStyle(color: AppTheme.mut, fontSize: 13),
                   ),
                 ],
