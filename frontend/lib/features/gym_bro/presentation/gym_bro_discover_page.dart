@@ -201,11 +201,13 @@ class _SwipeStack extends StatelessWidget {
                 icon: Icons.close,
                 color: AppTheme.error,
                 onPressed: busy ? null : onPass,
+                semanticLabel: 'Pass',
               ),
               _RoundButton(
                 icon: Icons.favorite,
                 color: AppTheme.primary,
                 onPressed: busy ? null : onLike,
+                semanticLabel: 'Like',
               ),
             ],
           ),
@@ -245,24 +247,30 @@ class _RoundButton extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onPressed,
+    required this.semanticLabel,
   });
 
   final IconData icon;
   final Color color;
   final VoidCallback? onPressed;
+  final String semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppTheme.surface,
-      shape: const CircleBorder(),
-      elevation: 2,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Icon(icon, color: color, size: 28),
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: Material(
+        color: AppTheme.surface,
+        shape: const CircleBorder(),
+        elevation: 2,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Icon(icon, color: color, size: 28),
+          ),
         ),
       ),
     );

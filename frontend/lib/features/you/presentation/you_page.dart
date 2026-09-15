@@ -85,7 +85,7 @@ class _YouPageState extends ConsumerState<YouPage> {
           ),
           const SizedBox(height: 20),
           Card(
-            color: AppTheme.surfaceContainerLow,
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
             child: Padding(
               padding: const EdgeInsets.all(AppTheme.cardPadding),
               child: Row(

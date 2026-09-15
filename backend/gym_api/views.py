@@ -465,8 +465,10 @@ class ProfileViewSet(viewsets.ModelViewSet):
     def discover(self, request):
         """GET /profiles/discover – Gym Bro candidates (GB-2).
 
-        Excludes the requester, anyone already swiped on, and profiles that
-        haven't finished the Gym Bro fields (see Profile.has_completed_gym_bro_profile).
+        Excludes the requester, anyone already swiped on, staff/internal
+        accounts (used for reviewing test data, not real training partners),
+        and profiles that haven't finished the Gym Bro fields (see
+        Profile.has_completed_gym_bro_profile).
         """
         user = request.user
         already_swiped_ids = Swipe.objects.filter(from_user=user).values_list('to_user_id', flat=True)
@@ -474,6 +476,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
             Profile.objects
             .exclude(user=user)
             .exclude(user_id__in=already_swiped_ids)
+            .exclude(user__is_staff=True)
             .select_related('user')
             .order_by('-created_at')
         )

@@ -16,20 +16,24 @@ Future<void> applyAuthResult(
   Map<String, dynamic> result, {
   required String fallbackUsername,
 }) async {
-  ref.read(accessTokenProvider.notifier).state = result['access'] as String;
-  ApiClient.I.accessToken = result['access'] as String;
-  if (result['refresh'] case final String refresh) {
-    ref.read(refreshTokenProvider.notifier).state = refresh;
-    ApiClient.I.refreshToken = refresh;
-  }
+  final access = result['access'] as String;
+  final refresh = result['refresh'] as String?;
+  // Only the plain ApiClient fields are set here — not the Riverpod
+  // providers below, which the router watches to decide whether to
+  // navigate away from sign-in. Setting those before this function is done
+  // would let that navigation dispose the calling widget (and this
+  // WidgetRef) mid-flight, silently aborting everything after it —
+  // including persistAuth — with no visible error.
+  ApiClient.I.accessToken = access;
+  ApiClient.I.refreshToken = refresh;
+
   await ref.read(planNotifierProvider.notifier).refreshFromApi();
   await ref.read(workoutSessionsProvider.notifier).loadRemote();
   final user = result['user'];
-  ref.read(currentUsernameProvider.notifier).state =
-      user is Map ? user['username'] as String : fallbackUsername;
-  await persistAuth(
-    access: result['access'] as String,
-    refresh: result['refresh'] as String?,
-    username: ref.read(currentUsernameProvider) ?? fallbackUsername,
-  );
+  final username = user is Map ? user['username'] as String : fallbackUsername;
+  await persistAuth(access: access, refresh: refresh, username: username);
+
+  ref.read(accessTokenProvider.notifier).state = access;
+  if (refresh != null) ref.read(refreshTokenProvider.notifier).state = refresh;
+  ref.read(currentUsernameProvider.notifier).state = username;
 }
